@@ -1,0 +1,904 @@
+{
+  "stocks": [
+    {
+      "id": "A1000001-0000-4000-8000-000000000001",
+      "name": "Kodak Portra 400",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "the modern gold standard; huge latitude, flattering skin tones",
+      "isDiscontinued": false
+    },
+    {
+      "id": "cf670589-1954-59a5-8a5f-271df628c615",
+      "name": "Kodak Portra 160",
+      "iso": 160,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "finer grain, softer palette for controlled light",
+      "isDiscontinued": false
+    },
+    {
+      "id": "ce6b4f95-303a-56ff-ac25-e7bbfbf37c7d",
+      "name": "Kodak Portra 800",
+      "iso": 800,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "best high-speed color negative made today",
+      "isDiscontinued": false
+    },
+    {
+      "id": "6187c280-92e6-57da-9bcc-e0419d30da77",
+      "name": "Kodak Ektar 100",
+      "iso": 100,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "finest-grained color neg ever; saturated, punchy",
+      "isDiscontinued": false
+    },
+    {
+      "id": "103b0eef-9449-5963-847d-ca0c72a7796b",
+      "name": "Kodak Gold 200",
+      "iso": 200,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "warm, nostalgic, cheap(ish) and beloved",
+      "isDiscontinued": false
+    },
+    {
+      "id": "67586504-1162-597e-b1ca-9db1a7884284",
+      "name": "Kodak UltraMax 400",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "versatile consumer all-rounder",
+      "isDiscontinued": false
+    },
+    {
+      "id": "956cee9a-7968-5206-8610-d3da64e21fee",
+      "name": "Kodak ColorPlus 200",
+      "iso": 200,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "budget classic with vintage rendering",
+      "isDiscontinued": false
+    },
+    {
+      "id": "16b96f1f-e630-579e-8922-d4a5d6ea6226",
+      "name": "Kodak Pro Image 100",
+      "iso": 100,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "skin-tone-friendly, heat-tolerant pro consumer stock",
+      "isDiscontinued": false
+    },
+    {
+      "id": "7b6b5aed-1ae6-5d98-b52f-0e452bb73bed",
+      "name": "Fujifilm Fujicolor 200",
+      "iso": 200,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "cool greens, classic Fuji look",
+      "isDiscontinued": false
+    },
+    {
+      "id": "67decd68-81cf-5d31-8a88-c639432dfe61",
+      "name": "Fujifilm Superia X-TRA 400",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "the everyday Fuji workhorse",
+      "isDiscontinued": false
+    },
+    {
+      "id": "59534da9-61b1-5017-8a76-0af947bc27a7",
+      "name": "CineStill 800T",
+      "iso": 800,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "tungsten cine film with the famous halation glow",
+      "isDiscontinued": false
+    },
+    {
+      "id": "af1c9381-e28f-53c8-a514-8e06329f240b",
+      "name": "CineStill 400D",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "daylight all-rounder with a cinematic feel",
+      "isDiscontinued": false
+    },
+    {
+      "id": "9c9af71d-8a67-5f16-be91-e69afdb5c9f6",
+      "name": "CineStill 50D",
+      "iso": 50,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "ultra-fine grain daylight cine stock",
+      "isDiscontinued": false
+    },
+    {
+      "id": "f8a889f7-a3b5-5834-ab88-9932c6461c73",
+      "name": "Kodak Vision3 500T",
+      "iso": 500,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "Hollywood's low-light standard",
+      "isDiscontinued": false
+    },
+    {
+      "id": "a9b58f22-1e75-58db-a44a-6701811b150e",
+      "name": "Kodak Vision3 250D",
+      "iso": 250,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "balanced daylight motion picture stock",
+      "isDiscontinued": false
+    },
+    {
+      "id": "c5f119b4-01eb-508d-96e5-71a20175c31c",
+      "name": "Kodak Vision3 200T",
+      "iso": 200,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "tungsten mid-speed cine film",
+      "isDiscontinued": false
+    },
+    {
+      "id": "1d2ba1c2-079a-55d6-b667-114c0e98cf50",
+      "name": "Kodak Vision3 50D",
+      "iso": 50,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "arguably the finest-grained color film in production",
+      "isDiscontinued": false
+    },
+    {
+      "id": "207bd6c8-8ddb-5980-8f7a-d15584e2241c",
+      "name": "Kodak Aerocolor IV",
+      "iso": 100,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "aerial film respooled as SantaColor 100 / Elektra 100",
+      "isDiscontinued": false
+    },
+    {
+      "id": "def19929-637a-54b9-8655-8af09af4923f",
+      "name": "Harman Phoenix 200",
+      "iso": 200,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "Ilford's first color film; quirky, high-contrast",
+      "isDiscontinued": false
+    },
+    {
+      "id": "c409e006-68ad-56e6-915c-f2c666cc32e6",
+      "name": "Lomography Color Negative 800",
+      "iso": 800,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "surprisingly good fast consumer film",
+      "isDiscontinued": false
+    },
+    {
+      "id": "221f2902-1564-57d9-a9d7-5390c41b70fb",
+      "name": "Lomography Color Negative 400",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "versatile consumer color negative",
+      "isDiscontinued": false
+    },
+    {
+      "id": "76fdcffc-914f-56a1-80b6-cff3d51ba9c2",
+      "name": "Lomography Color Negative 100",
+      "iso": 100,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "fine-grain consumer color negative",
+      "isDiscontinued": false
+    },
+    {
+      "id": "5a82477b-4ce4-5b8c-aa71-85605f78ffd4",
+      "name": "LomoChrome Purple",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "infrared-Aerochrome-style color shifts",
+      "isDiscontinued": false
+    },
+    {
+      "id": "65935396-00b4-5f6e-84ab-825ce4c2c085",
+      "name": "LomoChrome Metropolis",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "muted, desaturated urban look",
+      "isDiscontinued": false
+    },
+    {
+      "id": "defff4a1-d0e7-56a9-9038-ec802177f895",
+      "name": "LomoChrome Turquoise",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "blue/orange swapped tones",
+      "isDiscontinued": false
+    },
+    {
+      "id": "5a1a4857-77ac-5074-8e13-832fcf55c6b9",
+      "name": "Fujifilm Pro 400H",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "pastel wedding-photographer favorite, mourned since 2021",
+      "isDiscontinued": true
+    },
+    {
+      "id": "dc888b33-7d31-5cdb-9dce-7b1f80b0f52b",
+      "name": "Fujifilm Reala 100",
+      "iso": 100,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "the fourth-color-layer marvel",
+      "isDiscontinued": true
+    },
+    {
+      "id": "be00a89b-a206-51b7-94fa-54a5a669add7",
+      "name": "Fujifilm Natura 1600",
+      "iso": 1600,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "cult high-speed film",
+      "isDiscontinued": true
+    },
+    {
+      "id": "da5b9449-f86f-538a-87bd-ccbe34eba25c",
+      "name": "Fujifilm Superia 1600",
+      "iso": 1600,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "fast consumer Fuji stock",
+      "isDiscontinued": true
+    },
+    {
+      "id": "a49bcb33-97d5-507f-9a19-f315105ebea9",
+      "name": "Fujifilm Superia 800",
+      "iso": 800,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "high-speed consumer Fuji stock",
+      "isDiscontinued": true
+    },
+    {
+      "id": "b8b0ab40-f190-5b9d-a063-d2949d4eece6",
+      "name": "Kodak Portra 400NC",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "neutral predecessor of modern Portra",
+      "isDiscontinued": true
+    },
+    {
+      "id": "6a3095a3-f7ba-5da2-8058-511542f5cd86",
+      "name": "Kodak Portra 400VC",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "the vivid variant",
+      "isDiscontinued": true
+    },
+    {
+      "id": "01fe290b-9368-5a82-835b-19fc6120a61b",
+      "name": "Kodak Ektar 25",
+      "iso": 25,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "legendarily fine grain",
+      "isDiscontinued": true
+    },
+    {
+      "id": "660d926b-4247-5b01-91b2-f5e876896c05",
+      "name": "Agfa Vista 200",
+      "iso": 200,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "cheap, warm, sorely missed",
+      "isDiscontinued": true
+    },
+    {
+      "id": "b8e07be3-1375-5565-a263-c59e2c8787ff",
+      "name": "Agfa Vista 400",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "warm consumer stock, sorely missed",
+      "isDiscontinued": true
+    },
+    {
+      "id": "0221f4fa-619b-5ad3-91b9-04b7ff87d22a",
+      "name": "Konica Centuria 200",
+      "iso": 200,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "classic Konica consumer color negative",
+      "isDiscontinued": true
+    },
+    {
+      "id": "d7880157-9674-5d16-a289-b743346e8a99",
+      "name": "Kodak Royal Gold 400",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "premium consumer Kodak color negative",
+      "isDiscontinued": true
+    },
+    {
+      "id": "5eb01ca8-145b-52a0-bcac-2a0069ffe391",
+      "name": "Fujifilm Velvia 50",
+      "iso": 50,
+      "category": "Slide",
+      "process": "E-6",
+      "notes": "the landscape saturation king",
+      "isDiscontinued": false
+    },
+    {
+      "id": "46d470d7-a389-5114-9f2c-21afe1670646",
+      "name": "Kodak Ektachrome E100",
+      "iso": 100,
+      "category": "Slide",
+      "process": "E-6",
+      "notes": "clean, neutral, gloriously revived in 2018",
+      "isDiscontinued": false
+    },
+    {
+      "id": "f911496b-8f5c-585f-8ed0-d52686214f84",
+      "name": "Fujifilm Provia 100F",
+      "iso": 100,
+      "category": "Slide",
+      "process": "E-6",
+      "notes": "the balanced professional chrome",
+      "isDiscontinued": false
+    },
+    {
+      "id": "a721b042-0556-505a-85a5-ebc0e52e021e",
+      "name": "Fujifilm Velvia 100",
+      "iso": 100,
+      "category": "Slide",
+      "process": "E-6",
+      "notes": "vivid professional slide film",
+      "isDiscontinued": false
+    },
+    {
+      "id": "cd8bd23e-671e-50ff-9815-5b52018fbc72",
+      "name": "Kodachrome 64",
+      "iso": 64,
+      "category": "Slide",
+      "process": "E-6",
+      "notes": "the most iconic film ever made; discontinued, undevelopable",
+      "isDiscontinued": true
+    },
+    {
+      "id": "dda78710-cf49-5d2b-b90a-acd33a4d4db0",
+      "name": "Kodachrome 25",
+      "iso": 25,
+      "category": "Slide",
+      "process": "E-6",
+      "notes": "razor-sharp legend; K-14 process",
+      "isDiscontinued": true
+    },
+    {
+      "id": "0c2442db-c54e-5d4c-9f98-97124442c458",
+      "name": "Fujifilm Astia 100F",
+      "iso": 100,
+      "category": "Slide",
+      "process": "E-6",
+      "notes": "soft, skin-friendly chrome",
+      "isDiscontinued": true
+    },
+    {
+      "id": "4b4e6f30-fccd-518d-9c6d-6893e87911e6",
+      "name": "Agfa CT Precisa 100",
+      "iso": 100,
+      "category": "Slide",
+      "process": "E-6",
+      "notes": "cult cross-processing favorite",
+      "isDiscontinued": true
+    },
+    {
+      "id": "df96db40-a7d2-56d4-9f04-99bcddbacf8b",
+      "name": "Kodak Ektachrome 100VS",
+      "iso": 100,
+      "category": "Slide",
+      "process": "E-6",
+      "notes": "vivid saturation chrome",
+      "isDiscontinued": true
+    },
+    {
+      "id": "e690ffc3-6b84-537d-ae1a-adc6f63b08e0",
+      "name": "Fujichrome Fortia SP",
+      "iso": 50,
+      "category": "Slide",
+      "process": "E-6",
+      "notes": "ultra-rare hyper-saturated limited release",
+      "isDiscontinued": true
+    },
+    {
+      "id": "8c60775c-02fc-5c27-a335-4f8259a6c965",
+      "name": "Fujifilm Sensia 100",
+      "iso": 100,
+      "category": "Slide",
+      "process": "E-6",
+      "notes": "consumer chrome",
+      "isDiscontinued": true
+    },
+    {
+      "id": "3c54a257-682a-5a9e-99fa-4e38d5a944f1",
+      "name": "Kodak Elite Chrome 100",
+      "iso": 100,
+      "category": "Slide",
+      "process": "E-6",
+      "notes": "consumer slide film",
+      "isDiscontinued": true
+    },
+    {
+      "id": "11dea2b3-0fd3-5ea8-8b77-59922fcd9349",
+      "name": "Kodak Tri-X 400",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "the most famous B&W film in history",
+      "isDiscontinued": false
+    },
+    {
+      "id": "cf9afb11-26d1-5040-aedf-9145d6934da6",
+      "name": "Ilford HP5 Plus 400",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "Tri-X's equally beloved rival; pushes forever",
+      "isDiscontinued": false
+    },
+    {
+      "id": "6491466e-e87e-5e94-9aa8-622426957eb0",
+      "name": "Ilford FP4 Plus 125",
+      "iso": 125,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "classic mid-speed tonality",
+      "isDiscontinued": false
+    },
+    {
+      "id": "f021c2c2-1352-541a-95c0-d9fd40fb6d19",
+      "name": "Kodak T-Max 400",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "modern tabular grain, extremely sharp",
+      "isDiscontinued": false
+    },
+    {
+      "id": "72826435-2a23-5c5e-a091-874d1ae05192",
+      "name": "Kodak T-Max 100",
+      "iso": 100,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "near-medium-format resolution",
+      "isDiscontinued": false
+    },
+    {
+      "id": "efb76dba-9c5a-598e-9935-6da2f614b5e6",
+      "name": "Ilford Delta 100",
+      "iso": 100,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "Ilford's fine-grain tabular answer",
+      "isDiscontinued": false
+    },
+    {
+      "id": "25f2bd4a-8713-57f5-8473-f38574aa29db",
+      "name": "Ilford Delta 400",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "tabular grain mid-speed B&W",
+      "isDiscontinued": false
+    },
+    {
+      "id": "ed45ecf6-0e2a-5421-a572-80404cd485ef",
+      "name": "Ilford Pan F Plus 50",
+      "iso": 50,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "gorgeous slow-speed contrast",
+      "isDiscontinued": false
+    },
+    {
+      "id": "707b612a-51e1-58b5-aaf1-c36a979ff581",
+      "name": "Kodak T-Max P3200",
+      "iso": 3200,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "low-light specialist",
+      "isDiscontinued": false
+    },
+    {
+      "id": "d60875b7-abf7-5d0d-a75c-1c1232b5845c",
+      "name": "Ilford Delta 3200",
+      "iso": 3200,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "gritty available-darkness film",
+      "isDiscontinued": false
+    },
+    {
+      "id": "cd32732a-8ba0-5d17-8109-a3dd15fc5963",
+      "name": "Fujifilm Neopan Acros 100 II",
+      "iso": 100,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "incredible reciprocity characteristics",
+      "isDiscontinued": false
+    },
+    {
+      "id": "a5957776-6a0b-5782-aa6b-14eb7e5b114b",
+      "name": "Kodak Double-X 5222",
+      "iso": 250,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "cine B&W used in Schindler's List",
+      "isDiscontinued": false
+    },
+    {
+      "id": "03c07ef3-e191-5d39-b95a-886c0fccdb01",
+      "name": "Ilford XP2 Super 400",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "C-41 process B&W",
+      "isDiscontinued": false
+    },
+    {
+      "id": "eaac02e6-1d7f-52b1-96cc-0ea3ab77373c",
+      "name": "Ilford SFX 200",
+      "iso": 200,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "extended red/near-infrared",
+      "isDiscontinued": false
+    },
+    {
+      "id": "c5ae4850-8c30-577d-8e79-416a787abc3f",
+      "name": "Ilford Ortho Plus 80",
+      "iso": 80,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "orthochromatic character",
+      "isDiscontinued": false
+    },
+    {
+      "id": "92b823b3-7c8c-59ad-b846-00e79619f715",
+      "name": "Kentmere Pan 400",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "Ilford's budget line",
+      "isDiscontinued": false
+    },
+    {
+      "id": "33449ae1-8192-5542-a00d-282ec08ee035",
+      "name": "Kentmere Pan 100",
+      "iso": 100,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "Ilford's budget fine-grain line",
+      "isDiscontinued": false
+    },
+    {
+      "id": "aeb009ff-25e1-5564-ba47-215a480f6576",
+      "name": "Fomapan 400 Action",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "Czech budget classic",
+      "isDiscontinued": false
+    },
+    {
+      "id": "ae4bfaf2-2d83-5e8b-8aa2-62b1292964bc",
+      "name": "Fomapan 100 Classic",
+      "iso": 100,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "Czech fine-grain classic",
+      "isDiscontinued": false
+    },
+    {
+      "id": "4e821623-2131-5779-a2a6-6d1989fbe230",
+      "name": "Fomapan 200 Creative",
+      "iso": 200,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "Czech mid-speed emulsion",
+      "isDiscontinued": false
+    },
+    {
+      "id": "37e1a28d-f54c-5510-943e-9103984c7458",
+      "name": "Agfa APX 400",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "current Agfa B&W stock",
+      "isDiscontinued": false
+    },
+    {
+      "id": "1740864e-af90-5c4c-9600-abbaf97663b2",
+      "name": "Agfa APX 100",
+      "iso": 100,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "current Agfa fine-grain B&W",
+      "isDiscontinued": false
+    },
+    {
+      "id": "2511ccf2-ad26-56fa-9ce4-596f787f647f",
+      "name": "Rollei Retro 80S",
+      "iso": 80,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "near-IR sensitivity, dramatic skies",
+      "isDiscontinued": false
+    },
+    {
+      "id": "fe8bb79f-79c3-52f5-833c-f0cc10756aec",
+      "name": "Rollei Retro 400S",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "high-speed Rollei B&W",
+      "isDiscontinued": false
+    },
+    {
+      "id": "01a8547e-2510-5c1d-b189-c6ae4e4966b0",
+      "name": "Rollei Infrared 400",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "true IR effects with a filter",
+      "isDiscontinued": false
+    },
+    {
+      "id": "dce027f4-74b7-5b56-bbb3-ba63dfe65535",
+      "name": "Rollei RPX 400",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "versatile Rollei B&W",
+      "isDiscontinued": false
+    },
+    {
+      "id": "6b48847c-4726-5044-8a53-b4819f612a4a",
+      "name": "Rollei RPX 100",
+      "iso": 100,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "fine-grain Rollei B&W",
+      "isDiscontinued": false
+    },
+    {
+      "id": "e4958708-2740-5e08-a7ad-b9e746682b1c",
+      "name": "Rollei RPX 25",
+      "iso": 25,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "ultra-fine slow film",
+      "isDiscontinued": false
+    },
+    {
+      "id": "882dcd37-263f-50d6-ba4e-638904315017",
+      "name": "Rollei Ortho 25 Plus",
+      "iso": 25,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "orthochromatic slow-speed film",
+      "isDiscontinued": false
+    },
+    {
+      "id": "fc8b7c64-c7b8-5a4c-93f2-65c531e5ac98",
+      "name": "JCH StreetPan 400",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "Japan Camera Hunter's contrasty surveillance stock",
+      "isDiscontinued": false
+    },
+    {
+      "id": "818523e5-f0c4-5f51-b3df-886119379aa7",
+      "name": "Bergger Pancro 400",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "dual-emulsion French film",
+      "isDiscontinued": false
+    },
+    {
+      "id": "7d86aac5-bfe4-5260-87a5-0d6d6723ed8d",
+      "name": "Adox CMS 20 II",
+      "iso": 20,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "highest-resolving film on the market",
+      "isDiscontinued": false
+    },
+    {
+      "id": "dd5282eb-01a8-5734-803e-fdb01aa2ab3e",
+      "name": "Adox CHS 100 II",
+      "iso": 100,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "classic 1950s-style emulsion",
+      "isDiscontinued": false
+    },
+    {
+      "id": "43b07c38-6f9c-5305-a419-49451ec73c94",
+      "name": "Adox HR-50",
+      "iso": 50,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "fine-grain modified surveillance film",
+      "isDiscontinued": false
+    },
+    {
+      "id": "2d6c2a09-44dd-5b90-8e7d-e8a760d3349a",
+      "name": "Adox Scala 50",
+      "iso": 50,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "B&W reversal (slides)",
+      "isDiscontinued": false
+    },
+    {
+      "id": "d013fbe4-5617-5334-8f87-f9143b5d908f",
+      "name": "Ferrania P30",
+      "iso": 80,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "revived Italian cine emulsion, deep blacks",
+      "isDiscontinued": false
+    },
+    {
+      "id": "3836c6c0-ac6a-5cba-8161-d05bc85cb36a",
+      "name": "Ferrania P33",
+      "iso": 160,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "its 160-speed sibling",
+      "isDiscontinued": false
+    },
+    {
+      "id": "cb9f80d5-c50f-597d-9284-23a3a365657f",
+      "name": "ORWO UN54",
+      "iso": 100,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "German cine stock",
+      "isDiscontinued": false
+    },
+    {
+      "id": "9f7f5235-0f35-58bf-a7c7-06c5a802c3fd",
+      "name": "ORWO N75",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "newer 400-speed ORWO",
+      "isDiscontinued": false
+    },
+    {
+      "id": "95a37724-c101-5a16-b2e3-fc540c589ec6",
+      "name": "Kosmo Foto Mono 100",
+      "iso": 100,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "modern rebadged B&W stock",
+      "isDiscontinued": false
+    },
+    {
+      "id": "2c3049c1-a666-5abd-ba36-78d2070fd64e",
+      "name": "Film Washi S",
+      "iso": 100,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "sound-recording film with unique look",
+      "isDiscontinued": false
+    },
+    {
+      "id": "55bdf778-27bc-514f-99bc-b828c8f45f02",
+      "name": "Shanghai GP3 100",
+      "iso": 100,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "Chinese classic B&W",
+      "isDiscontinued": false
+    },
+    {
+      "id": "0d4b8afc-d5b1-5b0e-b2c8-b08fbfb72cdb",
+      "name": "Arista EDU Ultra 400",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "student darkroom staple",
+      "isDiscontinued": false
+    },
+    {
+      "id": "ac03b98b-3549-5cc4-b137-d32f96c73bb0",
+      "name": "Ultrafine eXtreme 400",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "budget high-speed B&W",
+      "isDiscontinued": false
+    },
+    {
+      "id": "dc971c63-e364-5ef7-ab56-13be2da66ac9",
+      "name": "Fujifilm Neopan 1600",
+      "iso": 1600,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "cult fast film",
+      "isDiscontinued": true
+    },
+    {
+      "id": "f19cf927-8b39-5db8-ab77-893d72152c01",
+      "name": "Fujifilm Neopan 400",
+      "iso": 400,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "classic Fuji B&W",
+      "isDiscontinued": true
+    },
+    {
+      "id": "8806ec2a-810e-5653-9419-d811f204a0c9",
+      "name": "Kodak Plus-X 125",
+      "iso": 125,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "mid-century classic",
+      "isDiscontinued": true
+    },
+    {
+      "id": "e8b7ef02-ed3c-544d-9a99-43f233cce266",
+      "name": "Kodak Panatomic-X 32",
+      "iso": 32,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "legendary fine grain",
+      "isDiscontinued": true
+    },
+    {
+      "id": "5b27ff19-fee2-5224-8a3c-9bbdaf357783",
+      "name": "Kodak Technical Pan",
+      "iso": 25,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "microfilm-sharp scientific emulsion",
+      "isDiscontinued": true
+    },
+    {
+      "id": "b74f8700-efb5-5ee0-8f36-adeffa9efc60",
+      "name": "Agfapan APX 25",
+      "iso": 25,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "original Agfa slow-speed masterpiece",
+      "isDiscontinued": true
+    },
+    {
+      "id": "c9f57093-2a61-5e42-af24-db255bdb92fb",
+      "name": "Efke KB25",
+      "iso": 25,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "old-school single-layer Croatian emulsion",
+      "isDiscontinued": true
+    }
+  ]
+}

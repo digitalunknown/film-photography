@@ -1,24 +1,42 @@
-//
-//  ContentView.swift
-//  Film Photography App
-//
-//  Created by Piotr Osmenda on 7/7/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(AppStore.self) private var store
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        @Bindable var store = store
+
+        TabView {
+            CamerasTabView()
+                .tabItem {
+                    Label("Cameras", systemImage: "camera")
+                }
+
+            RollsTabView()
+                .tabItem {
+                    Label("Rolls", systemImage: "film")
+                }
+
+            StocksTabView()
+                .tabItem {
+                    Label("Stocks", systemImage: "books.vertical")
+                }
         }
-        .padding()
+        .tint(AppTheme.textPrimary)
+        .preferredColorScheme(.dark)
+        .sheet(isPresented: $store.showingAddCamera) {
+            AddCameraView()
+        }
+        .sheet(isPresented: $store.showingAddRoll) {
+            AddRollView()
+        }
+        .sheet(isPresented: $store.showingLoadFlow) {
+            LoadFlowView()
+        }
     }
 }
 
 #Preview {
     ContentView()
+        .environment(AppStore())
 }
