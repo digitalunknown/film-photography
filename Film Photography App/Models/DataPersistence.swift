@@ -1,7 +1,7 @@
 import Foundation
 
 struct PersistedAppData: Codable {
-    static let currentVersion = 3
+    static let currentVersion = 4
 
     var version: Int
     var cameras: [Camera]

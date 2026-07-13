@@ -167,6 +167,18 @@ struct FrameMarker: Identifiable, Codable, Hashable {
     }
 }
 
+struct RollScan: Identifiable, Codable, Hashable {
+    let id: UUID
+    var imageData: Data
+    var createdAt: Date
+
+    init(id: UUID = UUID(), imageData: Data, createdAt: Date = Date()) {
+        self.id = id
+        self.imageData = imageData
+        self.createdAt = createdAt
+    }
+}
+
 struct Roll: Identifiable, Codable, Hashable {
     let id: UUID
     var shortId: String
@@ -192,6 +204,7 @@ struct Roll: Identifiable, Codable, Hashable {
     var tags: [String]
     var notes: String?
     var frameMarkers: [FrameMarker]
+    var scans: [RollScan]
 
     var pushPullLabel: String? {
         guard let pushPull, pushPull != 0 else { return nil }
@@ -257,7 +270,8 @@ struct Roll: Identifiable, Codable, Hashable {
         development: DevelopmentRecord? = nil,
         tags: [String] = [],
         notes: String? = nil,
-        frameMarkers: [FrameMarker]
+        frameMarkers: [FrameMarker],
+        scans: [RollScan] = []
     ) {
         self.id = id
         self.shortId = shortId
@@ -283,6 +297,7 @@ struct Roll: Identifiable, Codable, Hashable {
         self.tags = tags
         self.notes = notes
         self.frameMarkers = frameMarkers
+        self.scans = scans
     }
 
     init(from decoder: Decoder) throws {
@@ -312,6 +327,7 @@ struct Roll: Identifiable, Codable, Hashable {
         tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
         frameMarkers = try container.decode([FrameMarker].self, forKey: .frameMarkers)
+        scans = try container.decodeIfPresent([RollScan].self, forKey: .scans) ?? []
     }
 }
 

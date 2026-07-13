@@ -1,7 +1,10 @@
+import PhotosUI
 import SwiftUI
+import UIKit
 
 struct RollDetailView: View {
     @Environment(AppStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     let rollId: UUID
 
     @State private var showingImportAlert = false
@@ -13,6 +16,9 @@ struct RollDetailView: View {
     @State private var tagInput = ""
     @State private var showingAddDatedFrame = false
     @State private var datedFrameTimestamp = Date()
+    @State private var scanPickerItems: [PhotosPickerItem] = []
+    @State private var scanToDelete: RollScan?
+    @State private var selectedScan: RollScan?
 
     private var roll: Roll? {
         store.roll(for: rollId)
@@ -21,6 +27,14 @@ struct RollDetailView: View {
     private var rollTitle: String {
         guard let roll else { return "Roll" }
         return store.stock(for: roll.stockId)?.name ?? roll.shortId
+    }
+
+    private var canManageScans: Bool {
+        guard let status = roll?.status else { return false }
+        switch status {
+        case .developed, .scanned, .archived: return true
+        default: return false
+        }
     }
 
     var body: some View {
@@ -32,6 +46,9 @@ struct RollDetailView: View {
                         pipelineSection(roll)
                         metadataSection(roll)
                         frameLogSection(roll)
+                        if canManageScans || !roll.scans.isEmpty {
+                            scansSection(roll)
+                        }
                         if roll.status == .atLab || roll.status == .developed || roll.development != nil {
                             developmentSection(roll)
                         }
@@ -65,6 +82,9 @@ struct RollDetailView: View {
         .sheet(isPresented: $showingAddDatedFrame) {
             addDatedFrameSheet
         }
+        .sheet(item: $selectedScan) { scan in
+            scanDetailSheet(scan)
+        }
         .alert("Import scans", isPresented: $showingImportAlert) {
             Button("Import") {
                 store.advanceRollStatus(rollId)
@@ -76,11 +96,34 @@ struct RollDetailView: View {
         .alert(deleteAlertTitle, isPresented: $showingDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 store.requestDeleteRoll(rollId)
+                dismiss()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(deleteAlertMessage)
         }
+        .alert("Delete scan?", isPresented: scanDeleteBinding) {
+            Button("Delete", role: .destructive) {
+                if let scanToDelete {
+                    store.removeScan(scanToDelete.id, from: rollId)
+                }
+                scanToDelete = nil
+            }
+            Button("Cancel", role: .cancel) { scanToDelete = nil }
+        } message: {
+            Text("Remove this scan from the roll.")
+        }
+        .onChange(of: scanPickerItems) { _, items in
+            guard !items.isEmpty else { return }
+            Task { await loadSelectedScans(items) }
+        }
+    }
+
+    private var scanDeleteBinding: Binding<Bool> {
+        Binding(
+            get: { scanToDelete != nil && selectedScan == nil },
+            set: { if !$0 { scanToDelete = nil } }
+        )
     }
 
     private var deleteAlertTitle: String {
@@ -247,6 +290,51 @@ struct RollDetailView: View {
         }
     }
 
+    private func scansSection(_ roll: Roll) -> some View {
+        DetailSection(title: "Scans") {
+            VStack(alignment: .leading, spacing: 14) {
+                if roll.scans.isEmpty {
+                    Text("Add digitized frames from this roll.")
+                        .font(InstrumentFont.mono(12))
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("\(roll.scans.count) scan\(roll.scans.count == 1 ? "" : "s") · long press to delete")
+                        .font(InstrumentFont.mono(12))
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible(), spacing: 10),
+                            GridItem(.flexible(), spacing: 10),
+                            GridItem(.flexible(), spacing: 10),
+                        ],
+                        spacing: 10
+                    ) {
+                        ForEach(roll.scans) { scan in
+                            ScanGridCell(
+                                scan: scan,
+                                onTap: { selectedScan = scan },
+                                onDelete: { scanToDelete = scan }
+                            )
+                        }
+                    }
+                }
+
+                PhotosPicker(
+                    selection: $scanPickerItems,
+                    maxSelectionCount: 36,
+                    matching: .images
+                ) {
+                    Text("Add scans →")
+                        .font(InstrumentFont.mono(13))
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .underline(color: AppTheme.textPrimary)
+                }
+            }
+        }
+    }
+
     private var addDatedFrameSheet: some View {
         NavigationStack {
             Form {
@@ -277,6 +365,54 @@ struct RollDetailView: View {
             }
         }
         .presentationDetents([.medium])
+    }
+
+    private func scanDetailSheet(_ scan: RollScan) -> some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                if let image = UIImage(data: scan.imageData) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity)
+                } else {
+                    Text("Scan unavailable")
+                        .font(InstrumentFont.mono(13))
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+
+                Spacer(minLength: 0)
+
+                TextAction(label: "Delete scan →") {
+                    scanToDelete = scan
+                }
+                .padding(.horizontal, AppTheme.horizontalPadding)
+                .padding(.bottom, 24)
+            }
+            .instrumentScreen()
+            .navigationTitle("Scan")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { selectedScan = nil }
+                        .font(InstrumentFont.mono(13))
+                }
+            }
+            .alert("Delete scan?", isPresented: Binding(
+                get: { scanToDelete?.id == scan.id },
+                set: { if !$0 { scanToDelete = nil } }
+            )) {
+                Button("Delete", role: .destructive) {
+                    store.removeScan(scan.id, from: rollId)
+                    scanToDelete = nil
+                    selectedScan = nil
+                }
+                Button("Cancel", role: .cancel) { scanToDelete = nil }
+            } message: {
+                Text("Remove this scan from the roll.")
+            }
+        }
+        .presentationDetents([.large])
     }
 
     private func developmentSection(_ roll: Roll) -> some View {
@@ -641,6 +777,60 @@ struct RollDetailView: View {
     private func availableCameras(for roll: Roll) -> [Camera] {
         store.cameras.filter {
             store.loadedRoll(for: $0.id) == nil || $0.id == loadCameraId
+        }
+    }
+
+    private func loadSelectedScans(_ items: [PhotosPickerItem]) async {
+        var images: [Data] = []
+        for item in items {
+            if let data = try? await item.loadTransferable(type: Data.self) {
+                if let image = UIImage(data: data),
+                   let jpeg = image.jpegData(compressionQuality: 0.82) {
+                    images.append(jpeg)
+                } else {
+                    images.append(data)
+                }
+            }
+        }
+        await MainActor.run {
+            store.addScans(images, to: rollId)
+            scanPickerItems = []
+        }
+    }
+}
+
+private struct ScanGridCell: View {
+    let scan: RollScan
+    let onTap: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        Group {
+            if let image = UIImage(data: scan.imageData) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Rectangle()
+                    .fill(AppTheme.rule.opacity(0.35))
+                    .overlay {
+                        Text("◻")
+                            .font(InstrumentFont.mono(14))
+                            .foregroundStyle(AppTheme.textTertiary)
+                    }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .aspectRatio(1, contentMode: .fit)
+        .clipped()
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onTap)
+        .onLongPressGesture(minimumDuration: 0.4, perform: onDelete)
+        .contextMenu {
+            Button("Open") { onTap() }
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
         }
     }
 }

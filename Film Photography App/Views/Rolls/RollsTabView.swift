@@ -2,7 +2,6 @@ import SwiftUI
 
 struct RollsTabView: View {
     @Environment(AppStore.self) private var store
-    @State private var selectedRoll: Roll?
     @State private var rollToDelete: Roll?
     @State private var showingArchive = false
 
@@ -54,9 +53,6 @@ struct RollsTabView: View {
             .instrumentScreen()
             .instrumentTabNavigation(title: "Rolls") {
                 store.showingAddRoll = true
-            }
-            .navigationDestination(item: $selectedRoll) { roll in
-                RollDetailView(rollId: roll.id)
             }
             .navigationDestination(for: Roll.self) { roll in
                 RollDetailView(rollId: roll.id)
@@ -144,18 +140,21 @@ struct RollsTabView: View {
                 .padding(.bottom, 16)
 
             ForEach(Array(rolls.enumerated()), id: \.element.id) { index, roll in
-                RollLedgerRow(roll: roll)
-                    .contentShape(Rectangle())
-                    .onTapGesture { selectedRoll = roll }
-                    .contextMenu {
-                        Button(role: .destructive) {
-                            rollToDelete = roll
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
+                NavigationLink(value: roll) {
+                    RollLedgerRow(roll: roll)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .contextMenu {
+                    Button(role: .destructive) {
+                        rollToDelete = roll
+                    } label: {
+                        Label("Delete", systemImage: "trash")
                     }
-                    .padding(.horizontal, AppTheme.horizontalPadding)
-                    .padding(.vertical, AppTheme.rowSpacing)
+                }
+                .padding(.horizontal, AppTheme.horizontalPadding)
+                .padding(.vertical, AppTheme.rowSpacing)
 
                 if index < rolls.count - 1 {
                     HairlineRule()
