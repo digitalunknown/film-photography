@@ -328,7 +328,8 @@ final class AppStore {
             developedDate: normalizedStatus == .developed ? now : nil,
             scannedDate: normalizedStatus == .scanned ? now : nil,
             tags: tags,
-            frameMarkers: []
+            frameMarkers: [],
+            scans: []
         )
 
         if normalizedStatus == .shotUndeveloped && roll.storageLocation == nil {
@@ -442,7 +443,8 @@ final class AppStore {
             labName: nil,
             developedDate: nil,
             scannedDate: nil,
-            frameMarkers: []
+            frameMarkers: [],
+            scans: []
         )
         rolls.append(newRoll)
         persist()
@@ -562,6 +564,24 @@ final class AppStore {
             roll.frameMarkers.removeLast()
         }
         rolls[index] = roll
+        persist()
+    }
+
+    func addScans(_ images: [Data], to rollId: UUID) {
+        guard let index = rolls.firstIndex(where: { $0.id == rollId }), !images.isEmpty else { return }
+        let now = Date()
+        let newScans = images.map { RollScan(imageData: $0, createdAt: now) }
+        rolls[index].scans.append(contentsOf: newScans)
+        if rolls[index].status == .developed {
+            applyAdvance(to: &rolls[index], next: .scanned, cameraId: nil)
+            rolls[index].status = .scanned
+        }
+        persist()
+    }
+
+    func removeScan(_ scanId: UUID, from rollId: UUID) {
+        guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
+        rolls[index].scans.removeAll { $0.id == scanId }
         persist()
     }
 
