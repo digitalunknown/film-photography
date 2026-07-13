@@ -282,12 +282,15 @@ struct RollDetailView: View {
     private func developmentSection(_ roll: Roll) -> some View {
         DetailSection(title: "Development") {
             VStack(alignment: .leading, spacing: 12) {
-                Picker("Path", selection: developmentPathBinding(for: roll)) {
-                    ForEach(DevelopmentPath.allCases, id: \.self) { path in
-                        Text(path.displayName).tag(path)
+                EditableField(label: "Path") {
+                    Picker("Path", selection: developmentPathBinding(for: roll)) {
+                        ForEach(DevelopmentPath.allCases, id: \.self) { path in
+                            Text(path.displayName).tag(path)
+                        }
                     }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
                 }
-                .font(InstrumentFont.mono(12))
 
                 if store.roll(for: rollId)?.development?.path == .lab {
                     TextField("Lab name", text: labNameBinding(for: roll))

@@ -492,6 +492,23 @@ struct EditableDateRow: View {
     }
 }
 
+struct EditableField<Content: View>: View {
+    let label: String
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(InstrumentFont.mono(11))
+                .foregroundStyle(AppTheme.textSecondary)
+            content()
+                .font(InstrumentFont.mono(13))
+                .foregroundStyle(AppTheme.textPrimary)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
 struct InstrumentFormBackground: ViewModifier {
     func body(content: Content) -> some View {
         content
