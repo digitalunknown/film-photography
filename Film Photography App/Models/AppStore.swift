@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct LoadRecognitionResult {
     var cameraId: UUID?
@@ -36,6 +37,7 @@ final class AppStore {
     var cameras: [Camera]
     var rolls: [Roll]
     var stocks: [FilmStock]
+    var customStocks: [FilmStock]
     var fridgeItems: [FridgeItem]
     var devRecipePresets: [DevRecipePreset]
     var pendingDeletion: PendingRollDeletion?
@@ -43,17 +45,25 @@ final class AppStore {
     var showingAddRoll = false
     var showingLoadFlow = false
     var showingArchive = false
+    /// Opens Load Flow past the source chooser (camera already taken or about to open).
+    var loadFlowStartWithCamera = false
+    var pendingLoadCapture: UIImage?
 
     private var deletionTask: Task<Void, Never>?
 
     init() {
-        stocks = StockCatalog.loadStocks()
+        let catalog = StockCatalog.loadStocks()
 
         if let saved = DataPersistence.load() {
             cameras = saved.cameras
             rolls = saved.rolls.map(Roll.migrate)
             fridgeItems = saved.fridgeItems
             devRecipePresets = saved.devRecipePresets
+            let loadedCustom = saved.customStocks
+            customStocks = loadedCustom
+            stocks = catalog + loadedCustom
+            pendingDeletion = nil
+            deletionTask = nil
             if saved.version < PersistedAppData.currentVersion {
                 persist()
             }
@@ -62,6 +72,10 @@ final class AppStore {
             rolls = []
             fridgeItems = []
             devRecipePresets = []
+            customStocks = []
+            stocks = catalog
+            pendingDeletion = nil
+            deletionTask = nil
             persist()
         }
     }
@@ -71,8 +85,19 @@ final class AppStore {
             cameras: cameras,
             rolls: rolls.map { var r = $0; r.status = $0.status.normalized; return r },
             fridgeItems: fridgeItems,
-            devRecipePresets: devRecipePresets
+            devRecipePresets: devRecipePresets,
+            customStocks: customStocks
         )
+    }
+
+    /// Creates a user-entered stock and keeps it across launches.
+    @discardableResult
+    func addCustomStock(name: String, iso: Int) -> FilmStock {
+        let stock = FilmStock.custom(name: name, iso: iso)
+        customStocks.append(stock)
+        stocks.append(stock)
+        persist()
+        return stock
     }
 
     // MARK: - Lookups
@@ -110,12 +135,18 @@ final class AppStore {
         fridgeItems.filter { $0.stockId == stockId }.reduce(0) { $0 + $1.quantity }
     }
 
-    func fridgeItems(for stockId: UUID) -> [FridgeItem] {
-        fridgeItems.filter { $0.stockId == stockId && $0.quantity > 0 }
+    var availableFridgeItems: [FridgeItem] {
+        fridgeItems
+            .filter { $0.quantity > 0 }
+            .sorted {
+                let left = stock(for: $0.stockId)?.name ?? ""
+                let right = stock(for: $1.stockId)?.name ?? ""
+                return left.localizedCaseInsensitiveCompare(right) == .orderedAscending
+            }
     }
 
-    func availableFridgeItems() -> [FridgeItem] {
-        fridgeItems.filter { $0.quantity > 0 }
+    func fridgeItems(for stockId: UUID) -> [FridgeItem] {
+        fridgeItems.filter { $0.stockId == stockId && $0.quantity > 0 }
     }
 
     func rollsForCamera(_ cameraId: UUID) -> [Roll] {
@@ -124,6 +155,13 @@ final class AppStore {
 
     var activeRolls: [Roll] {
         rolls.filter { $0.status != .archived }
+    }
+
+    /// Rolls sitting in inventory and ready to load into a camera.
+    var inventoryRolls: [Roll] {
+        activeRolls
+            .filter { $0.status.isInventory || $0.status.normalized == .inFridge }
+            .sorted { $0.shortId > $1.shortId }
     }
 
     var archivedRolls: [Roll] {
@@ -155,7 +193,7 @@ final class AppStore {
     var pipelineSummary: String {
         guard !activeRolls.isEmpty else { return "no rolls yet" }
         let segments: [(String, Int)] = [
-            ("in fridge", activeRolls.filter { $0.status.isInventory }.count),
+            ("in stock", activeRolls.filter { $0.status.isInventory }.count),
             ("in camera", activeRolls.filter { $0.status == .inCamera }.count),
             ("waiting", activeRolls.filter { $0.status == .shotUndeveloped }.count),
             ("at lab", activeRolls.filter { $0.status == .atLab }.count),
@@ -177,13 +215,13 @@ final class AppStore {
         let shot = shotRollCount(for: stockId)
         var parts: [String] = []
         if fridge > 0 {
-            parts.append("\(fridge) in fridge")
+            parts.append("\(fridge) in stock")
         }
         if shot > 0 {
             parts.append("\(shot) shot")
         }
         if parts.isEmpty {
-            return "0 in fridge"
+            return "0 in stock"
         }
         return parts.joined(separator: " · ")
     }
@@ -298,6 +336,7 @@ final class AppStore {
         format: FilmFormat = .format35Full,
         exposures: Int,
         pushPull: Int = 0,
+        shootingISO: Int? = nil,
         frameCount: Int = 0,
         storageLocation: String? = nil,
         labName: String? = nil,
@@ -316,6 +355,7 @@ final class AppStore {
             status: normalizedStatus,
             format: format,
             pushPull: pushPull == 0 ? nil : pushPull,
+            shootingISO: shootingISO,
             frameCount: frameCount,
             pinCount: 0,
             totalExposures: exposures,
@@ -380,6 +420,42 @@ final class AppStore {
         var updated = roll
         updated.status = roll.status.normalized
         rolls[index] = updated
+        persist()
+    }
+
+    /// Assign or clear the camera for a roll. Loading a camera marks the roll as in-camera
+    /// so it appears on the Cameras tab.
+    func assignRoll(_ rollId: UUID, to cameraId: UUID?) {
+        guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
+
+        if let cameraId {
+            for i in rolls.indices where rolls[i].cameraId == cameraId
+                && rolls[i].status == .inCamera
+                && rolls[i].id != rollId {
+                rolls[i].status = .inFridge
+                rolls[i].cameraId = nil
+            }
+
+            var roll = rolls[index]
+            roll.cameraId = cameraId
+
+            if roll.status.isInventory || roll.status == .inCamera {
+                roll.status = .inCamera
+                if roll.loadedDate == nil {
+                    roll.loadedDate = Date()
+                }
+            }
+
+            rolls[index] = roll
+        } else {
+            var roll = rolls[index]
+            if roll.status == .inCamera {
+                roll.status = .inFridge
+            }
+            roll.cameraId = nil
+            rolls[index] = roll
+        }
+
         persist()
     }
 
@@ -528,11 +604,23 @@ final class AppStore {
         return true
     }
 
-    func addFrameMarker(to rollId: UUID, at timestamp: Date = Date(), duplicateLast: Bool = false) {
+    func dropPin(on rollId: UUID, at timestamp: Date = Date(), duplicateLast: Bool = false) {
         guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
         var roll = rolls[index]
 
+        let frameIndex: Int
+        if roll.frameCount == 0 {
+            frameIndex = 1
+            roll.frameCount = 1
+        } else if roll.frameMarkers.contains(where: { $0.frameIndex == roll.frameCount }) {
+            frameIndex = roll.frameCount + 1
+            roll.frameCount = frameIndex
+        } else {
+            frameIndex = roll.frameCount
+        }
+
         var marker = FrameMarker(
+            frameIndex: frameIndex,
             timestamp: timestamp,
             latitude: 40.7580 + Double.random(in: -0.01...0.01),
             longitude: -73.9855 + Double.random(in: -0.01...0.01)
@@ -541,14 +629,74 @@ final class AppStore {
         if duplicateLast, let last = roll.frameMarkers.last {
             marker.aperture = last.aperture
             marker.shutterSpeed = last.shutterSpeed
+            marker.location = last.location
             marker.notes = last.notes
             marker.tags = last.tags
         }
 
-        roll.frameCount += 1
-        roll.pinCount += 1
+        roll.frameMarkers.removeAll { $0.frameIndex == frameIndex }
         roll.frameMarkers.append(marker)
+        roll.frameMarkers = Roll.normalizeFrameMarkerIndices(roll.frameMarkers)
+        roll.pinCount = roll.frameMarkers.count
         rolls[index] = roll
+        persist()
+    }
+
+    func addFrameMarker(to rollId: UUID, at timestamp: Date = Date(), duplicateLast: Bool = false) {
+        dropPin(on: rollId, at: timestamp, duplicateLast: duplicateLast)
+    }
+
+    func advanceExposure(on rollId: UUID) {
+        guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
+        let cap = max(rolls[index].totalExposures, 1)
+        guard rolls[index].frameCount < cap else { return }
+        rolls[index].frameCount += 1
+        persist()
+    }
+
+    func shiftScanAlignment(for rollId: UUID, by delta: Int) {
+        guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
+        rolls[index].scanAlignmentOffset += delta
+        persist()
+    }
+
+    func importScans(to rollId: UUID, fileNames: [String]) {
+        guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
+        rolls[index].scanFileNames = fileNames
+        if rolls[index].status == .developed {
+            rolls[index].status = .scanned
+            if rolls[index].scannedDate == nil {
+                rolls[index].scannedDate = Date()
+            }
+        }
+        persist()
+    }
+
+    func appendScans(to rollId: UUID, fileNames: [String]) {
+        guard let index = rolls.firstIndex(where: { $0.id == rollId }), !fileNames.isEmpty else { return }
+        rolls[index].scanFileNames.append(contentsOf: fileNames)
+        if rolls[index].status == .developed {
+            rolls[index].status = .scanned
+            if rolls[index].scannedDate == nil {
+                rolls[index].scannedDate = Date()
+            }
+        }
+        persist()
+    }
+
+    func addScanFile(to rollId: UUID, fileName: String) {
+        appendScans(to: rollId, fileNames: [fileName])
+    }
+
+    func removeScan(from rollId: UUID, fileName: String) {
+        guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
+        rolls[index].scanFileNames.removeAll { $0 == fileName }
+        ScanStorage.deleteScan(rollId: rollId, fileName: fileName)
+        if rolls[index].scanFileNames.isEmpty,
+           rolls[index].status == .scanned {
+            rolls[index].status = .developed
+            rolls[index].scannedDate = nil
+        }
         persist()
     }
 
@@ -556,11 +704,12 @@ final class AppStore {
         guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
         var roll = rolls[index]
         guard roll.frameCount > 0 else { return }
-        roll.frameCount -= 1
-        if roll.pinCount > 0 { roll.pinCount -= 1 }
-        if !roll.frameMarkers.isEmpty {
-            roll.frameMarkers.removeLast()
+
+        if let markerIndex = roll.frameMarkers.firstIndex(where: { $0.frameIndex == roll.frameCount }) {
+            roll.frameMarkers.remove(at: markerIndex)
+            roll.pinCount = roll.frameMarkers.count
         }
+        roll.frameCount -= 1
         rolls[index] = roll
         persist()
     }
@@ -568,7 +717,8 @@ final class AppStore {
     func setFrameCount(_ count: Int, for rollId: UUID) {
         guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
         var roll = rolls[index]
-        let clamped = max(count, 0)
+        let cap = max(roll.totalExposures, 1)
+        let clamped = min(max(count, 0), cap)
         roll.frameCount = clamped
         if roll.frameMarkers.count > clamped {
             roll.frameMarkers = Array(roll.frameMarkers.prefix(clamped))
@@ -582,6 +732,18 @@ final class AppStore {
         guard let rollIndex = rolls.firstIndex(where: { $0.id == rollId }),
               let markerIndex = rolls[rollIndex].frameMarkers.firstIndex(where: { $0.id == marker.id }) else { return }
         rolls[rollIndex].frameMarkers[markerIndex] = marker
+        persist()
+    }
+
+    func upsertFrameMarker(_ rollId: UUID, marker: FrameMarker) {
+        guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
+        var roll = rolls[index]
+        roll.frameMarkers.removeAll { $0.frameIndex == marker.frameIndex }
+        roll.frameMarkers.append(marker)
+        roll.frameMarkers = Roll.normalizeFrameMarkerIndices(roll.frameMarkers)
+        roll.frameCount = max(roll.frameCount, roll.frameMarkers.map(\.frameIndex).max() ?? 0)
+        roll.pinCount = roll.frameMarkers.count
+        rolls[index] = roll
         persist()
     }
 
@@ -703,7 +865,9 @@ final class AppStore {
 
     func mockRecognize() -> LoadRecognitionResult {
         let matchedCamera = cameras.first
-        let matchedStock = stocks.first(where: { $0.name.contains("Portra 400") }) ?? stocks.first
+        let matchedStock = stocks.first(where: {
+            $0.name.contains("Portra 400") || $0.name.contains("Ektacolor Pro 400")
+        }) ?? stocks.first
         return LoadRecognitionResult(
             cameraId: matchedCamera?.id,
             cameraConfidence: matchedCamera != nil ? .matched : .low,

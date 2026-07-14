@@ -7,19 +7,19 @@ struct ContentView: View {
         @Bindable var store = store
 
         TabView {
-            CamerasTabView()
-                .tabItem {
-                    Label("Cameras", systemImage: "camera")
-                }
-
             RollsTabView()
                 .tabItem {
-                    Label("Rolls", systemImage: "film")
+                    Label("My Film", systemImage: "film")
+                }
+
+            CamerasTabView()
+                .tabItem {
+                    Label("My Cameras", systemImage: "camera")
                 }
 
             StocksTabView()
                 .tabItem {
-                    Label("Stocks", systemImage: "books.vertical")
+                    Label("Library", systemImage: "books.vertical")
                 }
         }
         .tint(AppTheme.textPrimary)
@@ -31,7 +31,8 @@ struct ContentView: View {
             AddRollView()
         }
         .sheet(isPresented: $store.showingLoadFlow) {
-            LoadFlowView()
+            LoadFlowView(startWithCamera: store.loadFlowStartWithCamera)
+                .instrumentSheetChrome()
         }
     }
 }

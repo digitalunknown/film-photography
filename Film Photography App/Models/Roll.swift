@@ -14,13 +14,14 @@ enum RollStatus: String, CaseIterable, Codable, Comparable {
         [.inFridge, .inCamera, .shotUndeveloped, .atLab, .developed, .scanned]
     }
 
+    /// Section order on the Rolls tab — active shooting first, inventory last among early stages.
     static var activePipelineCases: [RollStatus] {
-        pipelineCases
+        [.inCamera, .shotUndeveloped, .inFridge, .atLab, .developed, .scanned]
     }
 
     var displayName: String {
         switch self {
-        case .acquired, .inFridge: "In fridge"
+        case .acquired, .inFridge: "In stock"
         case .inCamera: "In camera"
         case .shotUndeveloped: "Shot, undeveloped"
         case .atLab: "At lab"
@@ -30,17 +31,7 @@ enum RollStatus: String, CaseIterable, Codable, Comparable {
         }
     }
 
-    var sectionTitle: String {
-        switch self {
-        case .acquired, .inFridge: "In fridge"
-        case .inCamera: "In camera"
-        case .shotUndeveloped: "Waiting to develop"
-        case .atLab: "At lab"
-        case .developed: "Developed"
-        case .scanned: "Ready to import"
-        case .archived: "Archived"
-        }
-    }
+    var sectionTitle: String { displayName }
 
     var sortOrder: Int {
         switch self {
@@ -106,17 +97,56 @@ enum RollStatus: String, CaseIterable, Codable, Comparable {
         }
     }
 
+    /// True once the roll has been developed (scans can be attached).
+    var canImportScans: Bool {
+        switch self {
+        case .developed, .scanned, .archived: true
+        default: false
+        }
+    }
+
     /// Label for the action that advances from this status to the next.
     var pipelineActionLabel: String? {
         switch self {
         case .acquired, .inFridge: "Load in camera"
-        case .inCamera: "Mark finished"
-        case .shotUndeveloped: "Drop at lab"
+        case .inCamera: "Unload roll"
+        case .shotUndeveloped: "Send to lab"
         case .atLab: "Mark developed"
-        case .developed: "Scans received"
-        case .scanned: "Import scans"
+        case .developed: "Receive scans"
+        case .scanned: "Archive roll"
         case .archived: nil
         }
+    }
+
+    /// Short slide prompt for the advance gate.
+    var pipelineSlidePrompt: String? {
+        switch self {
+        case .acquired, .inFridge: nil // uses FilmLoadSlider instead
+        case .inCamera: "slide to unload"
+        case .shotUndeveloped: "slide to lab"
+        case .atLab: "slide to developed"
+        case .developed: "slide for scans"
+        case .scanned: "slide to archive"
+        case .archived: nil
+        }
+    }
+
+    /// Compact label for stage strip nodes.
+    var pipelineNodeLabel: String {
+        switch self {
+        case .acquired, .inFridge: "Stock"
+        case .inCamera: "Camera"
+        case .shotUndeveloped: "Shot"
+        case .atLab: "Lab"
+        case .developed: "Dev"
+        case .scanned: "Scan"
+        case .archived: "Arch"
+        }
+    }
+
+    /// Stages shown on the pipeline rail (inventory → archive).
+    static var railCases: [RollStatus] {
+        [.inFridge, .inCamera, .shotUndeveloped, .atLab, .developed, .scanned, .archived]
     }
 
     var normalized: RollStatus {
@@ -126,30 +156,36 @@ enum RollStatus: String, CaseIterable, Codable, Comparable {
 
 struct FrameMarker: Identifiable, Codable, Hashable {
     let id: UUID
+    var frameIndex: Int
     var timestamp: Date
     var latitude: Double
     var longitude: Double
     var aperture: Double?
     var shutterSpeed: Double?
+    var location: String?
     var notes: String?
     var tags: [String]
 
     init(
         id: UUID = UUID(),
+        frameIndex: Int = 1,
         timestamp: Date = Date(),
         latitude: Double = 0,
         longitude: Double = 0,
         aperture: Double? = nil,
         shutterSpeed: Double? = nil,
+        location: String? = nil,
         notes: String? = nil,
         tags: [String] = []
     ) {
         self.id = id
+        self.frameIndex = frameIndex
         self.timestamp = timestamp
         self.latitude = latitude
         self.longitude = longitude
         self.aperture = aperture
         self.shutterSpeed = shutterSpeed
+        self.location = location
         self.notes = notes
         self.tags = tags
     }
@@ -157,11 +193,13 @@ struct FrameMarker: Identifiable, Codable, Hashable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
+        frameIndex = try container.decodeIfPresent(Int.self, forKey: .frameIndex) ?? 1
         timestamp = try container.decode(Date.self, forKey: .timestamp)
         latitude = try container.decodeIfPresent(Double.self, forKey: .latitude) ?? 0
         longitude = try container.decodeIfPresent(Double.self, forKey: .longitude) ?? 0
         aperture = try container.decodeIfPresent(Double.self, forKey: .aperture)
         shutterSpeed = try container.decodeIfPresent(Double.self, forKey: .shutterSpeed)
+        location = try container.decodeIfPresent(String.self, forKey: .location)
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
         tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
     }
@@ -192,24 +230,33 @@ struct Roll: Identifiable, Codable, Hashable {
     var tags: [String]
     var notes: String?
     var frameMarkers: [FrameMarker]
+    var scanFileNames: [String]
+    var scanAlignmentOffset: Int
 
     var pushPullLabel: String? {
         guard let pushPull, pushPull != 0 else { return nil }
-        let sign = pushPull > 0 ? "+" : ""
-        return "Pushed \(sign)\(pushPull)"
+        if pushPull > 0 {
+            return "Push +\(pushPull)"
+        }
+        return "Pull \(pushPull)"
+    }
+
+    var pushPullDisplayValue: String {
+        pushPullLabel ?? "Box speed"
     }
 
     var isExpired: Bool {
         guard let expiryDate else { return false }
-        return Calendar.current.startOfDay(for: expiryDate) < Calendar.current.startOfDay(for: Date())
+        return ExpirationDate.isExpired(expiryDate)
     }
 
     var isNearExpiry: Bool {
         guard let expiryDate, !isExpired else { return false }
+        let end = ExpirationDate.endOfMonth(containing: expiryDate)
         guard let threshold = Calendar.current.date(byAdding: .day, value: FridgeItem.nearExpiryDays, to: Date()) else {
             return false
         }
-        return expiryDate <= threshold
+        return end <= threshold
     }
 
     /// Best date to show when this roll was used or entered the pipeline.
@@ -257,7 +304,9 @@ struct Roll: Identifiable, Codable, Hashable {
         development: DevelopmentRecord? = nil,
         tags: [String] = [],
         notes: String? = nil,
-        frameMarkers: [FrameMarker]
+        frameMarkers: [FrameMarker],
+        scanFileNames: [String] = [],
+        scanAlignmentOffset: Int = 0
     ) {
         self.id = id
         self.shortId = shortId
@@ -283,6 +332,8 @@ struct Roll: Identifiable, Codable, Hashable {
         self.tags = tags
         self.notes = notes
         self.frameMarkers = frameMarkers
+        self.scanFileNames = scanFileNames
+        self.scanAlignmentOffset = scanAlignmentOffset
     }
 
     init(from decoder: Decoder) throws {
@@ -312,6 +363,8 @@ struct Roll: Identifiable, Codable, Hashable {
         tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
         frameMarkers = try container.decode([FrameMarker].self, forKey: .frameMarkers)
+        scanFileNames = try container.decodeIfPresent([String].self, forKey: .scanFileNames) ?? []
+        scanAlignmentOffset = try container.decodeIfPresent(Int.self, forKey: .scanAlignmentOffset) ?? 0
     }
 }
 
@@ -319,6 +372,24 @@ extension Roll {
     static func migrate(_ roll: Roll) -> Roll {
         var updated = roll
         updated.status = roll.status.normalized
+        updated.frameMarkers = normalizeFrameMarkerIndices(updated.frameMarkers)
         return updated
+    }
+
+    /// Ensures each pin maps to a unique frame index. Heals legacy data where every marker decoded as frame 1.
+    static func normalizeFrameMarkerIndices(_ markers: [FrameMarker]) -> [FrameMarker] {
+        guard !markers.isEmpty else { return markers }
+
+        let indices = markers.map(\.frameIndex)
+        let hasDuplicates = Set(indices).count != indices.count
+        let allDefaultedToOne = indices.allSatisfy { $0 == 1 } && markers.count > 1
+
+        guard hasDuplicates || allDefaultedToOne else { return markers }
+
+        var normalized = markers.sorted { $0.timestamp < $1.timestamp }
+        for i in normalized.indices {
+            normalized[i].frameIndex = i + 1
+        }
+        return normalized
     }
 }

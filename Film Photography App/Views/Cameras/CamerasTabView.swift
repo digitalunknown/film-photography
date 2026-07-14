@@ -9,15 +9,6 @@ struct CamerasTabView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(store.camerasSummary)
-                        .font(InstrumentFont.mono(12))
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .padding(.horizontal, AppTheme.horizontalPadding)
-                        .padding(.bottom, 20)
-
-                    HairlineRule()
-                        .padding(.horizontal, AppTheme.horizontalPadding)
-
                     if store.cameras.isEmpty {
                         InstrumentEmptyState(
                             message: "No cameras in your collection. Add a body to start tracking what's loaded.",
@@ -25,34 +16,27 @@ struct CamerasTabView: View {
                             primaryHandler: { store.showingAddCamera = true }
                         )
                         .padding(.horizontal, AppTheme.horizontalPadding)
+                        .padding(.top, AppTheme.Spacing.sm)
                     } else {
-                        LazyVStack(spacing: 0) {
-                            ForEach(Array(sortedCameras.enumerated()), id: \.element.id) { index, camera in
-                                CameraLedgerRow(camera: camera)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture { selectedCamera = camera }
-                                    .contextMenu {
-                                        Button(role: .destructive) {
-                                            cameraToDelete = camera
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                    }
+                        ForEach(Array(visibleSections.enumerated()), id: \.element.title) { index, section in
+                            if index > 0 {
+                                SectionRule()
                                     .padding(.horizontal, AppTheme.horizontalPadding)
-                                    .padding(.vertical, AppTheme.rowSpacing)
-
-                                if index < sortedCameras.count - 1 {
-                                    HairlineRule()
-                                        .padding(.horizontal, AppTheme.horizontalPadding)
-                                }
+                                    .padding(.vertical, AppTheme.Spacing.md)
                             }
+
+                            cameraSection(
+                                title: section.title,
+                                cameras: section.cameras,
+                                isFirst: index == 0
+                            )
                         }
                     }
                 }
-                .padding(.bottom, 32)
+                .padding(.bottom, AppTheme.Spacing.xl)
             }
             .instrumentScreen()
-            .instrumentTabNavigation(title: "Cameras") {
+            .instrumentTabNavigation(title: "My Cameras") {
                 store.showingAddCamera = true
             }
             .navigationDestination(item: $selectedCamera) { camera in
@@ -85,12 +69,49 @@ struct CamerasTabView: View {
         )
     }
 
+    private var visibleSections: [(title: String, cameras: [Camera])] {
+        let loaded = sortedCameras.filter { store.loadedRoll(for: $0.id) != nil }
+        let empty = sortedCameras.filter { store.loadedRoll(for: $0.id) == nil }
+        var sections: [(String, [Camera])] = []
+        if !loaded.isEmpty {
+            sections.append(("Loaded (\(loaded.count))", loaded))
+        }
+        if !empty.isEmpty {
+            sections.append(("Empty (\(empty.count))", empty))
+        }
+        return sections
+    }
+
     private var sortedCameras: [Camera] {
-        store.cameras.sorted { lhs, rhs in
-            let lhsLoaded = store.loadedRoll(for: lhs.id) != nil
-            let rhsLoaded = store.loadedRoll(for: rhs.id) != nil
-            if lhsLoaded != rhsLoaded { return lhsLoaded }
-            return lhs.name < rhs.name
+        store.cameras.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private func cameraSection(title: String, cameras: [Camera], isFirst: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionLabel(title: title)
+                .padding(.horizontal, AppTheme.horizontalPadding)
+                .padding(.top, isFirst ? AppTheme.Spacing.sm : 0)
+                .padding(.bottom, AppTheme.Spacing.sm)
+
+            ForEach(Array(cameras.enumerated()), id: \.element.id) { index, camera in
+                CameraLedgerRow(camera: camera)
+                    .contentShape(Rectangle())
+                    .onTapGesture { selectedCamera = camera }
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            cameraToDelete = camera
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                    .padding(.horizontal, AppTheme.horizontalPadding)
+                    .padding(.vertical, AppTheme.Spacing.sm)
+
+                if index < cameras.count - 1 {
+                    HairlineRule()
+                        .padding(.horizontal, AppTheme.horizontalPadding)
+                }
+            }
         }
     }
 }
@@ -99,15 +120,13 @@ private struct CameraLedgerRow: View {
     @Environment(AppStore.self) private var store
     let camera: Camera
 
-    private let photoSize: CGFloat = 54
-
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            CameraPhotoPlate(photoData: camera.photoData, size: photoSize)
+        HStack(alignment: .center, spacing: AppTheme.Spacing.md) {
+            CameraPhotoPlate(photoData: camera.photoData, size: 64)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                 Text(camera.name)
-                    .font(InstrumentFont.mono(12))
+                    .font(InstrumentFont.mono(13))
                     .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(2)
                 if let subtitle = camera.listSubtitle {
@@ -116,23 +135,22 @@ private struct CameraLedgerRow: View {
                         .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(1)
                 }
+                if let stockName = loadedStock?.name {
+                    Text(stockName)
+                        .font(InstrumentFont.mono(11))
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .lineLimit(1)
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(alignment: .trailing, spacing: 6) {
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: AppTheme.Spacing.xs) {
                 if let roll = loadedRoll {
                     Text("\(roll.frameCount)/\(roll.totalExposures)")
                         .font(InstrumentFont.mono(13))
                         .foregroundStyle(AppTheme.textPrimary)
-                    if let stock = loadedStock {
-                        HStack(spacing: 6) {
-                            RollPlate(tint: stock.emulsionTint, size: 16)
-                            Text(stock.name)
-                                .font(InstrumentFont.mono(11))
-                                .foregroundStyle(AppTheme.textSecondary)
-                                .lineLimit(1)
-                        }
-                    }
+                        .monospacedDigit()
                 } else {
                     Text("Empty")
                         .font(InstrumentFont.mono(13))

@@ -2,30 +2,92 @@
   "stocks": [
     {
       "id": "A1000001-0000-4000-8000-000000000001",
-      "name": "Kodak Portra 400",
+      "name": "Kodak Ektacolor Pro 400 (Portra 400)",
       "iso": 400,
       "category": "Color neg",
       "process": "C-41",
       "notes": "the modern gold standard; huge latitude, flattering skin tones",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "Color negative",
+      "usableRange": "100–1600",
+      "pushPullTolerance": "Excellent — commonly rated 200–800; holds well pushed to 1600",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "220 (legacy)",
+        "4×5",
+        "8×10"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1998–present",
+      "bestFor": [
+        "Portraits",
+        "Weddings",
+        "Available light"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "cf670589-1954-59a5-8a5f-271df628c615",
-      "name": "Kodak Portra 160",
+      "name": "Kodak Ektacolor Pro 160 (Portra 160)",
       "iso": 160,
       "category": "Color neg",
       "process": "C-41",
       "notes": "finer grain, softer palette for controlled light",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "Color negative",
+      "usableRange": "80–400",
+      "pushPullTolerance": "Best at box speed; mild pull/push ±1 stop is comfortable",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5",
+        "8×10"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1998–present",
+      "bestFor": [
+        "Studio portraiture",
+        "Controlled daylight",
+        "Fashion"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "ce6b4f95-303a-56ff-ac25-e7bbfbf37c7d",
-      "name": "Kodak Portra 800",
+      "name": "Kodak Ektacolor Pro 800 (Portra 800)",
       "iso": 800,
       "category": "Color neg",
       "process": "C-41",
       "notes": "best high-speed color negative made today",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "Color negative",
+      "usableRange": "400–3200",
+      "pushPullTolerance": "Pushes cleanly to 1600–3200; wide underexposure latitude",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1998–present",
+      "bestFor": [
+        "Low light",
+        "Concerts",
+        "Night street"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "6187c280-92e6-57da-9bcc-e0419d30da77",
@@ -34,7 +96,27 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "finest-grained color neg ever; saturated, punchy",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "Color negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Narrower than Portra — prefer box speed; ±1 stop max",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2008–present",
+      "bestFor": [
+        "Landscapes",
+        "Product",
+        "Saturated color"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "103b0eef-9449-5963-847d-ca0c72a7796b",
@@ -43,7 +125,26 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "warm, nostalgic, cheap(ish) and beloved",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "100–400",
+      "pushPullTolerance": "Forgiving consumer latitude; ±1 stop casual work",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "Single-use cameras"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1980s–present",
+      "bestFor": [
+        "Everyday snapshots",
+        "Travel",
+        "Warm skin tones"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "67586504-1162-597e-b1ca-9db1a7884284",
@@ -52,7 +153,26 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "versatile consumer all-rounder",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "200–800",
+      "pushPullTolerance": "Solid ±1 stop; common in point-and-shoots",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "Single-use cameras"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2007–present",
+      "bestFor": [
+        "All-purpose color",
+        "Travel",
+        "Flash photography"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "956cee9a-7968-5206-8610-d3da64e21fee",
@@ -61,7 +181,25 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "budget classic with vintage rendering",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "100–400",
+      "pushPullTolerance": "Typical consumer ±1 stop flexibility",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2000s–present",
+      "bestFor": [
+        "Budget color",
+        "Casual shooting",
+        "Nostalgic look"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "16b96f1f-e630-579e-8922-d4a5d6ea6226",
@@ -70,7 +208,25 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "skin-tone-friendly, heat-tolerant pro consumer stock",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Stable at box speed; tolerates heat better than Portra for travel",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2018–present",
+      "bestFor": [
+        "Event portraits",
+        "Warm climates",
+        "Prosumer work"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "7b6b5aed-1ae6-5d98-b52f-0e452bb73bed",
@@ -79,7 +235,52 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "cool greens, classic Fuji look",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "100–400",
+      "pushPullTolerance": "Everyday ±1 stop latitude",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1990s–present",
+      "bestFor": [
+        "Everyday color",
+        "Travel",
+        "Cool green foliage"
+      ],
+      "priceTier": "$"
+    },
+    {
+      "id": "cdec5879-3ecd-40eb-ba19-23ed9b815dce",
+      "name": "Fujifilm 400",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "current consumer Fuji color; cool greens, forgiving latitude",
+      "isDiscontinued": false,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "200–800",
+      "pushPullTolerance": "Forgiving consumer stock; ±1 stop",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2024–present",
+      "bestFor": [
+        "General use",
+        "Travel",
+        "Available light"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "67decd68-81cf-5d31-8a88-c639432dfe61",
@@ -88,7 +289,25 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "the everyday Fuji workhorse",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "200–800",
+      "pushPullTolerance": "Classic consumer latitude; pushes to 800–1600 with grit",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2003–present",
+      "bestFor": [
+        "Everyday color",
+        "Street",
+        "Flash"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "59534da9-61b1-5017-8a76-0af947bc27a7",
@@ -97,7 +316,26 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "tungsten cine film with the famous halation glow",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "CineStill",
+      "brandLine": "Cinema (remjet-removed)",
+      "filmType": "Color negative",
+      "usableRange": "400–3200",
+      "pushPullTolerance": "Rated well 400–1600; red halation strongest underexposed",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2013–present",
+      "bestFor": [
+        "Night city",
+        "Tungsten interiors",
+        "Halation aesthetics"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "af1c9381-e28f-53c8-a514-8e06329f240b",
@@ -106,7 +344,26 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "daylight all-rounder with a cinematic feel",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "CineStill",
+      "brandLine": "Cinema (remjet-removed)",
+      "filmType": "Color negative",
+      "usableRange": "200–800",
+      "pushPullTolerance": "Versatile ±1 stop; milder halation than 800T",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2022–present",
+      "bestFor": [
+        "Daylight cine look",
+        "Travel",
+        "Hybrid still/motion feel"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "9c9af71d-8a67-5f16-be91-e69afdb5c9f6",
@@ -115,43 +372,142 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "ultra-fine grain daylight cine stock",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "CineStill",
+      "brandLine": "Cinema (remjet-removed)",
+      "filmType": "Color negative",
+      "usableRange": "25–100",
+      "pushPullTolerance": "Prefer box speed; limited push room vs faster Cinestills",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2015–present",
+      "bestFor": [
+        "Bright daylight",
+        "Ultra-fine detail",
+        "Landscapes"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "f8a889f7-a3b5-5834-ab88-9932c6461c73",
       "name": "Kodak Vision3 500T",
       "iso": 500,
       "category": "Color neg",
-      "process": "C-41",
+      "process": "ECN-2",
       "notes": "Hollywood's low-light standard",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Motion Picture",
+      "filmType": "Color negative",
+      "usableRange": "250–2000",
+      "pushPullTolerance": "Cinema latitude is large; labs vary if cross-processed C-41 after remjet removal",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm cine",
+        "16mm",
+        "Bulk / short ends"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2007–present",
+      "bestFor": [
+        "Low-light cine",
+        "Night exteriors",
+        "Stills from short ends"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "a9b58f22-1e75-58db-a44a-6701811b150e",
       "name": "Kodak Vision3 250D",
       "iso": 250,
       "category": "Color neg",
-      "process": "C-41",
+      "process": "ECN-2",
       "notes": "balanced daylight motion picture stock",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Motion Picture",
+      "filmType": "Color negative",
+      "usableRange": "125–500",
+      "pushPullTolerance": "Designed for controlled EI; stills shooters often stay near box speed",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm cine",
+        "16mm",
+        "Bulk / short ends"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2007–present",
+      "bestFor": [
+        "Daylight motion",
+        "Exteriors",
+        "Stills respools"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "c5f119b4-01eb-508d-96e5-71a20175c31c",
       "name": "Kodak Vision3 200T",
       "iso": 200,
       "category": "Color neg",
-      "process": "C-41",
+      "process": "ECN-2",
       "notes": "tungsten mid-speed cine film",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Motion Picture",
+      "filmType": "Color negative",
+      "usableRange": "100–800",
+      "pushPullTolerance": "Broad motion-picture latitude; tungsten-balanced",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm cine",
+        "16mm",
+        "Bulk / short ends"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2010–present",
+      "bestFor": [
+        "Interior tungsten",
+        "Mixed lighting cine",
+        "Stills short ends"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "1d2ba1c2-079a-55d6-b667-114c0e98cf50",
       "name": "Kodak Vision3 50D",
       "iso": 50,
       "category": "Color neg",
-      "process": "C-41",
+      "process": "ECN-2",
       "notes": "arguably the finest-grained color film in production",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Motion Picture",
+      "filmType": "Color negative",
+      "usableRange": "25–100",
+      "pushPullTolerance": "Fine-grain daylight — stay close to EI 50",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm cine",
+        "16mm",
+        "Bulk / short ends"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2007–present",
+      "bestFor": [
+        "Bright exteriors",
+        "Fine detail",
+        "Daylight stills from bulk"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "207bd6c8-8ddb-5980-8f7a-d15584e2241c",
@@ -160,7 +516,26 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "aerial film respooled as SantaColor 100 / Elektra 100",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Aerial / Specialty",
+      "filmType": "Color negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Designed for aerial; ±1 stop for stills use",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm (respool)",
+        "Aerial long rolls"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2023–present (stills availability)",
+      "bestFor": [
+        "High-altitude clarity",
+        "Landscape stills",
+        "Scanning punch"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "def19929-637a-54b9-8655-8af09af4923f",
@@ -169,7 +544,54 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "Ilford's first color film; quirky, high-contrast",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Harman",
+      "brandLine": "Experimental color",
+      "filmType": "Color negative",
+      "usableRange": "100–400",
+      "pushPullTolerance": "Experimental color — expose carefully; results vary by batch/generation",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Pronounced",
+      "yearsActive": "2023–present",
+      "bestFor": [
+        "Experimental color",
+        "Surreal palettes",
+        "Creative projects"
+      ],
+      "priceTier": "$$"
+    },
+    {
+      "id": "0cc34bb6-86e6-5b5c-9828-ba89ddf78f9e",
+      "name": "Harman Red 125",
+      "iso": 125,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "Professionally finished redscale based on Phoenix emulsion",
+      "isDiscontinued": false,
+      "manufacturer": "Harman",
+      "brandLine": "Redscale",
+      "filmType": "Color negative",
+      "usableRange": "50–400",
+      "pushPullTolerance": "Best at EI 100–200; usable 50–400 — no process push needed for C-41",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Pronounced",
+      "yearsActive": "2025–present",
+      "bestFor": [
+        "Redscale looks",
+        "Experimental color",
+        "High-contrast scenes"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "c409e006-68ad-56e6-915c-f2c666cc32e6",
@@ -178,7 +600,26 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "surprisingly good fast consumer film",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Lomography",
+      "brandLine": "Color Negative",
+      "filmType": "Color negative",
+      "usableRange": "400–1600",
+      "pushPullTolerance": "Pushes with grit; consumer-style latitude",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Pronounced",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "Low light lo-fi",
+        "Parties",
+        "Experimentation"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "221f2902-1564-57d9-a9d7-5390c41b70fb",
@@ -187,7 +628,26 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "versatile consumer color negative",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Lomography",
+      "brandLine": "Color Negative",
+      "filmType": "Color negative",
+      "usableRange": "200–800",
+      "pushPullTolerance": "Forgiving everyday ±1–2 stops",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "Everyday lo-fi",
+        "Travel",
+        "Analog experiments"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "76fdcffc-914f-56a1-80b6-cff3d51ba9c2",
@@ -196,7 +656,54 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "fine-grain consumer color negative",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Lomography",
+      "brandLine": "Color Negative",
+      "filmType": "Color negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Best in good light; modest push room",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "Bright daylight",
+        "Budget fine grain",
+        "Travel"
+      ],
+      "priceTier": "$"
+    },
+    {
+      "id": "1132ec30-ca7f-407e-9226-264c9497b10d",
+      "name": "Lomography Earl Grey B&W 100",
+      "iso": 100,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "fine-grain panchromatic B&W with classic midtone rendering",
+      "isDiscontinued": false,
+      "manufacturer": "Lomography",
+      "brandLine": "B&W",
+      "filmType": "B&W negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Conventional B&W ±1–2 stops depending on developer",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2013–present",
+      "bestFor": [
+        "Budget B&W",
+        "Everyday mono",
+        "Learning development"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "5a82477b-4ce4-5b8c-aa71-85605f78ffd4",
@@ -205,7 +712,26 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "infrared-Aerochrome-style color shifts",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Lomography",
+      "brandLine": "LomoChrome",
+      "filmType": "Color negative",
+      "usableRange": "100–400",
+      "pushPullTolerance": "Color-shift stock — expose for palette, not for push performance",
+      "productionStatus": "Limited run",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2010s–present (editions)",
+      "bestFor": [
+        "Surreal color",
+        "Creative fashion",
+        "Experimental travel"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "65935396-00b4-5f6e-84ab-825ce4c2c085",
@@ -214,7 +740,26 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "muted, desaturated urban look",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Lomography",
+      "brandLine": "LomoChrome",
+      "filmType": "Color negative",
+      "usableRange": "100–400",
+      "pushPullTolerance": "Desaturated look; stay near box for predictable shifts",
+      "productionStatus": "Limited run",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2010s–present (editions)",
+      "bestFor": [
+        "Urban mood",
+        "Muted palettes",
+        "Cinematic stills"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "defff4a1-d0e7-56a9-9038-ec802177f895",
@@ -223,7 +768,26 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "blue/orange swapped tones",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Lomography",
+      "brandLine": "LomoChrome",
+      "filmType": "Color negative",
+      "usableRange": "100–400",
+      "pushPullTolerance": "Strong color shift — limited value in aggressive push/pull",
+      "productionStatus": "Limited run",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2010s–present (editions)",
+      "bestFor": [
+        "Cross-process vibes",
+        "Creative color",
+        "Statement frames"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "5a1a4857-77ac-5074-8e13-832fcf55c6b9",
@@ -232,7 +796,27 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "pastel wedding-photographer favorite, mourned since 2021",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Professional",
+      "filmType": "Color negative",
+      "usableRange": "200–800",
+      "pushPullTolerance": "Famous soft palette; common pull for pastel skin, mild push OK",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "220 (legacy)"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2004–2021",
+      "bestFor": [
+        "Wedding portraiture",
+        "Pastel skin",
+        "Soft fashion"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "dc888b33-7d31-5cdb-9dce-7b1f80b0f52b",
@@ -241,7 +825,26 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "the fourth-color-layer marvel",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Professional",
+      "filmType": "Color negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Natural color — prefer box speed",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1989–2010s",
+      "bestFor": [
+        "Natural color",
+        "Portraits",
+        "Daylight landscapes"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "be00a89b-a206-51b7-94fa-54a5a669add7",
@@ -250,7 +853,25 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "cult high-speed film",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "800–3200",
+      "pushPullTolerance": "High-speed consumer; grainy when pushed",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Pronounced",
+      "yearsActive": "2000s–2010s",
+      "bestFor": [
+        "Low light",
+        "Compact cameras",
+        "Gritty night"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "da5b9449-f86f-538a-87bd-ccbe34eba25c",
@@ -259,7 +880,25 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "fast consumer Fuji stock",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "800–3200",
+      "pushPullTolerance": "Pushes with heavy grain",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Pronounced",
+      "yearsActive": "2000s–2010s",
+      "bestFor": [
+        "Low light",
+        "Point-and-shoot",
+        "Available-light snapshots"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "a49bcb33-97d5-507f-9a19-f315105ebea9",
@@ -268,7 +907,25 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "high-speed consumer Fuji stock",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "400–1600",
+      "pushPullTolerance": "Decent consumer push to 1600",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1990s–2010s",
+      "bestFor": [
+        "Mixed light",
+        "Indoor color",
+        "Travel"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "b8b0ab40-f190-5b9d-a063-d2949d4eece6",
@@ -277,7 +934,27 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "neutral predecessor of modern Portra",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "Color negative",
+      "usableRange": "100–800",
+      "pushPullTolerance": "NC line favored natural color with good latitude",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "220"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1998–2010 (folded into Portra 400)",
+      "bestFor": [
+        "Natural portraits",
+        "Weddings",
+        "Skin tones"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "6a3095a3-f7ba-5da2-8058-511542f5cd86",
@@ -286,7 +963,27 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "the vivid variant",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "Color negative",
+      "usableRange": "100–800",
+      "pushPullTolerance": "Vivid counterpart to NC; similar exposure flexibility",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "220"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1998–2010 (folded into Portra 400)",
+      "bestFor": [
+        "Saturated portraits",
+        "Fashion",
+        "Strong color"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "01fe290b-9368-5a82-835b-19fc6120a61b",
@@ -295,7 +992,26 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "legendarily fine grain",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "Color negative",
+      "usableRange": "12–50",
+      "pushPullTolerance": "Very narrow — expose carefully at EI 25",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1989–c.2002",
+      "bestFor": [
+        "Tripod landscapes",
+        "Ultra-fine color",
+        "Bright daylight"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "660d926b-4247-5b01-91b2-f5e876896c05",
@@ -304,7 +1020,25 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "cheap, warm, sorely missed",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Agfa",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "100–400",
+      "pushPullTolerance": "Typical consumer ±1 stop",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1990s–2010s",
+      "bestFor": [
+        "Warm consumer color",
+        "Everyday snaps",
+        "Vintage finds"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "b8e07be3-1375-5565-a263-c59e2c8787ff",
@@ -313,7 +1047,25 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "warm consumer stock, sorely missed",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Agfa",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "200–800",
+      "pushPullTolerance": "Consumer flexibility ±1 stop",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1990s–2010s",
+      "bestFor": [
+        "Everyday color",
+        "Mixed light",
+        "Expired-film hunting"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "0221f4fa-619b-5ad3-91b9-04b7ff87d22a",
@@ -322,7 +1074,25 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "classic Konica consumer color negative",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Konica",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "100–400",
+      "pushPullTolerance": "Consumer ±1 stop; expired rolls vary widely",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1990s–2006",
+      "bestFor": [
+        "Warm nostalgia",
+        "Casual color",
+        "Expired experimentation"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "d7880157-9674-5d16-a289-b743346e8a99",
@@ -331,7 +1101,25 @@
       "category": "Color neg",
       "process": "C-41",
       "notes": "premium consumer Kodak color negative",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Kodak",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "200–800",
+      "pushPullTolerance": "Consumer latitude; often shot as expired stock today",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1990s–2000s",
+      "bestFor": [
+        "Warm skin",
+        "Snapshots",
+        "Vintage canister finds"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "5eb01ca8-145b-52a0-bcac-2a0069ffe391",
@@ -340,16 +1128,57 @@
       "category": "Slide",
       "process": "E-6",
       "notes": "the landscape saturation king",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Professional",
+      "filmType": "Color reversal",
+      "usableRange": "40–64",
+      "pushPullTolerance": "Slide film — expose precisely; ±1⁄3 stop matters; limited push/pull",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5",
+        "8×10"
+      ],
+      "grainRMS": "9",
+      "grainCharacter": "Fine",
+      "yearsActive": "1990–present (reissues)",
+      "bestFor": [
+        "Landscape saturation",
+        "Nature",
+        "Projection/scanning punch"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "46d470d7-a389-5114-9f2c-21afe1670646",
-      "name": "Kodak Ektachrome E100",
+      "name": "Kodak Ektachrome 100",
       "iso": 100,
       "category": "Slide",
       "process": "E-6",
       "notes": "clean, neutral, gloriously revived in 2018",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "Color reversal",
+      "usableRange": "50–200",
+      "pushPullTolerance": "E-6 ±1 stop possible; best results near box speed",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5"
+      ],
+      "grainRMS": "8",
+      "grainCharacter": "Fine",
+      "yearsActive": "2018–present (revival)",
+      "bestFor": [
+        "Clean slides",
+        "Travel color",
+        "Accurate daylight"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "f911496b-8f5c-585f-8ed0-d52686214f84",
@@ -358,7 +1187,28 @@
       "category": "Slide",
       "process": "E-6",
       "notes": "the balanced professional chrome",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Professional",
+      "filmType": "Color reversal",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Neutral slide — prefer precise metering; mild push known",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5",
+        "8×10"
+      ],
+      "grainRMS": "8",
+      "grainCharacter": "Fine",
+      "yearsActive": "1999–present",
+      "bestFor": [
+        "Neutral color",
+        "Studio/scan work",
+        "Portraits on slide"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "a721b042-0556-505a-85a5-ebc0e52e021e",
@@ -367,25 +1217,82 @@
       "category": "Slide",
       "process": "E-6",
       "notes": "vivid professional slide film",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Professional",
+      "filmType": "Color reversal",
+      "usableRange": "50–125",
+      "pushPullTolerance": "Saturated slide — meter carefully; less forgiving than neg",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5"
+      ],
+      "grainRMS": "8",
+      "grainCharacter": "Fine",
+      "yearsActive": "2005–present",
+      "bestFor": [
+        "Saturated landscapes",
+        "Product color",
+        "Fine detail"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "cd8bd23e-671e-50ff-9815-5b52018fbc72",
       "name": "Kodachrome 64",
       "iso": 64,
       "category": "Slide",
-      "process": "E-6",
+      "process": "K-14",
       "notes": "the most iconic film ever made; discontinued, undevelopable",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "Color reversal",
+      "usableRange": "32–80",
+      "pushPullTolerance": "K-14 process discontinued — no modern push/pull service",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm",
+        "120 (limited eras)"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1974–2009 (process ended 2010)",
+      "bestFor": [
+        "Archival color history",
+        "Documentary legacy",
+        "Collector shooting (unprocessable)"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "dda78710-cf49-5d2b-b90a-acd33a4d4db0",
       "name": "Kodachrome 25",
       "iso": 25,
       "category": "Slide",
-      "process": "E-6",
+      "process": "K-14",
       "notes": "razor-sharp legend; K-14 process",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "Color reversal",
+      "usableRange": "12–32",
+      "pushPullTolerance": "K-14 process discontinued — no lab push/pull today",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "c.1935–2002 (as K25 family)",
+      "bestFor": [
+        "Ultra-fine historic slides",
+        "Bright daylight archives",
+        "Collectors"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "0c2442db-c54e-5d4c-9f98-97124442c458",
@@ -394,7 +1301,26 @@
       "category": "Slide",
       "process": "E-6",
       "notes": "soft, skin-friendly chrome",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Professional",
+      "filmType": "Color reversal",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Soft portrait slide — precise exposure preferred",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": "7",
+      "grainCharacter": "Fine",
+      "yearsActive": "2003–2012",
+      "bestFor": [
+        "Soft portraits",
+        "Muted fashion",
+        "Gentle slide color"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "4b4e6f30-fccd-518d-9c6d-6893e87911e6",
@@ -403,7 +1329,25 @@
       "category": "Slide",
       "process": "E-6",
       "notes": "cult cross-processing favorite",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Agfa",
+      "brandLine": "Consumer",
+      "filmType": "Color reversal",
+      "usableRange": "50–125",
+      "pushPullTolerance": "Consumer slide — meter carefully",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1990s–2000s",
+      "bestFor": [
+        "Budget slides",
+        "Travel chrome",
+        "Expired finds"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "df96db40-a7d2-56d4-9f04-99bcddbacf8b",
@@ -412,7 +1356,26 @@
       "category": "Slide",
       "process": "E-6",
       "notes": "vivid saturation chrome",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "Color reversal",
+      "usableRange": "50–125",
+      "pushPullTolerance": "Vivid slide — narrow tolerance vs negative film",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2000s–2012",
+      "bestFor": [
+        "Vivid nature",
+        "Punchy travel",
+        "Projection"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "e690ffc3-6b84-537d-ae1a-adc6f63b08e0",
@@ -421,7 +1384,25 @@
       "category": "Slide",
       "process": "E-6",
       "notes": "ultra-rare hyper-saturated limited release",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Professional",
+      "filmType": "Color reversal",
+      "usableRange": "40–64",
+      "pushPullTolerance": "Limited specialty chrome — expose at speed",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "Limited 2000s runs",
+      "bestFor": [
+        "Specialty saturation",
+        "Collectors",
+        "Distinctive slide palette"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "8c60775c-02fc-5c27-a335-4f8259a6c965",
@@ -430,7 +1411,25 @@
       "category": "Slide",
       "process": "E-6",
       "notes": "consumer chrome",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Consumer",
+      "filmType": "Color reversal",
+      "usableRange": "50–125",
+      "pushPullTolerance": "Consumer chrome — stay near box",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1990s–2010s",
+      "bestFor": [
+        "Budget slides",
+        "Travel",
+        "Learning E-6"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "3c54a257-682a-5a9e-99fa-4e38d5a944f1",
@@ -439,7 +1438,25 @@
       "category": "Slide",
       "process": "E-6",
       "notes": "consumer slide film",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Kodak",
+      "brandLine": "Consumer",
+      "filmType": "Color reversal",
+      "usableRange": "50–125",
+      "pushPullTolerance": "Consumer Ektachrome-family — precise metering",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1990s–2000s",
+      "bestFor": [
+        "Consumer slides",
+        "Travel chrome",
+        "Expired hunting"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "11dea2b3-0fd3-5ea8-8b77-59922fcd9349",
@@ -448,7 +1465,29 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "the most famous B&W film in history",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "B&W negative",
+      "usableRange": "200–1600",
+      "pushPullTolerance": "Classic push film — routinely shot 800–1600; pulls cleanly too",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "220 (legacy)",
+        "4×5",
+        "Bulk"
+      ],
+      "grainRMS": "17",
+      "grainCharacter": "Pronounced",
+      "yearsActive": "1954–present (evolved emulsions)",
+      "bestFor": [
+        "Street",
+        "Photojournalism",
+        "Push processing"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "cf9afb11-26d1-5040-aedf-9145d6934da6",
@@ -457,7 +1496,30 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "Tri-X's equally beloved rival; pushes forever",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Ilford",
+      "brandLine": "Core",
+      "filmType": "B&W negative",
+      "usableRange": "200–3200",
+      "pushPullTolerance": "Exceptional push — community favorite 800–3200; pulls to 200",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "220",
+        "4×5",
+        "8×10",
+        "Bulk"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1989–present (Plus)",
+      "bestFor": [
+        "Street",
+        "Available light",
+        "Push/pull versatility"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "6491466e-e87e-5e94-9aa8-622426957eb0",
@@ -466,25 +1528,90 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "classic mid-speed tonality",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Ilford",
+      "brandLine": "Core",
+      "filmType": "B&W negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Excellent medium-speed control; mild push/pull common",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5",
+        "8×10",
+        "Bulk"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1990–present (Plus)",
+      "bestFor": [
+        "General pictorial",
+        "Landscapes",
+        "Large format"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "f021c2c2-1352-541a-95c0-d9fd40fb6d19",
-      "name": "Kodak T-Max 400",
+      "name": "Kodak Ektapan 400 (T-Max 400)",
       "iso": 400,
       "category": "B&W",
       "process": "B&W",
       "notes": "modern tabular grain, extremely sharp",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "B&W negative",
+      "usableRange": "200–1600",
+      "pushPullTolerance": "Pushes cleanly; tabular grain stays relatively tight",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5",
+        "Bulk"
+      ],
+      "grainRMS": "10",
+      "grainCharacter": "Fine",
+      "yearsActive": "1986–present",
+      "bestFor": [
+        "Fine-grain fast B&W",
+        "Scanning",
+        "General purpose"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "72826435-2a23-5c5e-a091-874d1ae05192",
-      "name": "Kodak T-Max 100",
+      "name": "Kodak Ektapan 100 (T-Max 100)",
       "iso": 100,
       "category": "B&W",
       "process": "B&W",
       "notes": "near-medium-format resolution",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "B&W negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Best at 100; mild push possible with care",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5",
+        "8×10",
+        "Bulk"
+      ],
+      "grainRMS": "8",
+      "grainCharacter": "Fine",
+      "yearsActive": "1986–present",
+      "bestFor": [
+        "Ultra-fine detail",
+        "Studio",
+        "Large format"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "efb76dba-9c5a-598e-9935-6da2f614b5e6",
@@ -493,7 +1620,27 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "Ilford's fine-grain tabular answer",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Ilford",
+      "brandLine": "Core",
+      "filmType": "B&W negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Tabular grain — mild ±1 stop preferred",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5"
+      ],
+      "grainRMS": "11",
+      "grainCharacter": "Fine",
+      "yearsActive": "1992–present",
+      "bestFor": [
+        "Fine detail",
+        "Portraits",
+        "Scanning"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "25f2bd4a-8713-57f5-8473-f38574aa29db",
@@ -502,7 +1649,27 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "tabular grain mid-speed B&W",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Ilford",
+      "brandLine": "Core",
+      "filmType": "B&W negative",
+      "usableRange": "200–1600",
+      "pushPullTolerance": "Good push to 800–1600; smoother than classic cubes when pushed",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5"
+      ],
+      "grainRMS": "13",
+      "grainCharacter": "Fine",
+      "yearsActive": "1990–present",
+      "bestFor": [
+        "Fine-grain 400",
+        "Hybrid street/portrait",
+        "Scanning"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "ed45ecf6-0e2a-5421-a572-80404cd485ef",
@@ -511,16 +1678,53 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "gorgeous slow-speed contrast",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Ilford",
+      "brandLine": "Core",
+      "filmType": "B&W negative",
+      "usableRange": "25–100",
+      "pushPullTolerance": "Slow film — expose carefully; limited push benefit",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": "8",
+      "grainCharacter": "Fine",
+      "yearsActive": "1990s–present (Plus)",
+      "bestFor": [
+        "Maximum detail",
+        "Still life",
+        "Bright daylight"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "707b612a-51e1-58b5-aaf1-c36a979ff581",
-      "name": "Kodak T-Max P3200",
+      "name": "Kodak Ektapan P3200 (T-Max P3200)",
       "iso": 3200,
       "category": "B&W",
       "process": "B&W",
       "notes": "low-light specialist",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "B&W negative",
+      "usableRange": "800–12500",
+      "pushPullTolerance": "Multi-speed — commonly 800–6400; Kodak documents wide EI range",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Pronounced",
+      "yearsActive": "1988–2012; revived 2018–present",
+      "bestFor": [
+        "Extreme low light",
+        "Night street",
+        "Documentary push"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "d60875b7-abf7-5d0d-a75c-1c1232b5845c",
@@ -529,7 +1733,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "gritty available-darkness film",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Ilford",
+      "brandLine": "Core",
+      "filmType": "B&W negative",
+      "usableRange": "400–12800",
+      "pushPullTolerance": "Rated flexible — often shot 1600–6400; beautiful at 1600–3200",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Pronounced",
+      "yearsActive": "1998–present",
+      "bestFor": [
+        "Low light",
+        "Atmospheric night",
+        "Grain aesthetics"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "cd32732a-8ba0-5d17-8109-a3dd15fc5963",
@@ -538,7 +1761,27 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "incredible reciprocity characteristics",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Professional",
+      "filmType": "B&W negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Superb reciprocity; prefer box speed for finest grain",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2019–present (II)",
+      "bestFor": [
+        "Long exposures",
+        "Landscapes",
+        "Ultra-smooth tonality"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "a5957776-6a0b-5782-aa6b-14eb7e5b114b",
@@ -547,16 +1790,55 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "cine B&W used in Schindler's List",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Motion Picture",
+      "filmType": "B&W negative",
+      "usableRange": "200–800",
+      "pushPullTolerance": "Cine B&W — routinely EI 200–500; pushes with classic grain",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm cine",
+        "16mm",
+        "Bulk / short ends"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1959–present",
+      "bestFor": [
+        "Cine stills",
+        "Documentary mono",
+        "Classic grain look"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "03c07ef3-e191-5d39-b95a-886c0fccdb01",
       "name": "Ilford XP2 Super 400",
       "iso": 400,
       "category": "B&W",
-      "process": "B&W",
+      "process": "C-41 chromogenic B&W",
       "notes": "C-41 process B&W",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Ilford",
+      "brandLine": "Core",
+      "filmType": "B&W negative",
+      "usableRange": "50–800",
+      "pushPullTolerance": "Chromogenic — famously wide latitude; often rated 200–800 in C-41 labs",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1996–present (Super)",
+      "bestFor": [
+        "C-41 lab convenience",
+        "Wide exposure latitude",
+        "Hybrid B&W workflow"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "eaac02e6-1d7f-52b1-96cc-0ea3ab77373c",
@@ -565,7 +1847,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "extended red/near-infrared",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Ilford",
+      "brandLine": "Specialty",
+      "filmType": "B&W negative",
+      "usableRange": "100–400",
+      "pushPullTolerance": "Near-IR extended; filter choice matters more than aggressive push",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1990s–present",
+      "bestFor": [
+        "Infrared effects",
+        "Woodland scenes",
+        "Creative filters"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "c5ae4850-8c30-577d-8e79-416a787abc3f",
@@ -574,7 +1875,27 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "orthochromatic character",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Ilford",
+      "brandLine": "Specialty",
+      "filmType": "B&W negative",
+      "usableRange": "40–160",
+      "pushPullTolerance": "Orthochromatic — meter for subject; limited classic push culture",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2019–present (Plus)",
+      "bestFor": [
+        "Copy work",
+        "Blue-sensitive look",
+        "Technical photography"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "92b823b3-7c8c-59ad-b846-00e79619f715",
@@ -583,7 +1904,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "Ilford's budget line",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Ilford",
+      "brandLine": "Kentmere",
+      "filmType": "B&W negative",
+      "usableRange": "200–1600",
+      "pushPullTolerance": "Budget cube-ish grain — pushes to 800–1600 acceptably",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2009–present (Harman Kentmere)",
+      "bestFor": [
+        "Budget learning",
+        "Everyday B&W",
+        "High volume shooting"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "33449ae1-8192-5542-a00d-282ec08ee035",
@@ -592,7 +1932,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "Ilford's budget fine-grain line",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Ilford",
+      "brandLine": "Kentmere",
+      "filmType": "B&W negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Solid beginner latitude ±1 stop",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2009–present (Harman Kentmere)",
+      "bestFor": [
+        "Budget fine grain",
+        "Learning B&W",
+        "Daylight mono"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "aeb009ff-25e1-5564-ba47-215a480f6576",
@@ -601,7 +1960,28 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "Czech budget classic",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Foma",
+      "brandLine": "Fomapan",
+      "filmType": "B&W negative",
+      "usableRange": "200–1600",
+      "pushPullTolerance": "Pushes with classic grit; popular budget 400",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5",
+        "Bulk"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Pronounced",
+      "yearsActive": "1990s–present",
+      "bestFor": [
+        "Budget street",
+        "Push practice",
+        "DIY development"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "ae4bfaf2-2d83-5e8b-8aa2-62b1292964bc",
@@ -610,7 +1990,28 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "Czech fine-grain classic",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Foma",
+      "brandLine": "Fomapan",
+      "filmType": "B&W negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Traditional emulsion — modest push/pull",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5",
+        "Bulk"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1990s–present",
+      "bestFor": [
+        "Budget landscapes",
+        "Large format practice",
+        "Classic tonality"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "4e821623-2131-5779-a2a6-6d1989fbe230",
@@ -619,7 +2020,27 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "Czech mid-speed emulsion",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Foma",
+      "brandLine": "Fomapan",
+      "filmType": "B&W negative",
+      "usableRange": "100–400",
+      "pushPullTolerance": "Orthopan-ish character; mild flexibility",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1990s–present",
+      "bestFor": [
+        "Mid-speed pictorial",
+        "Budget general use",
+        "Creative tonality"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "37e1a28d-f54c-5510-943e-9103984c7458",
@@ -628,7 +2049,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "current Agfa B&W stock",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Agfa",
+      "brandLine": "APX",
+      "filmType": "B&W negative",
+      "usableRange": "200–1600",
+      "pushPullTolerance": "Classic pushable 400; modern AgfaPhoto/roloed stock varies by maker",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1989–present (rebadged eras)",
+      "bestFor": [
+        "Street",
+        "General B&W",
+        "Push work"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "1740864e-af90-5c4c-9600-abbaf97663b2",
@@ -637,7 +2077,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "current Agfa fine-grain B&W",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Agfa",
+      "brandLine": "APX",
+      "filmType": "B&W negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Fine pictorial — mild ±1 stop",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1989–present (rebadged eras)",
+      "bestFor": [
+        "Portraits",
+        "Landscapes",
+        "Smooth tonality"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "2511ccf2-ad26-56fa-9ce4-596f787f647f",
@@ -646,7 +2105,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "near-IR sensitivity, dramatic skies",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Rollei",
+      "brandLine": "Retro",
+      "filmType": "B&W negative",
+      "usableRange": "40–160",
+      "pushPullTolerance": "Agfa Aviphot-based; filter/IR behavior drives look more than push",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "Near-IR looks",
+        "Clear skies",
+        "Fine detail"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "fe8bb79f-79c3-52f5-833c-f0cc10756aec",
@@ -655,7 +2133,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "high-speed Rollei B&W",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Rollei",
+      "brandLine": "Retro",
+      "filmType": "B&W negative",
+      "usableRange": "200–800",
+      "pushPullTolerance": "Fast Retro sibling — moderate push room",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "Contrast-y street",
+        "Specialty B&W",
+        "Clear-base scanning"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "01a8547e-2510-5c1d-b189-c6ae4e4966b0",
@@ -664,7 +2161,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "true IR effects with a filter",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Rollei",
+      "brandLine": "Infrared",
+      "filmType": "B&W negative",
+      "usableRange": "25–400",
+      "pushPullTolerance": "True IR — EI depends heavily on filtration; test carefully",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "Infrared landscapes",
+        "Woodland IR",
+        "Experimental mono"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "dce027f4-74b7-5b56-bbb3-ba63dfe65535",
@@ -673,7 +2189,27 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "versatile Rollei B&W",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Rollei",
+      "brandLine": "RPX",
+      "filmType": "B&W negative",
+      "usableRange": "200–1600",
+      "pushPullTolerance": "HP5-class workhorse behavior; pushes well",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "Bulk"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "General B&W",
+        "Street",
+        "Budget volume"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "6b48847c-4726-5044-8a53-b4819f612a4a",
@@ -682,7 +2218,27 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "fine-grain Rollei B&W",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Rollei",
+      "brandLine": "RPX",
+      "filmType": "B&W negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Clean mid-speed ±1 stop",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "Bulk"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "Everyday pictorial",
+        "Landscapes",
+        "Learning B&W"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "e4958708-2740-5e08-a7ad-b9e746682b1c",
@@ -691,7 +2247,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "ultra-fine slow film",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Rollei",
+      "brandLine": "RPX",
+      "filmType": "B&W negative",
+      "usableRange": "12–50",
+      "pushPullTolerance": "Very slow — meter precisely; little push upside",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "Maximum sharpness",
+        "Bright sun",
+        "Technical work"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "882dcd37-263f-50d6-ba4e-638904315017",
@@ -700,7 +2275,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "orthochromatic slow-speed film",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Rollei",
+      "brandLine": "Ortho",
+      "filmType": "B&W negative",
+      "usableRange": "12–50",
+      "pushPullTolerance": "Orthochromatic specialty — expose for subject reflectance",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "Copy/reproduction",
+        "Blue-sky look",
+        "Technical ortho"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "fc8b7c64-c7b8-5a4c-93f2-65c531e5ac98",
@@ -709,7 +2303,25 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "Japan Camera Hunter's contrasty surveillance stock",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "JCH",
+      "brandLine": "StreetPan",
+      "filmType": "B&W negative",
+      "usableRange": "200–1600",
+      "pushPullTolerance": "Street-oriented — pushes with grit",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Pronounced",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "Street photography",
+        "Gritty mono",
+        "Urban documentary"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "818523e5-f0c4-5f51-b3df-886119379aa7",
@@ -718,7 +2330,28 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "dual-emulsion French film",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Bergger",
+      "brandLine": "Pancro",
+      "filmType": "B&W negative",
+      "usableRange": "200–1600",
+      "pushPullTolerance": "Dual-emulsion design — strong flexibility around 400",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5",
+        "8×10"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2016–present",
+      "bestFor": [
+        "Large format",
+        "Pictorial B&W",
+        "Tonal range"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "7d86aac5-bfe4-5260-87a5-0d6d6723ed8d",
@@ -727,7 +2360,27 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "highest-resolving film on the market",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Adox",
+      "brandLine": "CMS",
+      "filmType": "B&W negative",
+      "usableRange": "3–25",
+      "pushPullTolerance": "Document film — extremely low latitude; specialist developing (Adotech)",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2010s–present (II)",
+      "bestFor": [
+        "Micro-detail",
+        "Technical/copy",
+        "Maximum resolution"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "dd5282eb-01a8-5734-803e-fdb01aa2ab3e",
@@ -736,7 +2389,27 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "classic 1950s-style emulsion",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Adox",
+      "brandLine": "CHS",
+      "filmType": "B&W negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Classic single-layer style — modest push",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2010s–present (II)",
+      "bestFor": [
+        "Traditional tonality",
+        "Pictorial B&W",
+        "LF practice"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "43b07c38-6f9c-5305-a419-49451ec73c94",
@@ -745,7 +2418,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "fine-grain modified surveillance film",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Adox",
+      "brandLine": "HR",
+      "filmType": "B&W negative",
+      "usableRange": "25–100",
+      "pushPullTolerance": "High-resolution ortho-pan — careful exposure",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "High resolution",
+        "Landscapes",
+        "Fine detail"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "2d6c2a09-44dd-5b90-8e7d-e8a760d3349a",
@@ -754,7 +2446,25 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "B&W reversal (slides)",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Adox",
+      "brandLine": "Scala",
+      "filmType": "B&W reversal",
+      "usableRange": "40–64",
+      "pushPullTolerance": "B&W slide — specialist reversal process; expose precisely",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2010s–present (revival lineage)",
+      "bestFor": [
+        "B&W slides",
+        "Projection",
+        "Positive mono"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "d013fbe4-5617-5334-8f87-f9143b5d908f",
@@ -763,7 +2473,25 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "revived Italian cine emulsion, deep blacks",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Ferrania",
+      "brandLine": "P30",
+      "filmType": "B&W negative",
+      "usableRange": "40–160",
+      "pushPullTolerance": "Cine-heritage B&W — prefer tested EI near 80",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2017–present (revival)",
+      "bestFor": [
+        "Classic Italian mono",
+        "Fine grain street",
+        "Cine look stills"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "3836c6c0-ac6a-5cba-8161-d05bc85cb36a",
@@ -772,7 +2500,25 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "its 160-speed sibling",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Ferrania",
+      "brandLine": "P33",
+      "filmType": "B&W negative",
+      "usableRange": "80–320",
+      "pushPullTolerance": "Newer sibling — moderate flexibility around box",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2023–present",
+      "bestFor": [
+        "General Ferrania B&W",
+        "Everyday mono",
+        "Analog revival"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "cb9f80d5-c50f-597d-9284-23a3a365657f",
@@ -781,7 +2527,27 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "German cine stock",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "ORWO",
+      "brandLine": "UN54",
+      "filmType": "B&W negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Motion-picture B&W — EI often 100; mild push OK",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm cine",
+        "Bulk / short ends",
+        "35mm stills respools"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1950s formula lineage–present",
+      "bestFor": [
+        "Cine stills",
+        "Documentary mono",
+        "Clear scanning base"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "9f7f5235-0f35-58bf-a7c7-06c5a802c3fd",
@@ -790,7 +2556,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "newer 400-speed ORWO",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "ORWO",
+      "brandLine": "N75",
+      "filmType": "B&W negative",
+      "usableRange": "200–800",
+      "pushPullTolerance": "Faster ORWO stills/cine — pushes with texture",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "Bulk"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "Modern ORWO stills era",
+      "bestFor": [
+        "Faster mono",
+        "Street",
+        "Available light"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "95a37724-c101-5a16-b2e3-fc540c589ec6",
@@ -799,7 +2584,25 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "modern rebadged B&W stock",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Kosmo Foto",
+      "brandLine": "Mono",
+      "filmType": "B&W negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Boutique slow B&W — mild ±1 stop",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "Boutique B&W",
+        "Travel mono",
+        "Small-batch aesthetic"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "2c3049c1-a666-5abd-ba36-78d2070fd64e",
@@ -808,7 +2611,25 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "sound-recording film with unique look",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Film Washi",
+      "brandLine": "S",
+      "filmType": "B&W negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Handcrafted washi-base — expose carefully; process gently",
+      "productionStatus": "Limited run",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "Artisanal texture",
+        "Experimental mono",
+        "Unique base character"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "55bdf778-27bc-514f-99bc-b828c8f45f02",
@@ -817,7 +2638,27 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "Chinese classic B&W",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Shanghai",
+      "brandLine": "GP3",
+      "filmType": "B&W negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Budget classic — forgiving for learning ±1 stop",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1950s lineage–present",
+      "bestFor": [
+        "Budget large format",
+        "Learning B&W",
+        "High volume"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "0d4b8afc-d5b1-5b0e-b2c8-b08fbfb72cdb",
@@ -826,7 +2667,28 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "student darkroom staple",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Arista",
+      "brandLine": "EDU Ultra",
+      "filmType": "B&W negative",
+      "usableRange": "200–1600",
+      "pushPullTolerance": "Typically Fomapan-sourced — pushes like Foma 400",
+      "productionStatus": "Respooled / rebrand",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5",
+        "Bulk"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Pronounced",
+      "yearsActive": "2000s–present",
+      "bestFor": [
+        "School/edu labs",
+        "Budget street",
+        "Bulk loading"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "ac03b98b-3549-5cc4-b137-d32f96c73bb0",
@@ -835,7 +2697,27 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "budget high-speed B&W",
-      "isDiscontinued": false
+      "isDiscontinued": false,
+      "manufacturer": "Ultrafine",
+      "brandLine": "eXtreme",
+      "filmType": "B&W negative",
+      "usableRange": "200–1600",
+      "pushPullTolerance": "House-brand 400 — generally Foma-class push behavior",
+      "productionStatus": "Respooled / rebrand",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "Bulk"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Pronounced",
+      "yearsActive": "2000s–present",
+      "bestFor": [
+        "Mail-order value",
+        "Practice rolls",
+        "Street grit"
+      ],
+      "priceTier": "$"
     },
     {
       "id": "dc971c63-e364-5ef7-ab56-13be2da66ac9",
@@ -844,7 +2726,25 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "cult fast film",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Neopan",
+      "filmType": "B&W negative",
+      "usableRange": "400–3200",
+      "pushPullTolerance": "High-speed Neopan — pushed often; grainy by nature",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Pronounced",
+      "yearsActive": "1990s–2010s",
+      "bestFor": [
+        "Low light B&W",
+        "Available-light street",
+        "Grit aesthetics"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "f19cf927-8b39-5db8-ab77-893d72152c01",
@@ -853,7 +2753,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "classic Fuji B&W",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Neopan",
+      "filmType": "B&W negative",
+      "usableRange": "200–1600",
+      "pushPullTolerance": "Classic pushable 400 before Acros era focus",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "1980s–2010s",
+      "bestFor": [
+        "General B&W",
+        "Street",
+        "Scanning legacy rolls"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "8806ec2a-810e-5653-9419-d811f204a0c9",
@@ -862,7 +2781,28 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "mid-century classic",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "B&W negative",
+      "usableRange": "64–200",
+      "pushPullTolerance": "Classic medium-speed — gentle pictorial push/pull",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm",
+        "120",
+        "4×5",
+        "Bulk"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1954–2011",
+      "bestFor": [
+        "Classic pictorial",
+        "Portraits",
+        "Documentary mid-century look"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "e8b7ef02-ed3c-544d-9a99-43f233cce266",
@@ -871,7 +2811,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "legendary fine grain",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Kodak",
+      "brandLine": "Professional",
+      "filmType": "B&W negative",
+      "usableRange": "16–64",
+      "pushPullTolerance": "Ultra-fine slow film — precise exposure",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1930s–1980s",
+      "bestFor": [
+        "Maximum detail archives",
+        "Still life",
+        "Bright sun"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "5b27ff19-fee2-5224-8a3c-9bbdaf357783",
@@ -880,7 +2839,27 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "microfilm-sharp scientific emulsion",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Kodak",
+      "brandLine": "Technical",
+      "filmType": "B&W negative",
+      "usableRange": "16–64",
+      "pushPullTolerance": "Document/tech film — specialist developers; tiny latitude",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm",
+        "4×5",
+        "Bulk"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1980s–2004",
+      "bestFor": [
+        "Technical/copy",
+        "Extreme resolution",
+        "Microfilming stills"
+      ],
+      "priceTier": "$$$"
     },
     {
       "id": "b74f8700-efb5-5ee0-8f36-adeffa9efc60",
@@ -889,7 +2868,26 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "original Agfa slow-speed masterpiece",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Agfa",
+      "brandLine": "APX",
+      "filmType": "B&W negative",
+      "usableRange": "12–50",
+      "pushPullTolerance": "Very slow orthopan — careful metering",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "1989–c.2000s",
+      "bestFor": [
+        "Fine grain classics",
+        "Bright daylight",
+        "Expired treasures"
+      ],
+      "priceTier": "$$"
     },
     {
       "id": "c9f57093-2a61-5e42-af24-db255bdb92fb",
@@ -898,7 +2896,109 @@
       "category": "B&W",
       "process": "B&W",
       "notes": "old-school single-layer Croatian emulsion",
-      "isDiscontinued": true
+      "isDiscontinued": true,
+      "manufacturer": "Efke",
+      "brandLine": "KB",
+      "filmType": "B&W negative",
+      "usableRange": "12–50",
+      "pushPullTolerance": "Traditional European slow film — expose carefully",
+      "productionStatus": "Discontinued",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "20th c.–c.2012",
+      "bestFor": [
+        "Classic European look",
+        "Fine detail",
+        "Collectors"
+      ],
+      "priceTier": "$$"
+    },
+    {
+      "id": "6a63ee1a-d7d5-52aa-868d-23c5e5b848b7",
+      "name": "Kodak Kodacolor 100",
+      "iso": 100,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "Consumer Kodacolor color negative",
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "50–200",
+      "pushPullTolerance": "Typical consumer ±1 stop; best in good daylight",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "Single-use cameras"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2020s–present (modern Kodacolor line)",
+      "bestFor": [
+        "Daylight snapshots",
+        "Travel",
+        "Budget fine-grain color"
+      ],
+      "priceTier": "$"
+    },
+    {
+      "id": "c5f233f6-a010-57c1-ade1-0234f46dde6a",
+      "name": "Kodak Kodacolor 200",
+      "iso": 200,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "Consumer Kodacolor color negative",
+      "isDiscontinued": false,
+      "manufacturer": "Kodak",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "100–400",
+      "pushPullTolerance": "Everyday consumer latitude ±1 stop",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "Single-use cameras"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2020s–present (modern Kodacolor line)",
+      "bestFor": [
+        "Everyday color",
+        "Family snapshots",
+        "Travel"
+      ],
+      "priceTier": "$"
+    },
+    {
+      "id": "0146bc7e-348d-55d8-ae37-149829fa0c9e",
+      "name": "Leica Monopan 50",
+      "iso": 50,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "Super-panchromatic ultra-fine grain; Leica’s 35mm B&W film",
+      "isDiscontinued": false,
+      "manufacturer": "Leica",
+      "brandLine": "Monopan",
+      "filmType": "B&W negative",
+      "usableRange": "25–100",
+      "pushPullTolerance": "Prefer box speed for finest grain; mild ±1 stop possible depending on developer",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Fine",
+      "yearsActive": "2025–present",
+      "bestFor": [
+        "High-resolution detail",
+        "Leica lenses / wide aperture",
+        "Near-IR with filters"
+      ],
+      "priceTier": "$$$"
     }
   ]
 }

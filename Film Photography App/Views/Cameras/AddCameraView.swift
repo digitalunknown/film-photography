@@ -12,6 +12,11 @@ struct AddCameraView: View {
     @State private var includePurchaseDate = false
     @State private var purchasePrice = ""
     @State private var quirkNote = ""
+    @FocusState private var focusedField: Field?
+
+    private enum Field {
+        case name, lens, serial, price, quirks
+    }
 
     private let cameraTypes = ["Rangefinder", "SLR", "Point & shoot", "TLR", "Large format", "Instant"]
 
@@ -20,35 +25,84 @@ struct AddCameraView: View {
         !lensSubtitle.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
+    private var sectionDivider: some View {
+        SectionRule()
+            .padding(.bottom, AppTheme.Spacing.md)
+    }
+
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Body") {
-                    TextField("Name", text: $name, prompt: Text("Konica C35 FD"))
-                    TextField("Lens", text: $lensSubtitle, prompt: Text("38mm f/1.8"))
-                    Picker("Type", selection: $cameraType) {
-                        ForEach(cameraTypes, id: \.self) { type in
-                            Text(type).tag(type)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    DetailSection(title: "Body") {
+                        VStack(spacing: 0) {
+                            InstrumentEditableRow(label: "Name", showsDivider: false) {
+                                TextField("Konica C35 FD", text: $name)
+                                    .focused($focusedField, equals: .name)
+                            }
+                            InstrumentEditableRow(label: "Lens") {
+                                TextField("38mm f/1.8", text: $lensSubtitle)
+                                    .focused($focusedField, equals: .lens)
+                            }
+                            InstrumentMenuRow(
+                                label: "Type",
+                                value: cameraType,
+                                valueBright: true
+                            ) {
+                                ForEach(cameraTypes, id: \.self) { type in
+                                    Button(type) { cameraType = type }
+                                }
+                            }
                         }
                     }
-                }
 
-                Section("Collection details") {
-                    TextField("Serial number", text: $serialNumber)
-                    Toggle("Purchase date", isOn: $includePurchaseDate)
-                    if includePurchaseDate {
-                        DatePicker("Date", selection: $purchaseDate, displayedComponents: .date)
+                    sectionDivider
+
+                    DetailSection(title: "Collection") {
+                        VStack(spacing: 0) {
+                            InstrumentEditableRow(label: "Serial", showsDivider: false) {
+                                TextField("Optional", text: $serialNumber)
+                                    .focused($focusedField, equals: .serial)
+                            }
+                            InstrumentRow(label: "Purchase date") {
+                                Toggle("", isOn: $includePurchaseDate)
+                                    .labelsHidden()
+                                    .tint(AppTheme.textPrimary)
+                            }
+                            if includePurchaseDate {
+                                InstrumentRow(label: "Date") {
+                                    DatePicker(
+                                        "Date",
+                                        selection: $purchaseDate,
+                                        displayedComponents: .date
+                                    )
+                                    .labelsHidden()
+                                    .colorScheme(.dark)
+                                }
+                            }
+                            InstrumentEditableRow(label: "Price") {
+                                TextField("Optional", text: $purchasePrice)
+                                    .keyboardType(.decimalPad)
+                                    .focused($focusedField, equals: .price)
+                            }
+                        }
                     }
-                    TextField("Purchase price", text: $purchasePrice)
-                        .keyboardType(.decimalPad)
-                }
 
-                Section("Quirks") {
-                    TextField("Notes", text: $quirkNote, axis: .vertical)
-                        .lineLimit(2...4)
+                    sectionDivider
+
+                    DetailSection(title: "Notes") {
+                        TextField("Quirks, servicing, tips", text: $quirkNote, axis: .vertical)
+                            .font(InstrumentFont.mono(12))
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .lineLimit(3...6)
+                            .focused($focusedField, equals: .quirks)
+                            .padding(.vertical, AppTheme.Spacing.sm)
+                    }
                 }
+                .instrumentDetailContent()
             }
-            .instrumentFormStyle()
+            .instrumentDetailScroll()
+            .instrumentScreen()
             .navigationTitle("Add Camera")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -61,8 +115,14 @@ struct AddCameraView: View {
                         .font(InstrumentFont.mono(13))
                         .disabled(!canSave)
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { focusedField = nil }
+                        .font(InstrumentFont.mono(13))
+                }
             }
         }
+        .instrumentSheetChrome()
     }
 
     private func save() {
@@ -72,7 +132,7 @@ struct AddCameraView: View {
             cameraType: cameraType,
             serialNumber: serialNumber,
             purchaseDate: includePurchaseDate ? purchaseDate : nil,
-            purchasePrice: Double(purchasePrice),
+            purchasePrice: Double(purchasePrice.replacingOccurrences(of: ",", with: ".")),
             quirkNote: quirkNote
         )
         dismiss()

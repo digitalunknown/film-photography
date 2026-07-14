@@ -7,16 +7,36 @@ struct CameraDetailView: View {
     let cameraId: UUID
 
     @State private var photoItem: PhotosPickerItem?
+    @State private var selectedLoadRollId: UUID?
+    @State private var selectedFridgeItemId: UUID?
+    @State private var showingLoadPicker = false
+    @State private var showingPurchaseDatePicker = false
+    @State private var purchaseDateDraft = Date()
+    @State private var selectedHistoryRoll: Roll?
+    @FocusState private var isNotesFocused: Bool
+    @FocusState private var isPriceFocused: Bool
 
     private let cameraTypes = ["Rangefinder", "SLR", "Point & shoot", "TLR", "Large format", "Instant"]
+    private let currencyCodes = ["USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HKD", "SGD", "KRW", "CNY", "MXN", "BRL"]
 
     private var camera: Camera? {
         store.camera(for: cameraId)
     }
 
-    private var cameraRollHistory: [Roll] {
-        store.rollsForCamera(cameraId)
-            .sorted { ($0.loadedDate ?? .distantPast) > ($1.loadedDate ?? .distantPast) }
+    private var loadedRoll: Roll? {
+        store.loadedRoll(for: cameraId)
+    }
+
+    private var historyRolls: [Roll] {
+        let loadedId = loadedRoll?.id
+        return store.rollsForCamera(cameraId)
+            .filter { $0.id != loadedId }
+            .sorted { ($0.historyDate ?? .distantPast) > ($1.historyDate ?? .distantPast) }
+    }
+
+    private var sectionDivider: some View {
+        SectionRule()
+            .padding(.bottom, AppTheme.Spacing.md)
     }
 
     var body: some View {
@@ -24,18 +44,28 @@ struct CameraDetailView: View {
             if let camera {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        heroSection(camera)
-                        photoSection(camera)
-                        bodySection(camera)
-                        collectionSection(camera)
-                        quirksSection(camera)
-                        repairSection(camera)
-                        loadedSection(camera)
-                        rollHistorySection
+                        photoHero(camera)
+
+                        if let roll = loadedRoll {
+                            loadedRollSection(roll)
+                            sectionDivider
+                        } else {
+                            loadSection(camera)
+                            sectionDivider
+                        }
+
+                        notesSection(camera)
+                        sectionDivider
+                        specificationsSection(camera)
+
+                        if !historyRolls.isEmpty {
+                            sectionDivider
+                            historySection
+                        }
                     }
-                    .padding(.horizontal, AppTheme.horizontalPadding)
-                    .padding(.bottom, 32)
+                    .instrumentDetailContent()
                 }
+                .instrumentDetailScroll()
             } else {
                 VStack(alignment: .leading) {
                     Text("Camera not found")
@@ -47,190 +77,449 @@ struct CameraDetailView: View {
         }
         .instrumentDetailChrome()
         .instrumentDetailNavigation(title: camera?.name ?? "Camera")
+        .navigationDestination(item: $selectedHistoryRoll) { roll in
+            RollDetailView(rollId: roll.id)
+        }
+        .sheet(isPresented: $showingLoadPicker) {
+            loadPickerSheet
+        }
+        .sheet(isPresented: $showingPurchaseDatePicker) {
+            purchaseDatePickerSheet
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    isNotesFocused = false
+                    isPriceFocused = false
+                }
+                .font(InstrumentFont.mono(13))
+            }
+        }
         .onChange(of: photoItem) { _, newItem in
             guard let newItem else { return }
             Task { await loadPhoto(from: newItem) }
         }
     }
 
-    @ViewBuilder
-    private func heroSection(_ camera: Camera) -> some View {
-        if let roll = store.loadedRoll(for: camera.id) {
-            HeroMetric(
-                label: "Frame",
-                sublabel: store.stock(for: roll.stockId)?.name,
-                value: String(format: "%02d", roll.frameCount)
-            )
-            .padding(.top, 8)
-            .padding(.bottom, 28)
-            UnderlineMeter(
-                label: "Exposures",
-                value: "\(roll.frameCount)/\(roll.totalExposures)",
-                progress: Double(roll.frameCount) / Double(max(roll.totalExposures, 1))
-            )
-            .padding(.bottom, 28)
-            HairlineRule().padding(.bottom, 28)
-        } else {
-            Text(camera.name)
-                .font(InstrumentFont.display(28, weight: .regular))
-                .foregroundStyle(AppTheme.textPrimary)
-                .padding(.top, 8)
-                .padding(.bottom, 28)
-        }
-    }
-
-    // MARK: - Sections
-
-    private func photoSection(_ camera: Camera) -> some View {
-        VStack(spacing: 10) {
-            PhotosPicker(selection: $photoItem, matching: .images) {
-                CameraPhotoPlate(photoData: camera.photoData, size: 120)
+    private func photoHero(_ camera: Camera) -> some View {
+        DetailHeroBlock {
+            Menu {
+                PhotosPicker(selection: $photoItem, matching: .images) {
+                    Label("Upload Photo", systemImage: "photo.badge.plus")
+                }
+                if camera.photoData != nil {
+                    Button("Remove", role: .destructive) {
+                        update(camera) { $0.photoData = nil }
+                    }
+                }
+            } label: {
+                CameraPhotoPlate(photoData: camera.photoData, square: false, height: 220)
             }
             .buttonStyle(.plain)
-
-            Text("Tap to add photo")
-                .font(InstrumentFont.mono(11))
-                .foregroundStyle(AppTheme.textSecondary)
-
-            if camera.photoData != nil {
-                TextAction(label: "Remove photo →") {
-                    update(camera) { $0.photoData = nil }
-                }
-            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.bottom, 28)
     }
 
-    private func bodySection(_ camera: Camera) -> some View {
-        DetailSection(title: "Body") {
-            EditableField(label: "Name") {
-                TextField("Camera name", text: binding(camera, \.name))
+    private func loadedRollSection(_ roll: Roll) -> some View {
+        DetailSection(title: "Loaded") {
+            Button {
+                selectedHistoryRoll = roll
+            } label: {
+                RollLedgerRow(roll: roll, showsCameraName: false)
             }
-            EditableField(label: "Lens") {
-                TextField("38mm f/1.8", text: binding(camera, \.lensSubtitle))
-            }
-            EditableField(label: "Type") {
-                Picker("Type", selection: binding(camera, \.cameraType)) {
-                    ForEach(cameraTypes, id: \.self) { type in
-                        Text(type).tag(type)
+            .buttonStyle(.plain)
+            .padding(.top, AppTheme.Spacing.xs)
+        }
+    }
+
+    private func loadSection(_ camera: Camera) -> some View {
+        DetailSection(title: "Load") {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                FilmLoadSlider(
+                    stock: currentLoadSelection?.stock,
+                    cameraName: camera.name,
+                    onChooseRoll: { showingLoadPicker = true }
+                ) {
+                    if let selection = currentLoadSelection {
+                        performLoad(onto: camera, selection: selection)
                     }
                 }
-                .labelsHidden()
-            }
-            EditableField(label: "Default format") {
-                Picker("Format", selection: defaultFormatBinding(camera)) {
-                    Text("None").tag(nil as FilmFormat?)
-                    ForEach(FilmFormat.allCases) { fmt in
-                        Text(fmt.displayName).tag(fmt as FilmFormat?)
-                    }
-                }
-                .labelsHidden()
-            }
-        }
-    }
+                .id(currentLoadSelection?.id ?? "empty-load")
 
-    private func collectionSection(_ camera: Camera) -> some View {
-        DetailSection(title: "Collection") {
-            EditableField(label: "Serial number") {
-                TextField("Optional", text: optionalStringBinding(camera, \.serialNumber))
-            }
-            EditableField(label: "Purchase date") {
-                DatePicker(
-                    "Date",
-                    selection: purchaseDateBinding(camera),
-                    displayedComponents: .date
-                )
-                .labelsHidden()
-            }
-            EditableField(label: "Purchase price") {
-                TextField("Optional", text: priceBinding(camera))
-                    .keyboardType(.decimalPad)
-            }
-        }
-    }
-
-    private func quirksSection(_ camera: Camera) -> some View {
-        DetailSection(title: "Quirks") {
-            if camera.quirks.isEmpty {
-                Text("No quirks recorded")
-                    .font(InstrumentFont.mono(12))
-                    .foregroundStyle(AppTheme.textSecondary)
-            } else {
-                ForEach(quirkIndices(camera), id: \.self) { index in
-                    HStack(alignment: .top, spacing: 8) {
-                        Text("△")
+                if currentLoadSelection != nil {
+                    HStack {
+                        Text(selectedLoadLabel)
                             .font(InstrumentFont.mono(11))
                             .foregroundStyle(AppTheme.textSecondary)
-                        TextField("Quirk", text: quirkBinding(camera, index: index), axis: .vertical)
+                            .lineLimit(1)
+                        Spacer()
+                        Button("Change →") {
+                            showingLoadPicker = true
+                        }
+                        .font(InstrumentFont.mono(11))
+                        .foregroundStyle(AppTheme.textSecondary)
+                    }
+                } else {
+                    Text(loadEmptyMessage)
+                        .font(InstrumentFont.mono(11))
+                        .foregroundStyle(AppTheme.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private func specificationsSection(_ camera: Camera) -> some View {
+        DetailSection(title: "Technical Specifications") {
+            VStack(alignment: .leading, spacing: 0) {
+                InstrumentEditableRow(label: "Name", showsDivider: false) {
+                    TextField("Camera name", text: binding(camera, \.name))
+                        .multilineTextAlignment(.leading)
+                }
+                InstrumentEditableRow(label: "Lens") {
+                    TextField("38mm f/1.8", text: binding(camera, \.lensSubtitle))
+                        .multilineTextAlignment(.leading)
+                }
+                InstrumentMenuRow(
+                    label: "Type",
+                    value: camera.cameraType.isEmpty ? "Not Set" : camera.cameraType,
+                    valueBright: !camera.cameraType.isEmpty
+                ) {
+                    ForEach(cameraTypes, id: \.self) { type in
+                        Button(type) {
+                            update(camera) { $0.cameraType = type }
+                        }
+                    }
+                }
+                InstrumentMenuRow(
+                    label: "Default format",
+                    value: camera.defaultFormat?.displayName ?? "Not Set",
+                    valueBright: camera.defaultFormat != nil
+                ) {
+                    Button("Not Set") {
+                        update(camera) { $0.defaultFormat = nil }
+                    }
+                    ForEach(FilmFormat.allCases) { fmt in
+                        Button(fmt.displayName) {
+                            update(camera) { $0.defaultFormat = fmt }
+                        }
+                    }
+                }
+                InstrumentEditableRow(label: "Serial number") {
+                    TextField("Optional", text: optionalStringBinding(camera, \.serialNumber))
+                        .multilineTextAlignment(.leading)
+                }
+                Button {
+                    purchaseDateDraft = camera.purchaseDate ?? Date()
+                    showingPurchaseDatePicker = true
+                } label: {
+                    InstrumentRow(label: "Purchase date") {
+                        HStack(spacing: AppTheme.Spacing.xs) {
+                            Text(purchaseDateDisplay(for: camera))
+                                .font(InstrumentFont.mono(12))
+                                .foregroundStyle(camera.purchaseDate != nil ? AppTheme.textPrimary : AppTheme.textSecondary)
+                                .multilineTextAlignment(.leading)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(InstrumentFont.mono(9, weight: .bold))
+                                .foregroundStyle(AppTheme.textTertiary)
+                            Spacer(minLength: 0)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                InstrumentEditableRow(label: "Purchase price") {
+                    HStack(spacing: AppTheme.Spacing.sm) {
+                        Menu {
+                            ForEach(currencyMenuCodes(for: camera), id: \.self) { code in
+                                Button(code) {
+                                    update(camera) { $0.purchaseCurrency = code }
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: AppTheme.Spacing.xs) {
+                                Text(camera.purchaseCurrency)
+                                    .font(InstrumentFont.mono(12))
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(InstrumentFont.mono(9, weight: .bold))
+                                    .foregroundStyle(AppTheme.textTertiary)
+                            }
+                        }
+                        TextField("0", text: priceBinding(camera))
                             .font(InstrumentFont.mono(12))
                             .foregroundStyle(AppTheme.textPrimary)
-                            .lineLimit(2...4)
-                        Button {
-                            removeQuirk(at: index, from: camera)
-                        } label: {
-                            Text("⨯")
-                                .font(InstrumentFont.mono(12))
-                                .foregroundStyle(AppTheme.textTertiary)
-                        }
-                        .buttonStyle(.plain)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.leading)
+                            .focused($isPriceFocused)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }
-
-            TextAction(label: "Add quirk →") { addQuirk(to: camera) }
-                .padding(.top, 4)
         }
     }
 
-    private func repairSection(_ camera: Camera) -> some View {
-        DetailSection(title: "Repairs") {
-            if camera.repairHistory.isEmpty {
-                Text("No repairs recorded")
-                    .font(InstrumentFont.mono(12))
-                    .foregroundStyle(AppTheme.textSecondary)
-            } else {
-                ForEach(repairIndices(camera), id: \.self) { index in
-                    VStack(alignment: .leading, spacing: 8) {
-                        TextField("Description", text: repairDescriptionBinding(camera, index: index), axis: .vertical)
-                            .lineLimit(2...3)
-                        DatePicker(
-                            "Date",
-                            selection: repairDateBinding(camera, index: index),
-                            displayedComponents: .date
-                        )
-                        .font(.caption)
-                        TextAction(label: "Remove →") {
-                            removeRepair(at: index, from: camera)
-                        }
-                    }
-                    .padding(.vertical, 4)
-
-                    if index < camera.repairHistory.count - 1 {
-                        HairlineRule().padding(.vertical, 8)
-                    }
-                }
+    private func notesSection(_ camera: Camera) -> some View {
+        DetailSection(title: "Notes") {
+            TextField(
+                "Add a note",
+                text: notesBinding(camera),
+                axis: .vertical
+            )
+            .font(InstrumentFont.mono(12))
+            .foregroundStyle(AppTheme.textPrimary)
+            .lineLimit(3...8)
+            .submitLabel(.done)
+            .focused($isNotesFocused)
+            .onSubmit {
+                isNotesFocused = false
             }
-
-            TextAction(label: "Add repair →") { addRepair(to: camera) }
-                .padding(.top, 4)
+            .padding(.vertical, AppTheme.Spacing.sm)
         }
     }
 
-    @ViewBuilder
-    private func loadedSection(_ camera: Camera) -> some View {
-        if let roll = store.loadedRoll(for: camera.id),
-           let stock = store.stock(for: roll.stockId) {
-            DetailSection(title: "Loaded") {
-                LoadedRollRow(stock: stock, roll: roll)
-            }
-        }
-    }
-
-    private var rollHistorySection: some View {
+    private var historySection: some View {
         DetailSection(title: "History") {
-            RollHistoryList(rolls: cameraRollHistory)
+            VStack(spacing: 0) {
+                ForEach(Array(historyRolls.enumerated()), id: \.element.id) { index, roll in
+                    Button {
+                        selectedHistoryRoll = roll
+                    } label: {
+                        cameraHistoryRow(roll, showsDivider: index > 0)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
+    }
+
+    private func cameraHistoryRow(_ roll: Roll, showsDivider: Bool) -> some View {
+        VStack(spacing: 0) {
+            if showsDivider {
+                HairlineRule()
+            }
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(historyDateText(for: roll))
+                        .font(InstrumentFont.mono(12))
+                        .foregroundStyle(AppTheme.textPrimary)
+                    Spacer(minLength: AppTheme.Spacing.sm)
+                    Text(historyFilmType(for: roll))
+                        .font(InstrumentFont.mono(12))
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                Text(store.stock(for: roll.stockId)?.name ?? roll.shortId)
+                    .font(InstrumentFont.mono(12))
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(roll.status.displayName)
+                    .font(InstrumentFont.mono(11))
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, AppTheme.Spacing.md)
+        }
+    }
+
+    private func historyDateText(for roll: Roll) -> String {
+        guard let date = roll.historyDate else { return "—" }
+        return DateFormatters.medium.string(from: date)
+    }
+
+    private func historyFilmType(for roll: Roll) -> String {
+        store.stock(for: roll.stockId)?.filmType.label ?? roll.format.displayName
+    }
+
+    private func currencyMenuCodes(for camera: Camera) -> [String] {
+        var codes = currencyCodes
+        if !codes.contains(camera.purchaseCurrency) {
+            codes.insert(camera.purchaseCurrency, at: 0)
+        }
+        return codes
+    }
+
+    private var purchaseDatePickerSheet: some View {
+        NavigationStack {
+            VStack(spacing: AppTheme.Spacing.lg) {
+                DatePicker(
+                    "Purchase date",
+                    selection: $purchaseDateDraft,
+                    displayedComponents: .date
+                )
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                .tint(AppTheme.textPrimary)
+                .padding(.horizontal, AppTheme.horizontalPadding)
+
+                Spacer(minLength: 0)
+            }
+            .instrumentScreen()
+            .navigationTitle("Purchase date")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Clear") {
+                        if let camera = camera {
+                            update(camera) { $0.purchaseDate = nil }
+                        }
+                        showingPurchaseDatePicker = false
+                    }
+                    .font(InstrumentFont.mono(13))
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        if let camera = camera {
+                            update(camera) {
+                                $0.purchaseDate = Calendar.current.startOfDay(for: purchaseDateDraft)
+                            }
+                        }
+                        showingPurchaseDatePicker = false
+                    }
+                    .font(InstrumentFont.mono(13))
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var loadPickerSheet: some View {
+        NavigationStack {
+            List {
+                if !store.inventoryRolls.isEmpty {
+                    Section("In stock") {
+                        ForEach(store.inventoryRolls) { roll in
+                            Button {
+                                selectedLoadRollId = roll.id
+                                selectedFridgeItemId = nil
+                                showingLoadPicker = false
+                            } label: {
+                                Text(inventoryRollLabel(for: roll))
+                                    .font(InstrumentFont.mono(13))
+                                    .foregroundStyle(AppTheme.textPrimary)
+                            }
+                        }
+                    }
+                }
+
+                if !store.availableFridgeItems.isEmpty {
+                    Section("Unopened stock") {
+                        ForEach(store.availableFridgeItems) { item in
+                            Button {
+                                selectedFridgeItemId = item.id
+                                selectedLoadRollId = nil
+                                showingLoadPicker = false
+                            } label: {
+                                Text(fridgeItemLabel(for: item))
+                                    .font(InstrumentFont.mono(13))
+                                    .foregroundStyle(AppTheme.textPrimary)
+                            }
+                        }
+                    }
+                }
+
+                if store.inventoryRolls.isEmpty && store.availableFridgeItems.isEmpty {
+                    Text(loadEmptyMessage)
+                        .font(InstrumentFont.mono(12))
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .listRowBackground(Color.clear)
+                }
+            }
+            .instrumentFormStyle()
+            .navigationTitle("Choose roll")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showingLoadPicker = false }
+                        .font(InstrumentFont.mono(13))
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private enum LoadSelection {
+        case roll(Roll, FilmStock?)
+        case fridgeItem(FridgeItem, FilmStock?)
+
+        var id: String {
+            switch self {
+            case .roll(let roll, _): return "roll-\(roll.id)"
+            case .fridgeItem(let item, _): return "fridge-\(item.id)"
+            }
+        }
+
+        var stock: FilmStock? {
+            switch self {
+            case .roll(_, let stock), .fridgeItem(_, let stock): return stock
+            }
+        }
+    }
+
+    private var currentLoadSelection: LoadSelection? {
+        if let selectedLoadRollId, let roll = store.roll(for: selectedLoadRollId) {
+            return .roll(roll, store.stock(for: roll.stockId))
+        }
+        if let selectedFridgeItemId,
+           let item = store.fridgeItems.first(where: { $0.id == selectedFridgeItemId }) {
+            return .fridgeItem(item, store.stock(for: item.stockId))
+        }
+        return nil
+    }
+
+    private var selectedLoadLabel: String {
+        switch currentLoadSelection {
+        case .roll(let roll, _):
+            return inventoryRollLabel(for: roll)
+        case .fridgeItem(let item, _):
+            return fridgeItemLabel(for: item)
+        case nil:
+            return "Not Set"
+        }
+    }
+
+    private var loadEmptyMessage: String {
+        if store.inventoryRolls.isEmpty && store.availableFridgeItems.isEmpty {
+            if store.activeRolls.isEmpty {
+                return "No rolls yet. Add a roll on the Rolls tab, then load it here."
+            }
+            return "No unloadable stock. Set a roll to In stock — or add unopened stock — then choose it here."
+        }
+        return "Tap the empty canister to choose a roll, then slide to load."
+    }
+
+    private func inventoryRollLabel(for roll: Roll) -> String {
+        let stockName = store.stock(for: roll.stockId)?.name ?? roll.shortId
+        return "\(stockName) · \(roll.shortId)"
+    }
+
+    private func fridgeItemLabel(for item: FridgeItem) -> String {
+        let stockName = store.stock(for: item.stockId)?.name ?? "Stock"
+        let qty = item.quantity > 1 ? " · ×\(item.quantity)" : ""
+        return "\(stockName) · \(item.format.displayName)\(qty)"
+    }
+
+    private func purchaseDateDisplay(for camera: Camera) -> String {
+        guard let date = camera.purchaseDate else { return "Not Set" }
+        return DateFormatters.medium.string(from: date)
+    }
+
+    private func performLoad(onto camera: Camera, selection: LoadSelection) {
+        switch selection {
+        case .roll(let roll, _):
+            store.assignRoll(roll.id, to: camera.id)
+        case .fridgeItem(let item, let stock):
+            store.loadRoll(
+                cameraId: camera.id,
+                stockId: item.stockId,
+                format: item.format,
+                iso: stock?.iso ?? 400,
+                exposures: item.format.defaultExposures,
+                expiryDate: item.expiryDate,
+                fromFridgeItemId: item.id
+            )
+        }
+        selectedLoadRollId = nil
+        selectedFridgeItemId = nil
     }
 
     // MARK: - Bindings
@@ -253,110 +542,42 @@ struct CameraDetailView: View {
         )
     }
 
-    private func purchaseDateBinding(_ camera: Camera) -> Binding<Date> {
-        Binding(
-            get: { store.camera(for: cameraId)?.purchaseDate ?? Date() },
-            set: { newValue in
-                update(camera) { $0.purchaseDate = newValue }
-            }
-        )
-    }
-
-    private func defaultFormatBinding(_ camera: Camera) -> Binding<FilmFormat?> {
-        Binding(
-            get: { store.camera(for: cameraId)?.defaultFormat },
-            set: { newValue in
-                update(camera) { $0.defaultFormat = newValue }
-            }
-        )
-    }
-
     private func priceBinding(_ camera: Camera) -> Binding<String> {
         Binding(
             get: {
                 guard let price = store.camera(for: cameraId)?.purchasePrice else { return "" }
-                return String(format: "%.0f", price)
+                if price.truncatingRemainder(dividingBy: 1) == 0 {
+                    return String(format: "%.0f", price)
+                }
+                return String(format: "%.2f", price)
             },
             set: { newValue in
-                update(camera) { $0.purchasePrice = Double(newValue) }
-            }
-        )
-    }
-
-    private func quirkIndices(_ camera: Camera) -> Range<Int> {
-        0..<(store.camera(for: cameraId)?.quirks.count ?? camera.quirks.count)
-    }
-
-    private func quirkBinding(_ camera: Camera, index: Int) -> Binding<String> {
-        Binding(
-            get: { store.camera(for: cameraId)?.quirks[index].note ?? "" },
-            set: { newValue in
-                update(camera) { cam in
-                    guard cam.quirks.indices.contains(index) else { return }
-                    cam.quirks[index].note = newValue
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                update(camera) {
+                    $0.purchasePrice = trimmed.isEmpty
+                        ? nil
+                        : Double(trimmed.replacingOccurrences(of: ",", with: "."))
                 }
             }
         )
     }
 
-    private func repairIndices(_ camera: Camera) -> Range<Int> {
-        0..<(store.camera(for: cameraId)?.repairHistory.count ?? camera.repairHistory.count)
-    }
-
-    private func repairDescriptionBinding(_ camera: Camera, index: Int) -> Binding<String> {
+    private func notesBinding(_ camera: Camera) -> Binding<String> {
         Binding(
-            get: { store.camera(for: cameraId)?.repairHistory[index].description ?? "" },
+            get: { store.camera(for: cameraId)?.notes ?? "" },
             set: { newValue in
-                update(camera) { cam in
-                    guard cam.repairHistory.indices.contains(index) else { return }
-                    cam.repairHistory[index].description = newValue
+                update(camera) {
+                    let text = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                    $0.notes = text.isEmpty ? nil : newValue
                 }
             }
         )
     }
-
-    private func repairDateBinding(_ camera: Camera, index: Int) -> Binding<Date> {
-        Binding(
-            get: { store.camera(for: cameraId)?.repairHistory[index].date ?? Date() },
-            set: { newValue in
-                update(camera) { cam in
-                    guard cam.repairHistory.indices.contains(index) else { return }
-                    cam.repairHistory[index].date = newValue
-                }
-            }
-        )
-    }
-
-    // MARK: - Mutations
 
     private func update(_ camera: Camera, _ transform: (inout Camera) -> Void) {
         guard var current = store.camera(for: cameraId) else { return }
         transform(&current)
         store.updateCamera(current)
-    }
-
-    private func addQuirk(to camera: Camera) {
-        update(camera) { $0.quirks.append(CameraQuirk(id: UUID(), note: "")) }
-    }
-
-    private func removeQuirk(at index: Int, from camera: Camera) {
-        update(camera) { cam in
-            guard cam.quirks.indices.contains(index) else { return }
-            cam.quirks.remove(at: index)
-        }
-    }
-
-    private func addRepair(to camera: Camera) {
-        update(camera) {
-            $0.repairHistory.append(RepairRecord(id: UUID(), date: Date(), description: ""))
-        }
-    }
-
-    private func removeRepair(at index: Int, from camera: Camera) {
-        update(camera) { cam in
-            guard cam.repairHistory.indices.contains(index) else { return }
-            cam.repairHistory.remove(at: index)
-        }
     }
 
     private func loadPhoto(from item: PhotosPickerItem) async {
@@ -369,121 +590,6 @@ struct CameraDetailView: View {
             camera.photoData = data
         }
         store.updateCamera(camera)
-    }
-}
-
-private struct EditableField<Content: View>: View {
-    let label: String
-    @ViewBuilder var content: () -> Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(InstrumentFont.mono(11))
-                .foregroundStyle(AppTheme.textSecondary)
-            content()
-                .font(InstrumentFont.mono(13))
-                .foregroundStyle(AppTheme.textPrimary)
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-private struct LoadedRollRow: View {
-    let stock: FilmStock
-    let roll: Roll
-
-    var body: some View {
-        VStack(spacing: 8) {
-            DataRow(label: "Stock", value: stock.name)
-            DataRow(label: "Frame", value: String(format: "%02d/%02d", roll.frameCount, roll.totalExposures))
-            DataRow(label: "Pins", value: "\(roll.pinCount)")
-        }
-    }
-}
-
-private struct RollHistoryList: View {
-    @Environment(AppStore.self) private var store
-    let rolls: [Roll]
-
-    var body: some View {
-        if rolls.isEmpty {
-            Text("No rolls yet")
-                .font(InstrumentFont.mono(12))
-                .foregroundStyle(AppTheme.textSecondary)
-        } else {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(rolls.enumerated()), id: \.element.id) { index, roll in
-                    if let stock = store.stock(for: roll.stockId) {
-                        RollTimelineRow(roll: roll, stockName: stock.name)
-
-                        if index < rolls.count - 1 {
-                            HairlineRule()
-                                .padding(.vertical, 16)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-private struct RollTimelineRow: View {
-    let roll: Roll
-    let stockName: String
-
-    private var events: [(label: String, date: Date)] {
-        var items: [(String, Date)] = []
-        if let date = roll.loadedDate { items.append(("Loaded", date)) }
-        if let date = roll.finishedDate { items.append(("Finished", date)) }
-        if let date = roll.dropOffDate { items.append(("At lab", date)) }
-        if let date = roll.developedDate { items.append(("Developed", date)) }
-        if let date = roll.scannedDate { items.append(("Scanned", date)) }
-        return items.sorted { $0.1 < $1.1 }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("\(stockName) · \(roll.shortId)")
-                .font(InstrumentFont.mono(12))
-                .foregroundStyle(AppTheme.textPrimary)
-
-            if events.isEmpty {
-                Text(roll.status.displayName)
-                    .font(InstrumentFont.mono(11))
-                    .foregroundStyle(AppTheme.textSecondary)
-            } else {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(events.enumerated()), id: \.offset) { index, event in
-                        HStack(alignment: .top, spacing: 14) {
-                            VStack(spacing: 0) {
-                                Circle()
-                                    .fill(index == events.count - 1 ? AppTheme.textPrimary : AppTheme.textSecondary)
-                                    .frame(width: 5, height: 5)
-                                if index < events.count - 1 {
-                                    Rectangle()
-                                        .fill(AppTheme.rule)
-                                        .frame(width: 0.5)
-                                        .frame(height: 28)
-                                }
-                            }
-                            .padding(.top, 4)
-
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(event.label)
-                                    .font(InstrumentFont.mono(11))
-                                    .foregroundStyle(AppTheme.textSecondary)
-                                Text(DateFormatters.medium.string(from: event.date))
-                                    .font(InstrumentFont.mono(12))
-                                    .foregroundStyle(AppTheme.textPrimary)
-                            }
-
-                            Spacer(minLength: 0)
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 

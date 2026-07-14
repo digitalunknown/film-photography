@@ -1,18 +1,22 @@
 import SwiftUI
+import PhotosUI
+import UniformTypeIdentifiers
+import UIKit
 
 struct RollDetailView: View {
     @Environment(AppStore.self) private var store
     let rollId: UUID
 
-    @State private var showingImportAlert = false
-    @State private var showingStatusPicker = false
     @State private var showingDeleteConfirm = false
     @State private var showingExportSheet = false
     @State private var loadCameraId: UUID?
+    @State private var showingCameraPicker = false
     @State private var exportText = ""
-    @State private var tagInput = ""
-    @State private var showingAddDatedFrame = false
-    @State private var datedFrameTimestamp = Date()
+    @State private var scanPickerItems: [PhotosPickerItem] = []
+    @State private var openedScanFrame: StripFrame?
+    @State private var showingAddDatePicker = false
+    @State private var addDateDraft = Date()
+    @FocusState private var isNotesFocused: Bool
 
     private var roll: Roll? {
         store.roll(for: rollId)
@@ -28,21 +32,42 @@ struct RollDetailView: View {
             if let roll {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        heroSection(roll)
-                        pipelineSection(roll)
+                        if let stock = store.stock(for: roll.stockId), stock.rollImageName != nil {
+                            DetailHeroBlock {
+                                StockPlate(stock: stock, square: false, height: 220)
+                            }
+                        }
+
+                        let showLoad = roll.status.isInventory
+                        let showScans = roll.status.canImportScans
+                        let showDevelopment = roll.status == .atLab
+                            || roll.status == .developed
+                            || roll.development != nil
+
+                        if showLoad {
+                            loadSection(roll)
+                            sectionDivider
+                        } else {
+                            pipelineSection(roll)
+                            sectionDivider
+                        }
+                        frameCounterSection(roll)
+                        if showScans {
+                            sectionDivider
+                            scansSection(roll)
+                        }
+                        sectionDivider
+                        notesSection(roll)
+                        sectionDivider
                         metadataSection(roll)
-                        frameLogSection(roll)
-                        if roll.status == .atLab || roll.status == .developed || roll.development != nil {
+                        if showDevelopment {
+                            sectionDivider
                             developmentSection(roll)
                         }
-                        tagsSection(roll)
-                        notesSection(roll)
-                        exportSection(roll)
-                        deleteSection(roll)
                     }
-                    .padding(.horizontal, AppTheme.horizontalPadding)
-                    .padding(.bottom, 32)
+                    .instrumentDetailContent()
                 }
+                .instrumentDetailScroll()
             } else {
                 VStack(alignment: .leading) {
                     Text("Roll not found")
@@ -53,25 +78,60 @@ struct RollDetailView: View {
             }
         }
         .instrumentDetailChrome()
-        .instrumentDetailNavigation(title: rollTitle)
-        .sheet(isPresented: $showingStatusPicker) {
-            if let roll {
-                statusPickerSheet(roll)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: AppTheme.Spacing.sm) {
+                    Text(rollTitle)
+                        .font(InstrumentFont.mono(13))
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .lineLimit(1)
+                    if roll?.isExpired == true {
+                        ExpiredLabel()
+                    }
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("Printable Summary Sheet", systemImage: "doc.text") {
+                        exportText = store.rollDataSheetText(for: rollId) ?? ""
+                        showingExportSheet = true
+                    }
+                    Divider()
+                    Button("Delete Roll", systemImage: "trash", role: .destructive) {
+                        showingDeleteConfirm = true
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                }
+                .accessibilityLabel("More")
+            }
+
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    isNotesFocused = false
+                }
+                .font(InstrumentFont.mono(13))
             }
         }
         .sheet(isPresented: $showingExportSheet) {
             exportSheet
         }
-        .sheet(isPresented: $showingAddDatedFrame) {
-            addDatedFrameSheet
+        .sheet(isPresented: $showingCameraPicker) {
+            cameraPickerSheet(for: rollId)
         }
-        .alert("Import scans", isPresented: $showingImportAlert) {
-            Button("Import") {
-                store.advanceRollStatus(rollId)
+        .sheet(isPresented: $showingAddDatePicker) {
+            addDatePickerSheet
+        }
+        .fullScreenCover(item: $openedScanFrame) { frame in
+            NavigationStack {
+                ScanFrameView(
+                    rollId: rollId,
+                    frame: frame,
+                    stock: store.roll(for: rollId).flatMap { store.stock(for: $0.stockId) }
+                )
             }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Write camera, lens, stock, ISO, dates, and GPS into scan files.")
         }
         .alert(deleteAlertTitle, isPresented: $showingDeleteConfirm) {
             Button("Delete", role: .destructive) {
@@ -94,256 +154,412 @@ struct RollDetailView: View {
         return "You can undo for 5 seconds after deleting."
     }
 
-    @ViewBuilder
-    private func heroSection(_ roll: Roll) -> some View {
-        if roll.status == .inCamera {
-            Button {
-                store.addFrameMarker(to: roll.id)
-            } label: {
-                HeroMetric(
-                    label: "Frame",
-                    sublabel: store.stock(for: roll.stockId)?.name,
-                    value: String(format: "%02d", roll.frameCount)
-                )
-            }
-            .buttonStyle(.plain)
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0.5).onEnded { _ in
-                    store.removeLastFrame(from: roll.id)
-                }
-            )
-            .padding(.bottom, 8)
-
-            Text("Tap counter to log a shot · long press to remove")
-                .font(InstrumentFont.mono(11))
-                .foregroundStyle(AppTheme.textTertiary)
-                .padding(.bottom, 16)
-
-            UnderlineMeter(
-                label: "Exposures",
-                value: "\(roll.frameCount)/\(roll.totalExposures)",
-                progress: min(Double(roll.frameCount) / Double(max(roll.totalExposures, 1)), 1.0)
-            )
-            .padding(.bottom, 28)
-
-            HairlineRule().padding(.bottom, 28)
-        } else {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
-                    Text(store.stock(for: roll.stockId)?.name ?? roll.shortId)
-                        .font(InstrumentFont.display(32, weight: .regular))
-                        .foregroundStyle(AppTheme.textPrimary)
-                    if roll.isExpired {
-                        Text("Expired")
-                            .font(InstrumentFont.mono(10))
-                            .foregroundStyle(AppTheme.textSecondary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .overlay(RoundedRectangle(cornerRadius: 2).stroke(AppTheme.rule))
-                    } else if roll.isNearExpiry {
-                        Text("Exp soon")
-                            .font(InstrumentFont.mono(10))
-                            .foregroundStyle(AppTheme.textSecondary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .overlay(RoundedRectangle(cornerRadius: 2).stroke(AppTheme.rule))
-                    }
-                }
-                Text(roll.shortId)
-                    .font(InstrumentFont.mono(12))
-                    .foregroundStyle(AppTheme.textSecondary)
-            }
-            .padding(.bottom, 28)
-
-            HairlineRule().padding(.bottom, 28)
-        }
+    private var sectionDivider: some View {
+        SectionRule()
+            .padding(.bottom, AppTheme.Spacing.md)
     }
 
-    private func pipelineSection(_ roll: Roll) -> some View {
-        DetailSection(title: "Pipeline") {
-            VStack(alignment: .leading, spacing: 12) {
-                if roll.status.isInventory {
-                    Picker("Camera", selection: $loadCameraId) {
-                        Text("Select camera").tag(nil as UUID?)
-                        ForEach(availableCameras(for: roll)) { camera in
-                            Text(camera.name).tag(camera.id as UUID?)
-                        }
+    private func scansSection(_ roll: Roll) -> some View {
+        DetailSection(title: "Scans") {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                if roll.scanFileNames.isEmpty {
+                    PhotosPicker(
+                        selection: $scanPickerItems,
+                        maxSelectionCount: 72,
+                        matching: .images,
+                        photoLibrary: .shared()
+                    ) {
+                        scanEmptyState
                     }
-                    .font(InstrumentFont.mono(12))
-                }
-
-                PipelineStatusRow(
-                    status: roll.status.displayName,
-                    onTapStatus: { showingStatusPicker = true }
-                )
-
-                if roll.status == .inCamera {
-                    TextAction(label: "Drop pin →") {
-                        store.addFrameMarker(to: roll.id)
-                    }
-                    TextAction(label: "Duplicate last frame →") {
-                        store.addFrameMarker(to: roll.id, duplicateLast: true)
-                    }
-                    if roll.frameCount > 0 {
-                        TextAction(label: "Remove last frame →") {
-                            store.removeLastFrame(from: roll.id)
-                        }
-                    }
-                }
-
-                if roll.status == .scanned {
-                    TextAction(label: "Import scans →") {
-                        showingImportAlert = true
-                    }
-                }
-            }
-        }
-    }
-
-    private func metadataSection(_ roll: Roll) -> some View {
-        DetailSection(title: "Record") {
-            VStack(spacing: 10) {
-                DataRow(label: "ID", value: roll.shortId)
-                if let stock = store.stock(for: roll.stockId) {
-                    DataRow(label: "Stock", value: stock.name)
-                    DataRow(label: "ISO", value: "\(roll.shootingISO ?? stock.iso)")
-                }
-                DataRow(label: "Format", value: roll.format.displayName)
-                if roll.status.showsCamera, let camera = store.camera(for: roll.cameraId) {
-                    DataRow(label: "Camera", value: camera.name)
-                }
-                editableFrameCountRow(roll)
-                editableExposuresRow(roll)
-                DataRow(label: "Pins", value: "\(roll.pinCount)")
-                if let push = roll.pushPullLabel {
-                    DataRow(label: "Push", value: push)
-                }
-                expiryRow(roll)
-                if let location = roll.storageLocation {
-                    DataRow(label: "Storage", value: location)
-                }
-            }
-        }
-    }
-
-    private func frameLogSection(_ roll: Roll) -> some View {
-        DetailSection(title: "Frame log") {
-            VStack(alignment: .leading, spacing: 10) {
-                if roll.frameMarkers.isEmpty {
-                    Text("Optional — log a frame with a specific date and time.")
-                        .font(InstrumentFont.mono(12))
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    .buttonStyle(.plain)
                 } else {
-                    Text("\(roll.frameMarkers.count) dated frame\(roll.frameMarkers.count == 1 ? "" : "s")")
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible(), spacing: AppTheme.Spacing.sm),
+                            GridItem(.flexible(), spacing: AppTheme.Spacing.sm),
+                        ],
+                        spacing: AppTheme.Spacing.sm
+                    ) {
+                        ForEach(Array(roll.scanFileNames.enumerated()), id: \.element) { index, fileName in
+                            Button {
+                                openedScanFrame = StripFrame(
+                                    index: index + 1,
+                                    state: .scanned,
+                                    marker: nil,
+                                    scanFileName: fileName
+                                )
+                            } label: {
+                                scanThumbnail(rollId: roll.id, fileName: fileName)
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button("Delete", systemImage: "trash", role: .destructive) {
+                                    store.removeScan(from: roll.id, fileName: fileName)
+                                }
+                            }
+                        }
+                    }
+
+                    PhotosPicker(
+                        selection: $scanPickerItems,
+                        maxSelectionCount: 72,
+                        matching: .images,
+                        photoLibrary: .shared()
+                    ) {
+                        Text("Add more photos →")
+                            .font(InstrumentFont.mono(12))
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .onChange(of: scanPickerItems) { _, items in
+                guard !items.isEmpty else { return }
+                Task { await importScans(items, for: roll.id) }
+            }
+        }
+    }
+
+    private var scanEmptyState: some View {
+        VStack(spacing: AppTheme.Spacing.md) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 2)
+                    .strokeBorder(AppTheme.rule, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                    .frame(height: 120)
+                VStack(spacing: AppTheme.Spacing.sm) {
+                    Text("◻◻")
+                        .font(InstrumentFont.mono(18))
+                        .foregroundStyle(AppTheme.textTertiary)
+                    Text("Add photos")
                         .font(InstrumentFont.mono(12))
                         .foregroundStyle(AppTheme.textSecondary)
+                    Text("Tap to upload scans")
+                        .font(InstrumentFont.mono(11))
+                        .foregroundStyle(AppTheme.textTertiary)
                 }
-                TextAction(label: "Add frame with date →") {
-                    datedFrameTimestamp = Date()
-                    showingAddDatedFrame = true
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func scanThumbnail(rollId: UUID, fileName: String) -> some View {
+        Group {
+            if let image = ScanStorage.thumbnail(for: rollId, fileName: fileName, maxSize: 600) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Rectangle()
+                    .fill(AppTheme.rule.opacity(0.35))
+                    .overlay {
+                        Text("·")
+                            .font(InstrumentFont.mono(16))
+                            .foregroundStyle(AppTheme.textTertiary)
+                    }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .aspectRatio(3 / 2, contentMode: .fit)
+        .clipped()
+        .overlay {
+            Rectangle()
+                .strokeBorder(AppTheme.rule, lineWidth: 0.5)
+        }
+    }
+
+    private func importScans(_ items: [PhotosPickerItem], for rollId: UUID) async {
+        let existingCount = await MainActor.run {
+            store.roll(for: rollId)?.scanFileNames.count ?? 0
+        }
+        var names: [String] = []
+        for (offset, item) in items.enumerated() {
+            guard let data = await loadImageData(from: item) else { continue }
+            let fileName = "scan-\(existingCount + offset + 1)-\(UUID().uuidString.prefix(8)).jpg"
+            if ScanStorage.saveScan(data: data, rollId: rollId, fileName: fileName) != nil {
+                names.append(fileName)
+            }
+        }
+        if !names.isEmpty {
+            await MainActor.run {
+                store.appendScans(to: rollId, fileNames: names)
+                scanPickerItems = []
+            }
+        } else {
+            await MainActor.run { scanPickerItems = [] }
+        }
+    }
+
+    private func loadImageData(from item: PhotosPickerItem) async -> Data? {
+        if let data = try? await item.loadTransferable(type: Data.self), !data.isEmpty {
+            return jpegData(from: data)
+        }
+        if let transfer = try? await item.loadTransferable(type: ScanImageTransfer.self) {
+            return jpegData(from: transfer.data)
+        }
+        return nil
+    }
+
+    private func jpegData(from data: Data) -> Data? {
+        if let image = UIImage(data: data) {
+            return image.jpegData(compressionQuality: 0.88) ?? data
+        }
+        return data
+    }
+
+    @ViewBuilder
+    private func loadSection(_ roll: Roll) -> some View {
+        if roll.status.isInventory {
+            DetailSection(title: "Load") {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                    let selectedCamera = loadCameraId.flatMap { store.camera(for: $0) }
+
+                    FilmLoadSlider(
+                        stock: store.stock(for: roll.stockId),
+                        cameraName: selectedCamera?.name ?? "camera",
+                        prompt: selectedCamera == nil ? "choose a camera" : "slide to load",
+                        onChooseRoll: selectedCamera == nil ? { showingCameraPicker = true } : nil
+                    ) {
+                        if let cameraId = loadCameraId {
+                            store.assignRoll(roll.id, to: cameraId)
+                        }
+                    }
+                    .id("\(roll.id)-\(loadCameraId?.uuidString ?? "none")")
+                    .allowsHitTesting(selectedCamera != nil)
+                    .overlay {
+                        if selectedCamera == nil {
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .onTapGesture { showingCameraPicker = true }
+                        }
+                    }
+
+                    if let selectedCamera {
+                        HStack {
+                            Text(selectedCamera.name)
+                                .font(InstrumentFont.mono(11))
+                                .foregroundStyle(AppTheme.textSecondary)
+                            Spacer()
+                            Button("Change →") { showingCameraPicker = true }
+                                .font(InstrumentFont.mono(11))
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                    } else if availableCameras(for: roll).isEmpty {
+                        Text("No empty cameras available.")
+                            .font(InstrumentFont.mono(11))
+                            .foregroundStyle(AppTheme.textTertiary)
+                    } else {
+                        Text("Tap the bay to choose a camera, then slide to load.")
+                            .font(InstrumentFont.mono(11))
+                            .foregroundStyle(AppTheme.textTertiary)
+                    }
                 }
             }
         }
     }
 
-    private var addDatedFrameSheet: some View {
+    private func cameraPickerSheet(for rollId: UUID) -> some View {
         NavigationStack {
-            Form {
-                DatePicker(
-                    "Date & time",
-                    selection: $datedFrameTimestamp,
-                    displayedComponents: [.date, .hourAndMinute]
-                )
-                .font(InstrumentFont.mono(12))
+            List {
+                if let roll = store.roll(for: rollId) {
+                    ForEach(availableCameras(for: roll)) { camera in
+                        Button {
+                            loadCameraId = camera.id
+                            showingCameraPicker = false
+                        } label: {
+                            Text(camera.name)
+                                .font(InstrumentFont.mono(13))
+                                .foregroundStyle(AppTheme.textPrimary)
+                        }
+                    }
+
+                    if availableCameras(for: roll).isEmpty {
+                        Text("No empty cameras available.")
+                            .font(InstrumentFont.mono(12))
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
             }
             .instrumentFormStyle()
-            .navigationTitle("Add frame")
+            .navigationTitle("Choose camera")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        showingAddDatedFrame = false
-                    }
-                    .font(InstrumentFont.mono(13))
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
-                        store.addFrameMarker(to: rollId, at: datedFrameTimestamp)
-                        showingAddDatedFrame = false
-                    }
-                    .font(InstrumentFont.mono(13))
+                    Button("Cancel") { showingCameraPicker = false }
+                        .font(InstrumentFont.mono(13))
                 }
             }
         }
         .presentationDetents([.medium])
     }
 
-    private func developmentSection(_ roll: Roll) -> some View {
-        DetailSection(title: "Development") {
-            VStack(alignment: .leading, spacing: 12) {
-                Picker("Path", selection: developmentPathBinding(for: roll)) {
-                    ForEach(DevelopmentPath.allCases, id: \.self) { path in
-                        Text(path.displayName).tag(path)
+    private func pipelineSection(_ roll: Roll) -> some View {
+        DetailSection(title: "Pipeline") {
+            InstrumentMenuRow(
+                label: "Status",
+                value: roll.status.displayName,
+                valueBright: true,
+                showsDivider: false
+            ) {
+                ForEach(Self.postLoadStatuses, id: \.self) { status in
+                    Button(status.displayName) {
+                        selectPipelineStatus(status, for: roll)
                     }
-                }
-                .font(InstrumentFont.mono(12))
-
-                if store.roll(for: rollId)?.development?.path == .lab {
-                    TextField("Lab name", text: labNameBinding(for: roll))
-                        .font(InstrumentFont.mono(12))
-                } else if store.roll(for: rollId)?.development?.path == .diy {
-                    TextField("Developer", text: devFieldBinding(for: roll, keyPath: \.developer))
-                        .font(InstrumentFont.mono(12))
-                    TextField("Dilution", text: devFieldBinding(for: roll, keyPath: \.dilution))
-                        .font(InstrumentFont.mono(12))
-                    TextField("Time (minutes)", text: devTimeBinding(for: roll))
-                        .font(InstrumentFont.mono(12))
-                        .keyboardType(.decimalPad)
-                    TextField("Temperature °C", text: devTempBinding(for: roll))
-                        .font(InstrumentFont.mono(12))
-                        .keyboardType(.decimalPad)
-                    TextField("Agitation notes", text: devFieldBinding(for: roll, keyPath: \.agitationNotes), axis: .vertical)
-                        .font(InstrumentFont.mono(12))
-                        .lineLimit(2...4)
-
-                    if !store.devRecipePresets.isEmpty {
-                        Menu("Apply preset") {
-                            ForEach(store.devRecipePresets) { preset in
-                                Button(preset.summary) {
-                                    store.applyDevPreset(preset.id, to: roll.id)
-                                }
-                            }
-                        }
-                        .font(InstrumentFont.mono(12))
-                    }
-                }
-
-                if let summary = store.roll(for: rollId)?.development?.summary {
-                    Text(summary)
-                        .font(InstrumentFont.mono(11))
-                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
         }
     }
 
-    private func tagsSection(_ roll: Roll) -> some View {
-        DetailSection(title: "Tags") {
-            VStack(alignment: .leading, spacing: 10) {
-                if !roll.tags.isEmpty {
-                    Text(roll.tags.joined(separator: " · "))
-                        .font(InstrumentFont.mono(12))
-                        .foregroundStyle(AppTheme.textPrimary)
+    private static let postLoadStatuses: [RollStatus] = [
+        .inCamera,
+        .shotUndeveloped,
+        .atLab,
+        .developed,
+        .scanned,
+        .archived,
+    ]
+
+    private func selectPipelineStatus(_ status: RollStatus, for roll: Roll) {
+        store.setRollStatus(roll.id, to: status, cameraId: roll.cameraId ?? loadCameraId)
+    }
+
+    private func frameCounterSection(_ roll: Roll) -> some View {
+        DetailSection(title: "Exposures") {
+            FrameExposureCounter(
+                shot: roll.frameCount,
+                total: max(roll.totalExposures, 1),
+                onIncrement: { store.advanceExposure(on: roll.id) },
+                onSetCount: { store.setFrameCount($0, for: roll.id) }
+            )
+            .padding(.top, AppTheme.Spacing.xs)
+        }
+    }
+
+    private func metadataSection(_ roll: Roll) -> some View {
+        DetailSection(title: "Technical Specifications") {
+            VStack(spacing: 0) {
+                if let stock = store.stock(for: roll.stockId) {
+                    DataRow(label: "Stock", value: stock.name, showsDivider: false)
+                    DataRow(label: "ISO", value: "\(roll.shootingISO ?? stock.iso)")
+                    DataRow(label: "Format", value: roll.format.displayName)
+                } else {
+                    DataRow(label: "Format", value: roll.format.displayName, showsDivider: false)
                 }
-                HStack {
-                    TextField("Add tag", text: $tagInput)
-                        .font(InstrumentFont.mono(12))
-                        .submitLabel(.done)
-                        .onSubmit { addTag(to: roll) }
-                    Button("Add") { addTag(to: roll) }
-                        .font(InstrumentFont.mono(12))
-                        .disabled(tagInput.trimmingCharacters(in: .whitespaces).isEmpty)
+                if !roll.status.isInventory {
+                    cameraRow(roll)
+                }
+                editableExposuresRow(roll)
+                pushPullRow(roll)
+                addDateRow(roll)
+            }
+        }
+    }
+
+    private func pushPullRow(_ roll: Roll) -> some View {
+        InstrumentMenuRow(
+            label: "Push / pull",
+            value: roll.pushPullDisplayValue,
+            valueBright: roll.pushPull != nil && roll.pushPull != 0
+        ) {
+            ForEach(Self.pushPullOptions, id: \.value) { option in
+                Button(option.label) {
+                    guard var updated = store.roll(for: rollId) else { return }
+                    updated.pushPull = option.value == 0 ? nil : option.value
+                    store.updateRoll(updated)
+                }
+            }
+        }
+    }
+
+    private static let pushPullOptions: [(label: String, value: Int)] = [
+        ("Box speed", 0),
+        ("Pull −1", -1),
+        ("Push +1", 1),
+        ("Push +2", 2),
+    ]
+
+    private func cameraRow(_ roll: Roll) -> some View {
+        InstrumentMenuRow(
+            label: "Camera",
+            value: cameraDisplayValue(for: roll),
+            valueBright: roll.cameraId != nil
+        ) {
+            Button("Not Set") {
+                store.assignRoll(rollId, to: nil)
+            }
+            ForEach(store.cameras) { camera in
+                Button(camera.name) {
+                    store.assignRoll(rollId, to: camera.id)
+                }
+            }
+        }
+    }
+
+    private func cameraDisplayValue(for roll: Roll) -> String {
+        guard let cameraId = roll.cameraId,
+              let camera = store.camera(for: cameraId) else {
+            return "Not Set"
+        }
+        return camera.name
+    }
+
+    private func developmentSection(_ roll: Roll) -> some View {
+        DetailSection(title: "Development") {
+            VStack(alignment: .leading, spacing: 0) {
+                InstrumentMenuRow(
+                    label: "Path",
+                    value: (store.roll(for: rollId)?.development?.path ?? .lab).displayName,
+                    valueBright: true,
+                    showsDivider: false
+                ) {
+                    ForEach(DevelopmentPath.allCases, id: \.self) { path in
+                        Button(path.displayName) {
+                            developmentPathBinding(for: roll).wrappedValue = path
+                        }
+                    }
+                }
+
+                if store.roll(for: rollId)?.development?.path == .lab {
+                    InstrumentEditableRow(label: "Lab") {
+                        TextField("Lab name", text: labNameBinding(for: roll))
+                    }
+                } else if store.roll(for: rollId)?.development?.path == .diy {
+                    InstrumentEditableRow(label: "Developer") {
+                        TextField("Developer", text: devFieldBinding(for: roll, keyPath: \.developer))
+                    }
+                    InstrumentEditableRow(label: "Dilution") {
+                        TextField("Dilution", text: devFieldBinding(for: roll, keyPath: \.dilution))
+                    }
+                    InstrumentEditableRow(label: "Time") {
+                        TextField("Minutes", text: devTimeBinding(for: roll))
+                            .keyboardType(.decimalPad)
+                    }
+                    InstrumentEditableRow(label: "Temp") {
+                        TextField("°C", text: devTempBinding(for: roll))
+                            .keyboardType(.decimalPad)
+                    }
+                    InstrumentEditableRow(label: "Agitation") {
+                        TextField("Notes", text: devFieldBinding(for: roll, keyPath: \.agitationNotes), axis: .vertical)
+                            .lineLimit(2...4)
+                    }
+
+                    if !store.devRecipePresets.isEmpty {
+                        VStack(spacing: 0) {
+                            HairlineRule()
+                            Menu("Apply preset") {
+                                ForEach(store.devRecipePresets) { preset in
+                                    Button(preset.summary) {
+                                        store.applyDevPreset(preset.id, to: roll.id)
+                                    }
+                                }
+                            }
+                            .font(InstrumentFont.mono(12))
+                            .padding(.vertical, AppTheme.Spacing.md)
+                        }
+                    }
+                }
+
+                if let summary = store.roll(for: rollId)?.development?.summary {
+                    DataRow(label: "Summary", value: summary, valueBright: false)
                 }
             }
         }
@@ -352,7 +568,7 @@ struct RollDetailView: View {
     private func notesSection(_ roll: Roll) -> some View {
         DetailSection(title: "Notes") {
             TextField(
-                "Notes",
+                "Add a note",
                 text: notesBinding(for: roll),
                 axis: .vertical
             )
@@ -360,30 +576,11 @@ struct RollDetailView: View {
             .foregroundStyle(AppTheme.textPrimary)
             .lineLimit(3...8)
             .submitLabel(.done)
-        }
-    }
-
-    private func exportSection(_ roll: Roll) -> some View {
-        DetailSection(title: "Export") {
-            VStack(alignment: .leading, spacing: 8) {
-                TextAction(label: "Copy CSV →") {
-                    exportText = store.csvExport(for: roll.id) ?? ""
-                    showingExportSheet = true
-                }
-                TextAction(label: "Print data sheet →") {
-                    exportText = store.rollDataSheetText(for: roll.id) ?? ""
-                    showingExportSheet = true
-                }
+            .focused($isNotesFocused)
+            .onSubmit {
+                isNotesFocused = false
             }
-        }
-    }
-
-    private func deleteSection(_ roll: Roll) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            TextAction(label: "Delete roll →") {
-                showingDeleteConfirm = true
-            }
-            .padding(.top, 8)
+            .padding(.vertical, AppTheme.Spacing.sm)
         }
     }
 
@@ -398,7 +595,7 @@ struct RollDetailView: View {
                     .padding(AppTheme.horizontalPadding)
             }
             .instrumentScreen()
-            .navigationTitle("Export")
+            .navigationTitle("Summary")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -409,96 +606,16 @@ struct RollDetailView: View {
         }
     }
 
-    private func statusPickerSheet(_ roll: Roll) -> some View {
-        NavigationStack {
-            List {
-                ForEach(RollStatus.pipelineCases + [.archived], id: \.self) { status in
-                    Button {
-                        if status == .scanned && roll.status != .scanned {
-                            showingStatusPicker = false
-                            showingImportAlert = true
-                        } else if status == .inCamera && roll.status.isInventory {
-                            guard let loadCameraId else { return }
-                            store.setRollStatus(roll.id, to: status, cameraId: loadCameraId)
-                            showingStatusPicker = false
-                        } else {
-                            store.setRollStatus(roll.id, to: status, cameraId: roll.cameraId)
-                            showingStatusPicker = false
-                        }
-                    } label: {
-                        HStack {
-                            Text(status.displayName)
-                                .font(InstrumentFont.mono(13))
-                            Spacer()
-                            if roll.status == status {
-                                Text("●")
-                                    .font(InstrumentFont.mono(10))
-                            }
-                        }
-                    }
-                }
-            }
-            .instrumentFormStyle()
-            .navigationTitle("Status")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { showingStatusPicker = false }
-                        .font(InstrumentFont.mono(13))
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-
     // MARK: - Bindings
 
-    private func editableFrameCountRow(_ roll: Roll) -> some View {
-        HStack {
-            Text("Frames shot")
-                .font(InstrumentFont.mono(12))
-                .foregroundStyle(AppTheme.textSecondary)
-            Spacer()
-            HStack(spacing: 16) {
-                Button {
-                    store.removeLastFrame(from: roll.id)
-                } label: {
-                    Text("−")
-                        .font(InstrumentFont.mono(16))
-                        .foregroundStyle(roll.frameCount > 0 ? AppTheme.textPrimary : AppTheme.textTertiary)
-                }
-                .buttonStyle(.plain)
-                .disabled(roll.frameCount == 0)
-
-                Text("\(roll.frameCount)")
-                    .font(InstrumentFont.mono(13))
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .monospacedDigit()
-
-                Button {
-                    store.addFrameMarker(to: roll.id)
-                } label: {
-                    Text("+")
-                        .font(InstrumentFont.mono(16))
-                        .foregroundStyle(AppTheme.textPrimary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
     private func editableExposuresRow(_ roll: Roll) -> some View {
-        HStack {
-            Text("Expected frames")
-                .font(InstrumentFont.mono(12))
-                .foregroundStyle(AppTheme.textSecondary)
-            Spacer()
+        InstrumentRow(label: "Expected frames") {
             TextField("36", value: exposuresBinding(for: roll), format: .number)
                 .font(InstrumentFont.mono(12))
                 .foregroundStyle(AppTheme.textPrimary)
-                .multilineTextAlignment(.trailing)
+                .multilineTextAlignment(.leading)
                 .keyboardType(.numberPad)
-                .frame(width: 56)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -588,34 +705,69 @@ struct RollDetailView: View {
         )
     }
 
-    private func expiryRow(_ roll: Roll) -> some View {
-        EditableDateRow(
-            label: "Expiry date",
-            date: expiryDateBinding(for: roll),
-            hasDate: store.roll(for: rollId)?.expiryDate != nil,
-            onToggle: { enabled in
-                guard var updated = store.roll(for: rollId) else { return }
-                if enabled {
-                    updated.expiryDate = updated.expiryDate
-                        ?? Calendar.current.date(byAdding: .year, value: 1, to: Date())
-                        ?? Date()
-                } else {
-                    updated.expiryDate = nil
+    private func addDateRow(_ roll: Roll) -> some View {
+        Button {
+            addDateDraft = roll.expiryDate ?? Date()
+            showingAddDatePicker = true
+        } label: {
+            InstrumentRow(label: "Expiration date") {
+                HStack(spacing: AppTheme.Spacing.xs) {
+                    Text(addDateDisplayValue(for: roll))
+                        .font(InstrumentFont.mono(12))
+                        .foregroundStyle(roll.expiryDate != nil ? AppTheme.textPrimary : AppTheme.textSecondary)
+                        .multilineTextAlignment(.leading)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(InstrumentFont.mono(9, weight: .bold))
+                        .foregroundStyle(AppTheme.textTertiary)
+                    Spacer(minLength: 0)
                 }
-                store.updateRoll(updated)
             }
-        )
+        }
+        .buttonStyle(.plain)
     }
 
-    private func expiryDateBinding(for roll: Roll) -> Binding<Date> {
-        Binding(
-            get: { store.roll(for: rollId)?.expiryDate ?? Date() },
-            set: { newValue in
-                guard var updated = store.roll(for: rollId) else { return }
-                updated.expiryDate = Calendar.current.startOfDay(for: newValue)
-                store.updateRoll(updated)
+    private var addDatePickerSheet: some View {
+        NavigationStack {
+            VStack {
+                Spacer(minLength: 0)
+                MonthYearPicker(date: $addDateDraft)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 160)
+                    .padding(.horizontal, AppTheme.horizontalPadding)
+                Spacer(minLength: 0)
             }
-        )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .instrumentScreen()
+            .navigationTitle("Expiration date")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Clear") {
+                        guard var updated = store.roll(for: rollId) else { return }
+                        updated.expiryDate = nil
+                        store.updateRoll(updated)
+                        showingAddDatePicker = false
+                    }
+                    .font(InstrumentFont.mono(13))
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        guard var updated = store.roll(for: rollId) else { return }
+                        updated.expiryDate = ExpirationDate.normalize(addDateDraft)
+                        store.updateRoll(updated)
+                        showingAddDatePicker = false
+                    }
+                    .font(InstrumentFont.mono(13))
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func addDateDisplayValue(for roll: Roll) -> String {
+        guard let date = roll.expiryDate else { return "Not Set" }
+        return DateFormatters.monthYear.string(from: date)
     }
 
     private func notesBinding(for roll: Roll) -> Binding<String> {
@@ -623,25 +775,37 @@ struct RollDetailView: View {
             get: { store.roll(for: rollId)?.notes ?? "" },
             set: { newValue in
                 guard var updated = store.roll(for: rollId) else { return }
-                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                updated.notes = trimmed.isEmpty ? nil : newValue
+                var text = newValue
+                // Vertical TextFields treat the Done key as Return; dismiss instead of a new line.
+                if text.hasSuffix("\n") {
+                    text = String(text.dropLast())
+                    Task { @MainActor in
+                        isNotesFocused = false
+                    }
+                }
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                updated.notes = trimmed.isEmpty ? nil : text
                 store.updateRoll(updated)
             }
         )
-    }
-
-    private func addTag(to roll: Roll) {
-        let tag = tagInput.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !tag.isEmpty, var updated = store.roll(for: rollId), !updated.tags.contains(tag) else { return }
-        updated.tags.append(tag)
-        store.updateRoll(updated)
-        tagInput = ""
     }
 
     private func availableCameras(for roll: Roll) -> [Camera] {
         store.cameras.filter {
             store.loadedRoll(for: $0.id) == nil || $0.id == loadCameraId
         }
+    }
+}
+
+/// Reliable PhotosPicker image transfer — `Data.self` alone often fails for library assets.
+private struct ScanImageTransfer: Transferable {
+    let data: Data
+
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(importedContentType: .jpeg) { ScanImageTransfer(data: $0) }
+        DataRepresentation(importedContentType: .png) { ScanImageTransfer(data: $0) }
+        DataRepresentation(importedContentType: .heic) { ScanImageTransfer(data: $0) }
+        DataRepresentation(importedContentType: .image) { ScanImageTransfer(data: $0) }
     }
 }
 

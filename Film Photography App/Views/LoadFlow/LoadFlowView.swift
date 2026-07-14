@@ -4,7 +4,7 @@ import UIKit
 struct LoadFlowView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @State private var step: LoadStep = .source
+    @State private var step: LoadStep
     @State private var isRecognizing = false
     @State private var recognitionResult: LoadRecognitionResult?
     @State private var selectedCameraId: UUID?
@@ -19,11 +19,16 @@ struct LoadFlowView: View {
     @State private var showingPushPicker = false
     @State private var showingDeviceCamera = false
     @State private var capturedImage: UIImage?
+    @State private var openedWithPendingCapture = false
 
     enum LoadStep {
         case source
         case capture
         case confirm
+    }
+
+    init(startWithCamera: Bool = false) {
+        _step = State(initialValue: startWithCamera ? .capture : .source)
     }
 
     private var exposures: Int {
@@ -64,6 +69,15 @@ struct LoadFlowView: View {
                 )
                 .ignoresSafeArea()
             }
+            .onAppear {
+                guard !openedWithPendingCapture else { return }
+                guard store.loadFlowStartWithCamera || store.pendingLoadCapture != nil else { return }
+                openedWithPendingCapture = true
+                capturedImage = store.pendingLoadCapture
+                store.pendingLoadCapture = nil
+                store.loadFlowStartWithCamera = false
+                processCapture()
+            }
         }
     }
 
@@ -83,23 +97,23 @@ struct LoadFlowView: View {
                 Text("How are you loading?")
                     .font(InstrumentFont.mono(13))
                     .foregroundStyle(AppTheme.textSecondary)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, AppTheme.Spacing.lg)
 
-                if !store.availableFridgeItems().isEmpty {
-                    TextAction(label: "From fridge →") {
+                if !store.availableFridgeItems.isEmpty {
+                    TextAction(label: "From stock →") {
                         step = .confirm
-                        if let first = store.availableFridgeItems().first {
+                        if let first = store.availableFridgeItems.first {
                             applyFridgeItem(first)
                         }
                     }
-                    .padding(.bottom, 20)
+                    .padding(.bottom, AppTheme.Spacing.lg)
                 }
 
                 TextAction(label: "Scan camera + canister →") {
                     step = .capture
                     presentDeviceCameraIfAvailable()
                 }
-                .padding(.bottom, 20)
+                .padding(.bottom, AppTheme.Spacing.lg)
 
                 TextAction(label: "Enter manually →") {
                     startManualEntry()
@@ -117,10 +131,10 @@ struct LoadFlowView: View {
             ZStack {
                 Color.black
 
-                VStack(spacing: 24) {
+                VStack(spacing: AppTheme.Spacing.lg) {
                     Spacer()
 
-                    HStack(spacing: 20) {
+                    HStack(spacing: AppTheme.Spacing.md) {
                         framingGuide(label: "Camera", icon: "camera.fill")
                         framingGuide(label: "Film canister", icon: "film")
                     }
@@ -155,7 +169,7 @@ struct LoadFlowView: View {
                     }
                     .font(InstrumentFont.mono(13))
                     .foregroundStyle(AppTheme.textSecondary)
-                    .padding(.bottom, 32)
+                    .padding(.bottom, AppTheme.Spacing.xl)
                 }
             }
             .frame(maxHeight: .infinity)
@@ -164,7 +178,7 @@ struct LoadFlowView: View {
     }
 
     private func framingGuide(label: String, icon: String) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: AppTheme.Spacing.sm) {
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(.white.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
                 .frame(width: 140, height: 100)
@@ -186,14 +200,14 @@ struct LoadFlowView: View {
             VStack(spacing: 0) {
                 if capturedImage != nil {
                     capturedPhotoPreview
-                        .padding(.bottom, 24)
-                    HairlineRule().padding(.bottom, 24)
+                        .padding(.bottom, AppTheme.Spacing.lg)
+                    HairlineRule().padding(.bottom, AppTheme.Spacing.lg)
                 }
 
-                if !store.availableFridgeItems().isEmpty {
-                    Picker("From fridge", selection: $selectedFridgeItemId) {
-                        Text("Not from fridge").tag(nil as UUID?)
-                        ForEach(store.availableFridgeItems()) { item in
+                if !store.availableFridgeItems.isEmpty {
+                    Picker("From stock", selection: $selectedFridgeItemId) {
+                        Text("Not from stock").tag(nil as UUID?)
+                        ForEach(store.availableFridgeItems) { item in
                             let name = store.stock(for: item.stockId)?.name ?? "Stock"
                             Text("\(name) · \(item.format.displayName) ×\(item.quantity)").tag(item.id as UUID?)
                         }
@@ -204,10 +218,10 @@ struct LoadFlowView: View {
                             applyFridgeItem(item)
                         }
                     }
-                    .padding(.bottom, 20)
+                    .padding(.bottom, AppTheme.Spacing.lg)
                 }
 
-                VStack(spacing: 14) {
+                VStack(spacing: AppTheme.Spacing.md) {
                     confirmField(
                         label: "Camera",
                         value: selectedCamera?.name ?? "Select",
@@ -247,7 +261,7 @@ struct LoadFlowView: View {
                             .frame(width: 64)
                     }
                 }
-                .padding(.bottom, 28)
+                .padding(.bottom, AppTheme.Spacing.lg)
 
                 TextAction(label: "Load roll →") { confirmLoad() }
                     .opacity(selectedCameraId == nil || selectedStockId == nil ? 0.35 : 1)
@@ -318,11 +332,11 @@ struct LoadFlowView: View {
     private var confirmISOField: some View {
         Button { showingPushPicker = true } label: {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                     Text("Shooting ISO")
                         .font(InstrumentFont.mono(11))
                         .foregroundStyle(AppTheme.textSecondary)
-                    HStack(spacing: 8) {
+                    HStack(spacing: AppTheme.Spacing.sm) {
                         Text(isoDisplayText)
                             .font(InstrumentFont.mono(13))
                             .foregroundStyle(AppTheme.textPrimary)

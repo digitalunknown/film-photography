@@ -5,37 +5,107 @@ struct AddFridgeItemView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedStockId: UUID?
+    @State private var showingStockPicker = false
     @State private var format: FilmFormat = .format35Full
     @State private var quantity = 1
     @State private var includeExpiryDate = false
     @State private var expiryDate = Calendar.current.date(byAdding: .year, value: 1, to: Date()) ?? Date()
 
+    private var selectedStock: FilmStock? {
+        selectedStockId.flatMap { store.stock(for: $0) }
+    }
+
+    private var sectionDivider: some View {
+        SectionRule()
+            .padding(.bottom, AppTheme.Spacing.md)
+    }
+
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Stock") {
-                    Picker("Film", selection: $selectedStockId) {
-                        Text("Select stock").tag(nil as UUID?)
-                        ForEach(store.stocks) { stock in
-                            Text(stock.name).tag(stock.id as UUID?)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    DetailSection(title: "Stock") {
+                        VStack(spacing: 0) {
+                            Button {
+                                showingStockPicker = true
+                            } label: {
+                                InstrumentRow(label: "Film", showsDivider: false) {
+                                    HStack(spacing: AppTheme.Spacing.sm) {
+                                        Text(selectedStock?.name ?? "Choose film")
+                                            .font(InstrumentFont.mono(12))
+                                            .foregroundStyle(
+                                                selectedStock == nil
+                                                    ? AppTheme.textSecondary
+                                                    : AppTheme.textPrimary
+                                            )
+                                        Spacer(minLength: 0)
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .font(InstrumentFont.mono(9, weight: .bold))
+                                            .foregroundStyle(AppTheme.textTertiary)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+
+                            InstrumentMenuRow(
+                                label: "Format",
+                                value: format.displayName,
+                                valueBright: true
+                            ) {
+                                ForEach(FilmFormat.allCases) { fmt in
+                                    Button(fmt.displayName) { format = fmt }
+                                }
+                            }
+
+                            InstrumentRow(label: "Quantity") {
+                                HStack(spacing: AppTheme.Spacing.md) {
+                                    Button {
+                                        quantity = max(quantity - 1, 1)
+                                    } label: {
+                                        Text("−")
+                                            .font(InstrumentFont.mono(16))
+                                            .foregroundStyle(quantity > 1 ? AppTheme.textPrimary : AppTheme.textTertiary)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(quantity <= 1)
+
+                                    Text("\(quantity)")
+                                        .font(InstrumentFont.mono(12))
+                                        .foregroundStyle(AppTheme.textPrimary)
+                                        .monospacedDigit()
+
+                                    Button {
+                                        quantity = min(quantity + 1, 99)
+                                    } label: {
+                                        Text("+")
+                                            .font(InstrumentFont.mono(16))
+                                            .foregroundStyle(AppTheme.textPrimary)
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    Spacer(minLength: 0)
+                                }
+                            }
+
+                            InstrumentRow(label: "Expiration date") {
+                                Toggle("", isOn: $includeExpiryDate)
+                                    .labelsHidden()
+                                    .tint(AppTheme.textPrimary)
+                            }
+
+                            if includeExpiryDate {
+                                MonthYearPicker(date: $expiryDate)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 120)
+                                    .padding(.top, AppTheme.Spacing.sm)
+                            }
                         }
-                    }
-
-                    Picker("Format", selection: $format) {
-                        ForEach(FilmFormat.allCases) { fmt in
-                            Text(fmt.displayName).tag(fmt)
-                        }
-                    }
-
-                    Stepper("Quantity: \(quantity)", value: $quantity, in: 1...99)
-
-                    Toggle("Expiry date", isOn: $includeExpiryDate)
-                    if includeExpiryDate {
-                        DatePicker("Date", selection: $expiryDate, displayedComponents: .date)
                     }
                 }
+                .instrumentDetailContent()
             }
-            .instrumentFormStyle()
+            .instrumentDetailScroll()
+            .instrumentScreen()
             .navigationTitle("Add to Fridge")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -49,12 +119,21 @@ struct AddFridgeItemView: View {
                         .disabled(selectedStockId == nil)
                 }
             }
+            .sheet(isPresented: $showingStockPicker) {
+                StockPickerSheet(
+                    title: "Choose film",
+                    selectedStockId: selectedStockId
+                ) { stock in
+                    selectedStockId = stock.id
+                }
+            }
             .onAppear {
                 if selectedStockId == nil {
                     selectedStockId = store.stocks.first?.id
                 }
             }
         }
+        .instrumentSheetChrome()
     }
 
     private func save() {
@@ -63,7 +142,7 @@ struct AddFridgeItemView: View {
             stockId: stockId,
             format: format,
             quantity: quantity,
-            expiryDate: includeExpiryDate ? expiryDate : nil
+            expiryDate: includeExpiryDate ? ExpirationDate.normalize(expiryDate) : nil
         )
         dismiss()
     }

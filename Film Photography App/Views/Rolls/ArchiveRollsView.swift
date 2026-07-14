@@ -6,32 +6,24 @@ struct ArchiveRollsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                if store.archivedRolls.isEmpty {
-                    Text("No archived rolls yet.")
-                        .font(InstrumentFont.mono(13))
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .padding(.horizontal, AppTheme.horizontalPadding)
-                        .padding(.top, 8)
-                } else {
-                    ForEach(Array(store.archivedRolls.enumerated()), id: \.element.id) { index, roll in
-                        NavigationLink(value: roll) {
-                            ArchiveRollRow(roll: roll)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, AppTheme.horizontalPadding)
-                        .padding(.vertical, AppTheme.rowSpacing)
+                ForEach(Array(store.archivedRolls.enumerated()), id: \.element.id) { index, roll in
+                    NavigationLink(value: roll) {
+                        ArchiveRollRow(roll: roll)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, AppTheme.horizontalPadding)
+                    .padding(.vertical, AppTheme.rowSpacing)
 
-                        if index < store.archivedRolls.count - 1 {
-                            HairlineRule()
-                                .padding(.horizontal, AppTheme.horizontalPadding)
-                        }
+                    if index < store.archivedRolls.count - 1 {
+                        HairlineRule()
+                            .padding(.horizontal, AppTheme.horizontalPadding)
                     }
                 }
             }
-            .padding(.bottom, 32)
+            .padding(.bottom, AppTheme.Spacing.xl)
         }
-        .navigationTitle("Archive")
-        .navigationBarTitleDisplayMode(.large)
+        .instrumentScreen()
+        .instrumentDetailNavigation(title: "Archive")
     }
 }
 
@@ -40,8 +32,8 @@ private struct ArchiveRollRow: View {
     let roll: Roll
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            RollPlate(tint: store.stock(for: roll.stockId)?.emulsionTint ?? AppTheme.textTertiary)
+        HStack(alignment: .center, spacing: AppTheme.Spacing.md) {
+            RollPlate(stock: store.stock(for: roll.stockId), size: 64)
             VStack(alignment: .leading, spacing: 3) {
                 Text(store.stock(for: roll.stockId)?.name ?? roll.shortId)
                     .font(InstrumentFont.mono(13))
