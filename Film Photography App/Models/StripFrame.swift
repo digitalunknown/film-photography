@@ -17,8 +17,7 @@ struct StripFrame: Identifiable, Hashable {
     var id: Int { index }
 
     var negativeNotation: String {
-        let base = String(format: "%02d", index)
-        return "\(base) \(base)A"
+        "\(index) \(index)A"
     }
 }
 
@@ -26,10 +25,19 @@ enum StripFrameBuilder {
     static func frames(for roll: Roll) -> [StripFrame] {
         let maxPinIndex = roll.frameMarkers.map(\.frameIndex).max() ?? 0
         let maxScanFrame = roll.scanFileNames.isEmpty ? 0 : roll.scanFileNames.count + roll.scanAlignmentOffset
-        let span = max(roll.totalExposures, roll.frameCount, maxPinIndex, maxScanFrame)
+        let maxPhotoFrame = roll.framePhotoFileNames.keys.compactMap(Int.init).max() ?? 0
+        let span = max(roll.totalExposures, roll.frameCount, maxPinIndex, maxScanFrame, maxPhotoFrame, 1)
         let pinByIndex = pinLookup(from: roll.frameMarkers)
 
         return (1...span).map { index in
+            if let photo = roll.framePhotoFileName(forFrame: index) {
+                return StripFrame(
+                    index: index,
+                    state: .scanned,
+                    marker: pinByIndex[index],
+                    scanFileName: photo
+                )
+            }
             let scanFile = roll.scanFileName(forFrame: index)
             if scanFile != nil {
                 return StripFrame(
@@ -71,28 +79,52 @@ struct FilmStripLayout {
     let showsSprockets: Bool
     let framesPerCell: Int
 
-    static func layout(for format: FilmFormat, cellHeight: CGFloat = 120) -> FilmStripLayout {
+    /// Aspect ratio width / height for the gate interior (not including sprocket rails).
+    static func aspectRatio(for format: FilmFormat) -> CGFloat {
         switch format {
-        case .format35Full:
-            let width = cellHeight * 1.5
-            return FilmStripLayout(frameSize: CGSize(width: width, height: cellHeight), showsSprockets: true, framesPerCell: 1)
-        case .format35Half:
-            let width = cellHeight * 0.75
-            return FilmStripLayout(frameSize: CGSize(width: width, height: cellHeight * 0.5), showsSprockets: true, framesPerCell: 2)
-        case .format35Pano:
-            let width = cellHeight * 2.4
-            return FilmStripLayout(frameSize: CGSize(width: width, height: cellHeight), showsSprockets: true, framesPerCell: 1)
-        case .format120_645:
-            let width = cellHeight * 1.33
-            return FilmStripLayout(frameSize: CGSize(width: width, height: cellHeight), showsSprockets: false, framesPerCell: 1)
-        case .format120_66:
-            return FilmStripLayout(frameSize: CGSize(width: cellHeight, height: cellHeight), showsSprockets: false, framesPerCell: 1)
-        case .format120_67:
-            let width = cellHeight * 1.17
-            return FilmStripLayout(frameSize: CGSize(width: width, height: cellHeight), showsSprockets: false, framesPerCell: 1)
-        case .format120_69:
-            let width = cellHeight * 1.5
-            return FilmStripLayout(frameSize: CGSize(width: width, height: cellHeight), showsSprockets: false, framesPerCell: 1)
+        case .format35Full: 1.5
+        case .format35Half: 0.75
+        case .format35Pano: 2.4
+        case .format120_645: 1.33
+        case .format120_66: 1.0
+        case .format120_67: 1.17
+        case .format120_69: 1.5
         }
+    }
+
+    static func showsSprockets(for format: FilmFormat) -> Bool {
+        switch format {
+        case .format35Full, .format35Half, .format35Pano: true
+        default: false
+        }
+    }
+
+    static func layout(for format: FilmFormat, cellHeight: CGFloat = 120) -> FilmStripLayout {
+        let aspect = aspectRatio(for: format)
+        let height = format == .format35Half ? cellHeight * 0.5 : cellHeight
+        let width = height * aspect
+        return FilmStripLayout(
+            frameSize: CGSize(width: width, height: height),
+            showsSprockets: showsSprockets(for: format),
+            framesPerCell: format == .format35Half ? 2 : 1
+        )
+    }
+
+    /// Size cells so `visibleCount` frames fill the strip viewport width.
+    static func layout(
+        for format: FilmFormat,
+        visibleCount: CGFloat,
+        containerWidth: CGFloat,
+        horizontalInset: CGFloat = 12
+    ) -> FilmStripLayout {
+        let usable = max(containerWidth - horizontalInset, 1)
+        let width = usable / max(visibleCount, 1)
+        let aspect = aspectRatio(for: format)
+        let height = width / aspect
+        return FilmStripLayout(
+            frameSize: CGSize(width: width, height: height),
+            showsSprockets: showsSprockets(for: format),
+            framesPerCell: format == .format35Half ? 2 : 1
+        )
     }
 }

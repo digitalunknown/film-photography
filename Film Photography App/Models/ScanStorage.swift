@@ -39,6 +39,28 @@ enum ScanStorage {
         }
     }
 
+    /// Flattens EXIF orientation into pixel data so strip fills stay upright.
+    static func normalizedJPEG(from data: Data, quality: CGFloat = 0.88) -> Data? {
+        guard let image = UIImage(data: data) else { return nil }
+        return normalizedJPEG(from: image, quality: quality)
+    }
+
+    static func normalizedJPEG(from image: UIImage, quality: CGFloat = 0.88) -> Data? {
+        let oriented: UIImage
+        if image.imageOrientation == .up {
+            oriented = image
+        } else {
+            let format = UIGraphicsImageRendererFormat.default()
+            format.scale = image.scale
+            format.opaque = true
+            let renderer = UIGraphicsImageRenderer(size: image.size, format: format)
+            oriented = renderer.image { _ in
+                image.draw(in: CGRect(origin: .zero, size: image.size))
+            }
+        }
+        return oriented.jpegData(compressionQuality: quality)
+    }
+
     static func deleteScan(rollId: UUID, fileName: String) {
         let fileURL = url(for: rollId, fileName: fileName)
         try? FileManager.default.removeItem(at: fileURL)

@@ -654,6 +654,29 @@ final class AppStore {
         persist()
     }
 
+    func setFramePhoto(on rollId: UUID, frameIndex: Int, imageData: Data) {
+        guard let index = rolls.firstIndex(where: { $0.id == rollId }), frameIndex > 0 else { return }
+        let key = String(frameIndex)
+        if let existing = rolls[index].framePhotoFileNames[key] {
+            ScanStorage.deleteScan(rollId: rollId, fileName: existing)
+        }
+        let fileName = "frame-\(frameIndex)-\(UUID().uuidString.prefix(8)).jpg"
+        guard ScanStorage.saveScan(data: imageData, rollId: rollId, fileName: fileName) != nil else { return }
+        rolls[index].framePhotoFileNames[key] = fileName
+        if rolls[index].frameCount < frameIndex {
+            rolls[index].frameCount = frameIndex
+        }
+        persist()
+    }
+
+    func removeFramePhoto(from rollId: UUID, frameIndex: Int) {
+        guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
+        let key = String(frameIndex)
+        guard let fileName = rolls[index].framePhotoFileNames.removeValue(forKey: key) else { return }
+        ScanStorage.deleteScan(rollId: rollId, fileName: fileName)
+        persist()
+    }
+
     func shiftScanAlignment(for rollId: UUID, by delta: Int) {
         guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
         rolls[index].scanAlignmentOffset += delta

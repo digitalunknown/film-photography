@@ -324,6 +324,7 @@ struct UnderlineMeter: View {
 struct FrameExposureCounter: View {
     let shot: Int
     let total: Int
+    var showsSegmentBar: Bool = true
     var onIncrement: (() -> Void)? = nil
     var onSetCount: ((Int) -> Void)? = nil
 
@@ -363,7 +364,9 @@ struct FrameExposureCounter: View {
                 shutterButton
             }
 
-            segmentBar
+            if showsSegmentBar {
+                segmentBar
+            }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(displayedShot) of \(safeTotal) frames shot")

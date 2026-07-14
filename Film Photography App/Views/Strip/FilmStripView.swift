@@ -13,21 +13,29 @@ struct FilmStripView: View {
     @State private var contactSheetMode = false
     @State private var scrollPosition: Int?
     @State private var lastHapticFrame: Int?
+    @State private var containerWidth: CGFloat = 0
+
+    private let visibleFrameCount: CGFloat = 3
+    private let horizontalInset: CGFloat = 0
+
+    /// Charcoal emulsion base — slightly above pure black so gates read darker.
+    static let filmBase = Color(red: 0.12, green: 0.12, blue: 0.125)
+    static let stripChromeHeight: CGFloat = FilmStripFrameMetrics.chromeHeight
 
     private var frames: [StripFrame] {
         StripFrameBuilder.frames(for: roll)
     }
 
     private var layout: FilmStripLayout {
-        FilmStripLayout.layout(for: roll.format)
-    }
-
-    private var baseColor: Color {
-        stock?.stripBaseColor ?? Color(red: 0.141, green: 0.075, blue: 0.035)
-    }
-
-    private var edgeColor: Color {
-        stock?.stripEdgePrintColor ?? Color(red: 0.85, green: 0.62, blue: 0.28)
+        if containerWidth > 1 {
+            return FilmStripLayout.layout(
+                for: roll.format,
+                visibleCount: visibleFrameCount,
+                containerWidth: containerWidth,
+                horizontalInset: horizontalInset
+            )
+        }
+        return FilmStripLayout.layout(for: roll.format, cellHeight: 110)
     }
 
     var body: some View {
@@ -47,6 +55,15 @@ struct FilmStripView: View {
                 scanAlignmentControls
             }
         }
+        .background(
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { containerWidth = geo.size.width }
+                    .onChange(of: geo.size.width) { _, width in
+                        containerWidth = width
+                    }
+            }
+        )
         .gesture(
             MagnificationGesture()
                 .onEnded { value in
@@ -62,20 +79,22 @@ struct FilmStripView: View {
     private var stripScrollView: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(spacing: 0) {
-                ForEach(frames) { frame in
+                ForEach(Array(frames.enumerated()), id: \.element.id) { offset, frame in
                     FilmStripFrameCell(
                         frame: frame,
                         roll: roll,
                         stock: stock,
                         layout: layout,
-                        baseColor: baseColor,
-                        edgeColor: edgeColor,
-                        isSelected: selectedFrameIndex == frame.index
+                        isSelected: selectedFrameIndex == frame.index,
+                        showsTrailingMarks: offset < frames.count - 1
                     )
                     .id(frame.index)
                     .onTapGesture {
                         selectedFrameIndex = frame.index
                         onFrameTap?(frame)
+                        if frame.state == .scanned {
+                            onOpenScan?(frame)
+                        }
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     }
                     .onLongPressGesture {
@@ -92,7 +111,22 @@ struct FilmStripView: View {
             lastHapticFrame = newValue
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
-        .frame(height: layout.frameSize.height + 36)
+        .onChange(of: roll.frameCount) { previous, newCount in
+            guard newCount > previous, newCount > 0 else { return }
+            selectedFrameIndex = newCount
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                scrollPosition = newCount
+            }
+        }
+        .onChange(of: selectedFrameIndex) { _, newValue in
+            guard let newValue, scrollPosition != newValue else { return }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                scrollPosition = newValue
+            }
+        }
+        .frame(height: layout.frameSize.height + Self.stripChromeHeight)
+        .background(Self.filmBase)
+        .clipShape(RoundedRectangle(cornerRadius: 2))
     }
 
     private var scanAlignmentControls: some View {
@@ -124,147 +158,158 @@ struct FilmStripView: View {
     }
 }
 
+enum FilmStripFrameMetrics {
+    static let railHeight: CGFloat = 16
+    static let edgeBandHeight: CGFloat = 14
+    static let gateInset: CGFloat = 5
+    static var chromeHeight: CGFloat { (railHeight + edgeBandHeight) * 2 }
+}
+
 private struct FilmStripFrameCell: View {
     let frame: StripFrame
     let roll: Roll
     let stock: FilmStock?
     let layout: FilmStripLayout
-    let baseColor: Color
-    let edgeColor: Color
     let isSelected: Bool
+    var showsTrailingMarks: Bool = true
 
-    private let railHeight: CGFloat = 10
-    private let edgeBandHeight: CGFloat = 8
+    private var edgeInk: Color { AppTheme.textSecondary.opacity(0.85) }
+
+    private var stockLabel: String {
+        (stock?.name ?? "FILM").uppercased()
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             sprocketRail
-            topEdgeMarking
+            topEdgeBand
             frameArea
-            bottomEdgeMarking
+            bottomEdgeBand
             sprocketRail
         }
         .frame(width: layout.frameSize.width)
-        .background(baseColor)
-        .overlay {
-            if isSelected {
-                Rectangle()
-                    .strokeBorder(Color.white.opacity(0.9), lineWidth: 1.5)
+        .background(FilmStripView.filmBase)
+        .overlay(alignment: .trailing) {
+            if showsTrailingMarks {
+                interFrameMarks
             }
         }
+    }
+
+    private var interFrameMarks: some View {
+        VStack(spacing: 0) {
+            Color.clear.frame(height: FilmStripFrameMetrics.railHeight)
+            Text("→")
+                .font(InstrumentFont.mono(7))
+                .foregroundStyle(edgeInk)
+                .frame(height: FilmStripFrameMetrics.edgeBandHeight)
+            Spacer(minLength: 0)
+            Text("◎")
+                .font(InstrumentFont.mono(8))
+                .foregroundStyle(edgeInk)
+                .frame(height: FilmStripFrameMetrics.edgeBandHeight)
+            Color.clear.frame(height: FilmStripFrameMetrics.railHeight)
+        }
+        .offset(x: 4)
+        .allowsHitTesting(false)
     }
 
     @ViewBuilder
     private var sprocketRail: some View {
         if layout.showsSprockets {
-            HStack(spacing: layout.frameSize.width / 8) {
-                ForEach(0..<6, id: \.self) { _ in
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(Color.black.opacity(0.5))
-                        .frame(width: 6, height: 4)
+            HStack(spacing: 0) {
+                ForEach(0..<4, id: \.self) { _ in
+                    sprocketHole
+                        .frame(maxWidth: .infinity)
                 }
             }
-            .frame(height: railHeight)
-            .frame(maxWidth: .infinity)
+            .frame(height: FilmStripFrameMetrics.railHeight)
+            .padding(.horizontal, 6)
         } else {
-            Color.clear.frame(height: 2)
+            Color.clear.frame(height: 4)
         }
     }
 
-    private var topEdgeMarking: some View {
-        Text(stock?.stripEdgeLabel ?? "FILM →")
-            .font(InstrumentFont.mono(6))
-            .foregroundStyle(edgeColor.opacity(0.85))
+    private var sprocketHole: some View {
+        RoundedRectangle(cornerRadius: 1.5)
+            .strokeBorder(edgeInk, lineWidth: 1)
+            .frame(width: 9, height: 7)
+    }
+
+    private var topEdgeBand: some View {
+        Text(stockLabel)
+            .font(InstrumentFont.mono(7))
+            .foregroundStyle(edgeInk)
+            .tracking(0.4)
             .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .frame(height: edgeBandHeight)
+            .minimumScaleFactor(0.55)
             .frame(maxWidth: .infinity)
-            .clipped()
+            .frame(height: FilmStripFrameMetrics.edgeBandHeight)
+            .padding(.horizontal, FilmStripFrameMetrics.gateInset + 2)
     }
 
     @ViewBuilder
     private var frameArea: some View {
         ZStack {
-            frameBackground
+            RoundedRectangle(cornerRadius: 1)
+                .fill(Color.black)
 
             switch frame.state {
-            case .unexposed:
-                Text(String(format: "%02d", frame.index))
-                    .font(InstrumentFont.mono(10))
-                    .foregroundStyle(Color.white.opacity(0.12))
-            case .exposed:
-                Text(String(format: "%02d", frame.index))
-                    .font(InstrumentFont.mono(11))
-                    .foregroundStyle(Color.white.opacity(0.35))
+            case .unexposed, .exposed:
+                emptyGateMark
             case .pinned:
-                VStack(spacing: 4) {
-                    Text("◎")
-                        .font(InstrumentFont.mono(14))
-                        .foregroundStyle(edgeColor.opacity(0.9))
+                VStack(spacing: 6) {
+                    emptyGateMark
                     if let location = frame.marker?.location, !location.isEmpty {
                         Text(location)
                             .font(InstrumentFont.mono(7))
-                            .foregroundStyle(edgeColor.opacity(0.7))
+                            .foregroundStyle(AppTheme.textTertiary)
                             .lineLimit(1)
-                    } else if let marker = frame.marker {
-                        Text(DateFormatters.short.string(from: marker.timestamp))
-                            .font(InstrumentFont.mono(7))
-                            .foregroundStyle(edgeColor.opacity(0.7))
                     }
                 }
             case .scanned:
-                if let fileName = frame.scanFileName,
-                   let image = ScanStorage.thumbnail(for: roll.id, fileName: fileName) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                } else {
-                    Color.white.opacity(0.15)
+                Group {
+                    if let fileName = frame.scanFileName,
+                       let image = ScanStorage.thumbnail(for: roll.id, fileName: fileName) {
+                        GeometryReader { geo in
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: geo.size.width, height: geo.size.height)
+                                .clipped()
+                        }
+                    } else {
+                        Color.white.opacity(0.06)
+                        emptyGateMark
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: 1))
             }
         }
+        .overlay {
+            RoundedRectangle(cornerRadius: 1)
+                .strokeBorder(
+                    isSelected ? AppTheme.textSecondary : Color.clear,
+                    lineWidth: 1
+                )
+        }
+        .padding(.horizontal, FilmStripFrameMetrics.gateInset)
         .frame(width: layout.frameSize.width, height: layout.frameSize.height)
-        .clipped()
     }
 
-    private var frameBackground: Color {
-        switch frame.state {
-        case .unexposed: baseColor.opacity(0.95)
-        case .exposed: baseColor.opacity(0.85)
-        case .pinned: baseColor.opacity(0.75)
-        case .scanned: baseColor
-        }
+    private var emptyGateMark: some View {
+        RoundedRectangle(cornerRadius: 2)
+            .strokeBorder(edgeInk.opacity(0.7), lineWidth: 1)
+            .frame(width: 14, height: 14)
     }
 
-    private var bottomEdgeMarking: some View {
-        HStack {
-            Text(frame.negativeNotation)
-                .font(InstrumentFont.mono(6))
-                .foregroundStyle(edgeColor.opacity(0.8))
-            Spacer()
-            if frame.state == .pinned || (frame.state == .scanned && frame.marker != nil) {
-                if let marker = frame.marker, let label = telemetryLabel(for: marker) {
-                    Text(label)
-                        .font(InstrumentFont.mono(6))
-                        .foregroundStyle(edgeColor.opacity(0.75))
-                        .lineLimit(1)
-                }
-            }
-        }
-        .padding(.horizontal, 2)
-        .frame(height: edgeBandHeight)
-    }
-
-    private func telemetryLabel(for marker: FrameMarker) -> String? {
-        var parts: [String] = []
-        if let location = marker.location, !location.isEmpty {
-            parts.append(location)
-        }
-        parts.append("◎")
-        if let exposure = ExposureFormat.exposure(aperture: marker.aperture, shutterSpeed: marker.shutterSpeed) {
-            parts.append(exposure)
-        }
-        return parts.isEmpty ? nil : parts.joined(separator: " ")
+    private var bottomEdgeBand: some View {
+        Text(frame.negativeNotation)
+            .font(InstrumentFont.mono(7))
+            .foregroundStyle(edgeInk)
+            .frame(maxWidth: .infinity)
+            .frame(height: FilmStripFrameMetrics.edgeBandHeight)
     }
 }
 

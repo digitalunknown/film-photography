@@ -232,6 +232,8 @@ struct Roll: Identifiable, Codable, Hashable {
     var frameMarkers: [FrameMarker]
     var scanFileNames: [String]
     var scanAlignmentOffset: Int
+    /// Per-frame preview photos keyed by frame index string ("1", "2", …).
+    var framePhotoFileNames: [String: String]
 
     var pushPullLabel: String? {
         guard let pushPull, pushPull != 0 else { return nil }
@@ -306,7 +308,8 @@ struct Roll: Identifiable, Codable, Hashable {
         notes: String? = nil,
         frameMarkers: [FrameMarker],
         scanFileNames: [String] = [],
-        scanAlignmentOffset: Int = 0
+        scanAlignmentOffset: Int = 0,
+        framePhotoFileNames: [String: String] = [:]
     ) {
         self.id = id
         self.shortId = shortId
@@ -334,6 +337,7 @@ struct Roll: Identifiable, Codable, Hashable {
         self.frameMarkers = frameMarkers
         self.scanFileNames = scanFileNames
         self.scanAlignmentOffset = scanAlignmentOffset
+        self.framePhotoFileNames = framePhotoFileNames
     }
 
     init(from decoder: Decoder) throws {
@@ -365,6 +369,11 @@ struct Roll: Identifiable, Codable, Hashable {
         frameMarkers = try container.decode([FrameMarker].self, forKey: .frameMarkers)
         scanFileNames = try container.decodeIfPresent([String].self, forKey: .scanFileNames) ?? []
         scanAlignmentOffset = try container.decodeIfPresent(Int.self, forKey: .scanAlignmentOffset) ?? 0
+        framePhotoFileNames = try container.decodeIfPresent([String: String].self, forKey: .framePhotoFileNames) ?? [:]
+    }
+
+    func framePhotoFileName(forFrame frameIndex: Int) -> String? {
+        framePhotoFileNames[String(frameIndex)]
     }
 }
 

@@ -1,6 +1,4 @@
 import SwiftUI
-import PhotosUI
-import UniformTypeIdentifiers
 import UIKit
 
 struct RollDetailView: View {
@@ -12,10 +10,9 @@ struct RollDetailView: View {
     @State private var loadCameraId: UUID?
     @State private var showingCameraPicker = false
     @State private var exportText = ""
-    @State private var scanPickerItems: [PhotosPickerItem] = []
-    @State private var openedScanFrame: StripFrame?
     @State private var showingAddDatePicker = false
     @State private var addDateDraft = Date()
+    @State private var pendingLoadReveal = false
     @FocusState private var isNotesFocused: Bool
 
     private var roll: Roll? {
@@ -39,22 +36,15 @@ struct RollDetailView: View {
                         }
 
                         let showLoad = roll.status.isInventory
-                        let showScans = roll.status.canImportScans
                         let showDevelopment = roll.status == .atLab
                             || roll.status == .developed
                             || roll.development != nil
 
-                        if showLoad {
-                            loadSection(roll)
+                        // Inventory uses the load slider; every other status uses the frame carousel.
+                        loadOrExposureStage(roll)
+                        if !showLoad {
                             sectionDivider
-                        } else {
                             pipelineSection(roll)
-                            sectionDivider
-                        }
-                        frameCounterSection(roll)
-                        if showScans {
-                            sectionDivider
-                            scansSection(roll)
                         }
                         sectionDivider
                         notesSection(roll)
@@ -124,15 +114,6 @@ struct RollDetailView: View {
         .sheet(isPresented: $showingAddDatePicker) {
             addDatePickerSheet
         }
-        .fullScreenCover(item: $openedScanFrame) { frame in
-            NavigationStack {
-                ScanFrameView(
-                    rollId: rollId,
-                    frame: frame,
-                    stock: store.roll(for: rollId).flatMap { store.stock(for: $0.stockId) }
-                )
-            }
-        }
         .alert(deleteAlertTitle, isPresented: $showingDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 store.requestDeleteRoll(rollId)
@@ -159,202 +140,51 @@ struct RollDetailView: View {
             .padding(.bottom, AppTheme.Spacing.md)
     }
 
-    private func scansSection(_ roll: Roll) -> some View {
-        DetailSection(title: "Scans") {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-                if roll.scanFileNames.isEmpty {
-                    PhotosPicker(
-                        selection: $scanPickerItems,
-                        maxSelectionCount: 72,
-                        matching: .images,
-                        photoLibrary: .shared()
-                    ) {
-                        scanEmptyState
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    LazyVGrid(
-                        columns: [
-                            GridItem(.flexible(), spacing: AppTheme.Spacing.sm),
-                            GridItem(.flexible(), spacing: AppTheme.Spacing.sm),
-                        ],
-                        spacing: AppTheme.Spacing.sm
-                    ) {
-                        ForEach(Array(roll.scanFileNames.enumerated()), id: \.element) { index, fileName in
-                            Button {
-                                openedScanFrame = StripFrame(
-                                    index: index + 1,
-                                    state: .scanned,
-                                    marker: nil,
-                                    scanFileName: fileName
-                                )
-                            } label: {
-                                scanThumbnail(rollId: roll.id, fileName: fileName)
-                            }
-                            .buttonStyle(.plain)
-                            .contextMenu {
-                                Button("Delete", systemImage: "trash", role: .destructive) {
-                                    store.removeScan(from: roll.id, fileName: fileName)
-                                }
-                            }
-                        }
-                    }
-
-                    PhotosPicker(
-                        selection: $scanPickerItems,
-                        maxSelectionCount: 72,
-                        matching: .images,
-                        photoLibrary: .shared()
-                    ) {
-                        Text("Add more photos →")
-                            .font(InstrumentFont.mono(12))
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .onChange(of: scanPickerItems) { _, items in
-                guard !items.isEmpty else { return }
-                Task { await importScans(items, for: roll.id) }
-            }
-        }
-    }
-
-    private var scanEmptyState: some View {
-        VStack(spacing: AppTheme.Spacing.md) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 2)
-                    .strokeBorder(AppTheme.rule, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                    .frame(height: 120)
-                VStack(spacing: AppTheme.Spacing.sm) {
-                    Text("◻◻")
-                        .font(InstrumentFont.mono(18))
-                        .foregroundStyle(AppTheme.textTertiary)
-                    Text("Add photos")
-                        .font(InstrumentFont.mono(12))
-                        .foregroundStyle(AppTheme.textSecondary)
-                    Text("Tap to upload scans")
-                        .font(InstrumentFont.mono(11))
-                        .foregroundStyle(AppTheme.textTertiary)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func scanThumbnail(rollId: UUID, fileName: String) -> some View {
-        Group {
-            if let image = ScanStorage.thumbnail(for: rollId, fileName: fileName, maxSize: 600) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                Rectangle()
-                    .fill(AppTheme.rule.opacity(0.35))
-                    .overlay {
-                        Text("·")
-                            .font(InstrumentFont.mono(16))
-                            .foregroundStyle(AppTheme.textTertiary)
-                    }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .aspectRatio(3 / 2, contentMode: .fit)
-        .clipped()
-        .overlay {
-            Rectangle()
-                .strokeBorder(AppTheme.rule, lineWidth: 0.5)
-        }
-    }
-
-    private func importScans(_ items: [PhotosPickerItem], for rollId: UUID) async {
-        let existingCount = await MainActor.run {
-            store.roll(for: rollId)?.scanFileNames.count ?? 0
-        }
-        var names: [String] = []
-        for (offset, item) in items.enumerated() {
-            guard let data = await loadImageData(from: item) else { continue }
-            let fileName = "scan-\(existingCount + offset + 1)-\(UUID().uuidString.prefix(8)).jpg"
-            if ScanStorage.saveScan(data: data, rollId: rollId, fileName: fileName) != nil {
-                names.append(fileName)
-            }
-        }
-        if !names.isEmpty {
-            await MainActor.run {
-                store.appendScans(to: rollId, fileNames: names)
-                scanPickerItems = []
-            }
-        } else {
-            await MainActor.run { scanPickerItems = [] }
-        }
-    }
-
-    private func loadImageData(from item: PhotosPickerItem) async -> Data? {
-        if let data = try? await item.loadTransferable(type: Data.self), !data.isEmpty {
-            return jpegData(from: data)
-        }
-        if let transfer = try? await item.loadTransferable(type: ScanImageTransfer.self) {
-            return jpegData(from: transfer.data)
-        }
-        return nil
-    }
-
-    private func jpegData(from data: Data) -> Data? {
-        if let image = UIImage(data: data) {
-            return image.jpegData(compressionQuality: 0.88) ?? data
-        }
-        return data
-    }
-
     @ViewBuilder
-    private func loadSection(_ roll: Roll) -> some View {
-        if roll.status.isInventory {
-            DetailSection(title: "Load") {
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-                    let selectedCamera = loadCameraId.flatMap { store.camera(for: $0) }
+    private func loadOrExposureStage(_ roll: Roll) -> some View {
+        let selectedCamera = loadCameraId.flatMap { store.camera(for: $0) }
+            ?? roll.cameraId.flatMap { store.camera(for: $0) }
+        let startMode: LoadExposureStage.StartMode = {
+            if roll.status.isInventory { return .slide }
+            if pendingLoadReveal { return .reveal }
+            return .carousel
+        }()
 
-                    FilmLoadSlider(
-                        stock: store.stock(for: roll.stockId),
-                        cameraName: selectedCamera?.name ?? "camera",
-                        prompt: selectedCamera == nil ? "choose a camera" : "slide to load",
-                        onChooseRoll: selectedCamera == nil ? { showingCameraPicker = true } : nil
-                    ) {
-                        if let cameraId = loadCameraId {
-                            store.assignRoll(roll.id, to: cameraId)
-                        }
-                    }
-                    .id("\(roll.id)-\(loadCameraId?.uuidString ?? "none")")
-                    .allowsHitTesting(selectedCamera != nil)
-                    .overlay {
-                        if selectedCamera == nil {
-                            Color.clear
-                                .contentShape(Rectangle())
-                                .onTapGesture { showingCameraPicker = true }
-                        }
-                    }
-
-                    if let selectedCamera {
-                        HStack {
-                            Text(selectedCamera.name)
-                                .font(InstrumentFont.mono(11))
-                                .foregroundStyle(AppTheme.textSecondary)
-                            Spacer()
-                            Button("Change →") { showingCameraPicker = true }
-                                .font(InstrumentFont.mono(11))
-                                .foregroundStyle(AppTheme.textSecondary)
-                        }
-                    } else if availableCameras(for: roll).isEmpty {
-                        Text("No empty cameras available.")
-                            .font(InstrumentFont.mono(11))
-                            .foregroundStyle(AppTheme.textTertiary)
-                    } else {
-                        Text("Tap the bay to choose a camera, then slide to load.")
-                            .font(InstrumentFont.mono(11))
-                            .foregroundStyle(AppTheme.textTertiary)
-                    }
+        LoadExposureStage(
+            roll: roll,
+            stock: store.stock(for: roll.stockId),
+            cameraName: selectedCamera?.name ?? "camera",
+            canSlide: selectedCamera != nil && roll.status.isInventory,
+            startMode: startMode,
+            emptyPrompt: availableCameras(for: roll).isEmpty
+                ? "no empty cameras"
+                : "choose a camera",
+            footnote: {
+                if roll.status.isInventory, let selectedCamera {
+                    return selectedCamera.name
                 }
+                return nil
+            }(),
+            onChoose: {
+                showingCameraPicker = true
+            },
+            onChangeSelection: {
+                showingCameraPicker = true
+            },
+            onCommitLoad: {
+                pendingLoadReveal = true
+                if let cameraId = loadCameraId ?? selectedCamera?.id {
+                    store.assignRoll(roll.id, to: cameraId)
+                }
+            },
+            onAdvance: { store.advanceExposure(on: roll.id) },
+            onSetCount: { store.setFrameCount($0, for: roll.id) },
+            onRevealFinished: {
+                pendingLoadReveal = false
             }
-        }
+        )
+        // Stable across load→camera reveal; remount when returning to inventory so Load shows again.
+        .id("load-stage-\(roll.id)-\(roll.status.isInventory ? "stock" : "active")-\(loadCameraId?.uuidString ?? "pick")")
     }
 
     private func cameraPickerSheet(for rollId: UUID) -> some View {
@@ -410,6 +240,7 @@ struct RollDetailView: View {
     }
 
     private static let postLoadStatuses: [RollStatus] = [
+        .inFridge,
         .inCamera,
         .shotUndeveloped,
         .atLab,
@@ -419,19 +250,11 @@ struct RollDetailView: View {
     ]
 
     private func selectPipelineStatus(_ status: RollStatus, for roll: Roll) {
-        store.setRollStatus(roll.id, to: status, cameraId: roll.cameraId ?? loadCameraId)
-    }
-
-    private func frameCounterSection(_ roll: Roll) -> some View {
-        DetailSection(title: "Exposures") {
-            FrameExposureCounter(
-                shot: roll.frameCount,
-                total: max(roll.totalExposures, 1),
-                onIncrement: { store.advanceExposure(on: roll.id) },
-                onSetCount: { store.setFrameCount($0, for: roll.id) }
-            )
-            .padding(.top, AppTheme.Spacing.xs)
+        if status.isInventory {
+            pendingLoadReveal = false
+            loadCameraId = nil
         }
+        store.setRollStatus(roll.id, to: status, cameraId: roll.cameraId ?? loadCameraId)
     }
 
     private func metadataSection(_ roll: Roll) -> some View {
@@ -794,18 +617,6 @@ struct RollDetailView: View {
         store.cameras.filter {
             store.loadedRoll(for: $0.id) == nil || $0.id == loadCameraId
         }
-    }
-}
-
-/// Reliable PhotosPicker image transfer — `Data.self` alone often fails for library assets.
-private struct ScanImageTransfer: Transferable {
-    let data: Data
-
-    static var transferRepresentation: some TransferRepresentation {
-        DataRepresentation(importedContentType: .jpeg) { ScanImageTransfer(data: $0) }
-        DataRepresentation(importedContentType: .png) { ScanImageTransfer(data: $0) }
-        DataRepresentation(importedContentType: .heic) { ScanImageTransfer(data: $0) }
-        DataRepresentation(importedContentType: .image) { ScanImageTransfer(data: $0) }
     }
 }
 

@@ -13,6 +13,7 @@ struct CameraDetailView: View {
     @State private var showingPurchaseDatePicker = false
     @State private var purchaseDateDraft = Date()
     @State private var selectedHistoryRoll: Roll?
+    @State private var pendingLoadRevealRollId: UUID?
     @FocusState private var isNotesFocused: Bool
     @FocusState private var isPriceFocused: Bool
 
@@ -48,6 +49,8 @@ struct CameraDetailView: View {
 
                         if let roll = loadedRoll {
                             loadedRollSection(roll)
+                            sectionDivider
+                            loadedExposureStage(roll)
                             sectionDivider
                         } else {
                             loadSection(camera)
@@ -120,6 +123,23 @@ struct CameraDetailView: View {
         }
     }
 
+    private func loadedExposureStage(_ roll: Roll) -> some View {
+        let reveal = pendingLoadRevealRollId == roll.id
+        return LoadExposureStage(
+            roll: roll,
+            stock: store.stock(for: roll.stockId),
+            cameraName: camera?.name ?? "camera",
+            canSlide: false,
+            startMode: reveal ? .reveal : .carousel,
+            onAdvance: { store.advanceExposure(on: roll.id) },
+            onSetCount: { store.setFrameCount($0, for: roll.id) },
+            onRevealFinished: {
+                pendingLoadRevealRollId = nil
+            }
+        )
+        .id("camera-load-stage-\(roll.id)-\(reveal ? "reveal" : "carousel")")
+    }
+
     private func loadedRollSection(_ roll: Roll) -> some View {
         DetailSection(title: "Loaded") {
             Button {
@@ -142,6 +162,7 @@ struct CameraDetailView: View {
                 ) {
                     if let selection = currentLoadSelection {
                         performLoad(onto: camera, selection: selection)
+                        pendingLoadRevealRollId = store.loadedRoll(for: camera.id)?.id
                     }
                 }
                 .id(currentLoadSelection?.id ?? "empty-load")

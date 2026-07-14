@@ -10,15 +10,32 @@ struct ScanFrameView: View {
 
     @State private var showingDeleteConfirm = false
 
+    private var image: UIImage? {
+        guard let fileName = frame.scanFileName else { return nil }
+        return ScanStorage.thumbnail(for: rollId, fileName: fileName, maxSize: 4096)
+    }
+
+    private var hasRemovablePhoto: Bool {
+        guard frame.scanFileName != nil else { return false }
+        if store.roll(for: rollId)?.framePhotoFileName(forFrame: frame.index) != nil {
+            return true
+        }
+        return store.roll(for: rollId)?.scanFileNames.contains(frame.scanFileName ?? "") == true
+    }
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            if let fileName = frame.scanFileName,
-               let image = ScanStorage.thumbnail(for: rollId, fileName: fileName, maxSize: 4096) {
+            if let image {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                Text(String(format: "%02d", frame.index))
+                    .font(InstrumentFont.mono(72, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.18))
             }
 
             VStack {
@@ -27,29 +44,38 @@ struct ScanFrameView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                HStack(spacing: AppTheme.Spacing.md) {
-                    if frame.scanFileName != nil {
-                        Button("Delete", role: .destructive) {
-                            showingDeleteConfirm = true
-                        }
-                        .font(InstrumentFont.mono(13))
-                        .foregroundStyle(Color(red: 1, green: 0.23, blue: 0.19))
+            ToolbarItem(placement: .cancellationAction) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+                .accessibilityLabel("Close")
+            }
+            if hasRemovablePhoto {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Delete", role: .destructive) {
+                        showingDeleteConfirm = true
                     }
-                    Button("Done") { dismiss() }
-                        .font(InstrumentFont.mono(13))
+                    .font(InstrumentFont.mono(13))
+                    .foregroundStyle(Color(red: 1, green: 0.23, blue: 0.19))
                 }
             }
         }
         .alert("Delete photo?", isPresented: $showingDeleteConfirm) {
             Button("Delete", role: .destructive) {
-                guard let fileName = frame.scanFileName else { return }
-                store.removeScan(from: rollId, fileName: fileName)
+                if store.roll(for: rollId)?.framePhotoFileName(forFrame: frame.index) != nil {
+                    store.removeFramePhoto(from: rollId, frameIndex: frame.index)
+                } else if let fileName = frame.scanFileName {
+                    store.removeScan(from: rollId, fileName: fileName)
+                }
                 dismiss()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This removes the scan from this roll.")
+            Text("This removes the photo from frame \(frame.index).")
         }
     }
 
