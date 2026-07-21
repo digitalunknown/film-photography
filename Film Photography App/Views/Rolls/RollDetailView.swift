@@ -3,6 +3,7 @@ import UIKit
 
 struct RollDetailView: View {
     @Environment(AppStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     let rollId: UUID
 
     @State private var showingDeleteConfirm = false
@@ -115,6 +116,7 @@ struct RollDetailView: View {
         .alert(deleteAlertTitle, isPresented: $showingDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 store.requestDeleteRoll(rollId)
+                dismiss()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
