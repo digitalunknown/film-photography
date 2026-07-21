@@ -13,7 +13,6 @@ struct CameraDetailView: View {
     @State private var showingPurchaseDatePicker = false
     @State private var purchaseDateDraft = Date()
     @State private var selectedHistoryRoll: Roll?
-    @State private var pendingLoadRevealRollId: UUID?
     @FocusState private var isNotesFocused: Bool
     @FocusState private var isPriceFocused: Bool
 
@@ -92,11 +91,10 @@ struct CameraDetailView: View {
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") {
+                InstrumentKeyboardDoneButton {
                     isNotesFocused = false
                     isPriceFocused = false
                 }
-                .font(InstrumentFont.mono(13))
             }
         }
         .onChange(of: photoItem) { _, newItem in
@@ -124,20 +122,17 @@ struct CameraDetailView: View {
     }
 
     private func loadedExposureStage(_ roll: Roll) -> some View {
-        let reveal = pendingLoadRevealRollId == roll.id
-        return LoadExposureStage(
+        LoadExposureStage(
             roll: roll,
             stock: store.stock(for: roll.stockId),
             cameraName: camera?.name ?? "camera",
             canSlide: false,
-            startMode: reveal ? .reveal : .carousel,
+            startMode: .carousel,
             onAdvance: { store.advanceExposure(on: roll.id) },
-            onSetCount: { store.setFrameCount($0, for: roll.id) },
-            onRevealFinished: {
-                pendingLoadRevealRollId = nil
-            }
+            onUndo: { store.removeLastFrame(from: roll.id) },
+            onSetCount: { store.setFrameCount($0, for: roll.id) }
         )
-        .id("camera-load-stage-\(roll.id)-\(reveal ? "reveal" : "carousel")")
+        .id("camera-load-stage-\(roll.id)")
     }
 
     private func loadedRollSection(_ roll: Roll) -> some View {
@@ -157,37 +152,45 @@ struct CameraDetailView: View {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
                 FilmLoadSlider(
                     stock: currentLoadSelection?.stock,
-                    cameraName: camera.name,
-                    onChooseRoll: { showingLoadPicker = true }
+                    layout: loadSliderLayout(for: camera),
+                    isEnabled: currentLoadSelection != nil
                 ) {
                     if let selection = currentLoadSelection {
                         performLoad(onto: camera, selection: selection)
-                        pendingLoadRevealRollId = store.loadedRoll(for: camera.id)?.id
                     }
                 }
                 .id(currentLoadSelection?.id ?? "empty-load")
 
-                if currentLoadSelection != nil {
-                    HStack {
-                        Text(selectedLoadLabel)
-                            .font(InstrumentFont.mono(11))
-                            .foregroundStyle(AppTheme.textSecondary)
-                            .lineLimit(1)
-                        Spacer()
-                        Button("Change →") {
-                            showingLoadPicker = true
+                Button {
+                    showingLoadPicker = true
+                } label: {
+                    Text("Choose Roll")
+                        .font(InstrumentFont.mono(12))
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .overlay {
+                            Rectangle()
+                                .strokeBorder(AppTheme.rule, lineWidth: 1)
                         }
-                        .font(InstrumentFont.mono(11))
-                        .foregroundStyle(AppTheme.textSecondary)
-                    }
-                } else {
-                    Text(loadEmptyMessage)
-                        .font(InstrumentFont.mono(11))
-                        .foregroundStyle(AppTheme.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .buttonStyle(.plain)
             }
         }
+    }
+
+    private func loadSliderLayout(for camera: Camera) -> FilmStripLayout {
+        let format: FilmFormat = {
+            switch currentLoadSelection {
+            case .roll(let roll, _):
+                return roll.format
+            case .fridgeItem(let item, _):
+                return item.format
+            case nil:
+                return camera.defaultFormat ?? .format35Full
+            }
+        }()
+        return FilmStripLayout.layout(for: format, cellHeight: 110)
     }
 
     private func specificationsSection(_ camera: Camera) -> some View {
@@ -289,11 +292,8 @@ struct CameraDetailView: View {
             .font(InstrumentFont.mono(12))
             .foregroundStyle(AppTheme.textPrimary)
             .lineLimit(3...8)
-            .submitLabel(.done)
+            .submitLabel(.return)
             .focused($isNotesFocused)
-            .onSubmit {
-                isNotesFocused = false
-            }
             .padding(.vertical, AppTheme.Spacing.sm)
         }
     }
@@ -400,7 +400,7 @@ struct CameraDetailView: View {
             }
         }
         .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
+        .presentationDragIndicator(.hidden)
     }
 
     private var loadPickerSheet: some View {
@@ -456,6 +456,7 @@ struct CameraDetailView: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.hidden)
     }
 
     private enum LoadSelection {
@@ -487,17 +488,6 @@ struct CameraDetailView: View {
         return nil
     }
 
-    private var selectedLoadLabel: String {
-        switch currentLoadSelection {
-        case .roll(let roll, _):
-            return inventoryRollLabel(for: roll)
-        case .fridgeItem(let item, _):
-            return fridgeItemLabel(for: item)
-        case nil:
-            return "Not Set"
-        }
-    }
-
     private var loadEmptyMessage: String {
         if store.inventoryRolls.isEmpty && store.availableFridgeItems.isEmpty {
             if store.activeRolls.isEmpty {
@@ -505,7 +495,7 @@ struct CameraDetailView: View {
             }
             return "No unloadable stock. Set a roll to In stock — or add unopened stock — then choose it here."
         }
-        return "Tap the empty canister to choose a roll, then slide to load."
+        return "Choose a roll, then slide to load."
     }
 
     private func inventoryRollLabel(for roll: Roll) -> String {

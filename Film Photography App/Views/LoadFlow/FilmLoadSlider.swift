@@ -1,14 +1,14 @@
 import SwiftUI
 import UIKit
 
-/// Slide-to-load control: drag the roll across a film path into the camera bay.
-/// Gray stroke / fill only — film stretches as you pull.
+/// Slide-to-load: empty camera chamber with a film gate you pull across.
+/// Gate height matches `FilmStripView` so the swap to the loaded strip feels continuous.
 struct FilmLoadSlider: View {
     let stock: FilmStock?
-    let cameraName: String
-    var prompt: String = "slide to load"
-    var emptyPrompt: String = "choose a roll"
-    var onChooseRoll: (() -> Void)?
+    var layout: FilmStripLayout = .layout(for: .format35Full, cellHeight: 110)
+    var isEnabled: Bool = true
+    /// When true, the film gate slides into the chamber on appear.
+    var playsEntrance: Bool = false
     var onComplete: (() -> Void)?
 
     @State private var dragOffset: CGFloat = 0
@@ -16,277 +16,211 @@ struct FilmLoadSlider: View {
     @State private var trackWidth: CGFloat = 0
     @State private var lastSprocketIndex = 0
     @State private var haptics = FilmGateHaptics()
+    @State private var entranceOffset: CGFloat = 0
+    @State private var entranceReady = false
 
-    private let thumbSize: CGFloat = 52
-    private let trackHeight: CGFloat = 88
-    private let inset: CGFloat = 8
-    private let bayWidth: CGFloat = 52
-    private let sprocketCount = 12
-    private let filmHeight: CGFloat = 34
+    private let sprocketTickCount = 10
+    private let stroke = FilmStripFrameMetrics.strokeWidth
 
     private var hasRoll: Bool { stock != nil }
 
+    private var chassisHeight: CGFloat {
+        layout.frameSize.height + FilmStripFrameMetrics.chromeHeight
+    }
+
+    private var gateWidth: CGFloat {
+        max(layout.frameSize.width, 44)
+    }
+
     private var maxTravel: CGFloat {
-        max(trackWidth - bayWidth * 2 - inset * 2, 0)
+        max(trackWidth - gateWidth, 0)
     }
 
     private var progress: CGFloat {
-        guard hasRoll, maxTravel > 0 else { return 0 }
+        guard hasRoll, isEnabled, maxTravel > 0 else { return 0 }
         return min(max(dragOffset / maxTravel, 0), 1)
     }
 
+    private var displayedGateOffset: CGFloat {
+        entranceReady ? dragOffset : entranceOffset
+    }
+
+    private var edgeInk: Color { AppTheme.textSecondary.opacity(0.85) }
+
+    private var stockLabel: String {
+        (stock?.name ?? "FILM").uppercased()
+    }
+
+    private var gateInset: CGFloat {
+        FilmStripFrameMetrics.gateInset(forCellWidth: gateWidth)
+    }
+
     var body: some View {
-        ZStack {
-            trackChassis
-            if hasRoll {
-                filmLeader
+        GeometryReader { geo in
+            let width = geo.size.width
+            ZStack(alignment: .leading) {
+                cameraChamber(width: width)
+
+                if hasRoll, entranceReady, (dragOffset > 0 || isComplete) {
+                    filmGate(
+                        width: dragOffset + gateWidth,
+                        showsMark: false,
+                        dimmed: false
+                    )
+                    .allowsHitTesting(false)
+                }
+
+                filmGate(
+                    width: gateWidth,
+                    showsMark: true,
+                    dimmed: !hasRoll || (!isEnabled && hasRoll)
+                )
+                .offset(x: displayedGateOffset)
+                .opacity(isComplete ? 0.55 : 1)
+                .highPriorityGesture(
+                    hasRoll && isEnabled && !isComplete && entranceReady ? dragGesture : nil
+                )
             }
-            promptLabel
-            HStack(spacing: 0) {
-                leftBay
-                Spacer(minLength: 0)
-                rightBay
+            .frame(width: width, height: chassisHeight)
+            .clipShape(Rectangle())
+            .overlay {
+                Rectangle()
+                    .strokeBorder(AppTheme.rule, lineWidth: stroke)
             }
-            .padding(.horizontal, inset)
-            thumb
+            .onAppear {
+                trackWidth = width
+                runEntranceIfNeeded()
+            }
+            .onChange(of: width) { _, newWidth in
+                trackWidth = newWidth
+            }
         }
-        .frame(height: trackHeight)
-        .clipShape(RoundedRectangle(cornerRadius: 3))
-        .background(
-            GeometryReader { geo in
-                Color.clear
-                    .onAppear { trackWidth = geo.size.width }
-                    .onChange(of: geo.size.width) { _, width in
-                        trackWidth = width
-                    }
-            }
-        )
+        .frame(maxWidth: .infinity)
+        .frame(height: chassisHeight)
+        .opacity(isEnabled || !hasRoll ? 1 : 0.55)
         .onChange(of: stock?.id) { _, _ in
             dragOffset = 0
             isComplete = false
             lastSprocketIndex = 0
+            entranceReady = false
+            runEntranceIfNeeded()
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            hasRoll
-                ? "Load \(stock?.name ?? "roll") into \(cameraName)"
-                : "Choose a roll to load into \(cameraName)"
-        )
-        .accessibilityHint(hasRoll ? "Swipe right to load" : "Double tap to choose a roll")
-        .accessibilityAddTraits(.isButton)
-        .accessibilityAction {
-            if !hasRoll { onChooseRoll?() }
-        }
-        .disabled(isComplete)
+        .accessibilityLabel(hasRoll ? "Slide to load roll" : "No roll selected")
+        .accessibilityHint(hasRoll && isEnabled ? "Swipe right to load" : "")
+        .disabled(isComplete || !isEnabled || !hasRoll || !entranceReady)
     }
 
-    // MARK: - Chassis
+    private func runEntranceIfNeeded() {
+        guard playsEntrance, hasRoll, isEnabled else {
+            entranceOffset = 0
+            entranceReady = true
+            return
+        }
+        entranceOffset = -gateWidth - 12
+        entranceReady = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.84)) {
+                entranceOffset = 0
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.48) {
+                entranceReady = true
+                dragOffset = 0
+            }
+        }
+    }
 
-    private var trackChassis: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 3)
-                .fill(AppTheme.bg)
+    // MARK: - Camera chamber
 
-            RoundedRectangle(cornerRadius: 2)
-                .fill(AppTheme.rule.opacity(0.18))
-                .padding(.vertical, 14)
-                .padding(.horizontal, inset + bayWidth * 0.35)
-
-            RoundedRectangle(cornerRadius: 3)
-                .strokeBorder(AppTheme.rule, lineWidth: 1)
-
-            VStack {
+    private func cameraChamber(width: CGFloat) -> some View {
+        Rectangle()
+            .fill(AppTheme.bg)
+            .overlay {
                 Rectangle()
-                    .fill(AppTheme.rule)
-                    .frame(height: 1)
-                Spacer()
-                Rectangle()
-                    .fill(AppTheme.rule)
-                    .frame(height: 1)
+                    .fill(AppTheme.rule.opacity(0.35))
+                    .padding(1)
             }
-            .padding(.vertical, 10)
-            .padding(.horizontal, inset + 4)
-        }
+            .frame(width: width, height: chassisHeight)
     }
 
-    // MARK: - Film leader (stretch)
+    // MARK: - Gate cell
 
-    private var filmLeader: some View {
-        let leaderWidth = max(dragOffset + thumbSize * 0.4, 0)
-        return ZStack(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 1)
-                .fill(AppTheme.rule.opacity(0.22 + progress * 0.12))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 1)
-                        .strokeBorder(AppTheme.rule, lineWidth: 1)
-                }
-                .frame(width: leaderWidth, height: filmHeight)
+    private func filmGate(width: CGFloat, showsMark: Bool, dimmed: Bool) -> some View {
+        let inset = FilmStripFrameMetrics.gateInset(forCellWidth: min(width, gateWidth))
 
-            VStack {
-                sprocketRow(width: leaderWidth)
-                Spacer(minLength: 0)
-                sprocketRow(width: leaderWidth)
+        return VStack(spacing: 0) {
+            if layout.showsSprockets {
+                sprocketRail(width: width)
             }
-            .frame(width: leaderWidth, height: filmHeight)
 
-            HStack(spacing: 0) {
-                ForEach(0..<sprocketCount, id: \.self) { index in
-                    let notchProgress = CGFloat(index) / CGFloat(sprocketCount)
-                    Rectangle()
-                        .fill(AppTheme.rule.opacity(progress > notchProgress ? 0.9 : 0.35))
-                        .frame(width: 1, height: 16)
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .frame(width: leaderWidth, height: filmHeight)
-        }
-        .padding(.leading, inset + (bayWidth - thumbSize) / 2)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .allowsHitTesting(false)
-    }
-
-    private func sprocketRow(width: CGFloat) -> some View {
-        HStack(spacing: 5) {
-            let count = max(Int(width / 10), 0)
-            ForEach(0..<count, id: \.self) { _ in
-                RoundedRectangle(cornerRadius: 0.5)
-                    .strokeBorder(AppTheme.rule, lineWidth: 1)
-                    .frame(width: 4, height: 4)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 3)
-        .padding(.vertical, 2)
-    }
-
-    // MARK: - Prompt
-
-    private var promptLabel: some View {
-        VStack(spacing: AppTheme.Spacing.xs) {
-            Text(promptText)
-                .font(InstrumentFont.mono(11))
-                .foregroundStyle(AppTheme.textSecondary)
-                .tracking(1.2)
-
-            if !isComplete && hasRoll {
-                Text("pull →")
-                    .font(InstrumentFont.mono(10))
-                    .foregroundStyle(AppTheme.textTertiary)
-                    .opacity(0.45 + 0.45 * Double(sin(progress * .pi)))
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, bayWidth + inset)
-        .opacity(hasRoll ? (isComplete ? 1 : max(0, 1 - progress * 1.8)) : 1)
-        .allowsHitTesting(false)
-    }
-
-    private var promptText: String {
-        if isComplete { return "loaded" }
-        if hasRoll { return prompt }
-        return emptyPrompt
-    }
-
-    // MARK: - Bays (matched left / right)
-
-    private var leftBay: some View {
-        bayChrome {
-            if !hasRoll {
-                Text("◎")
-                    .font(InstrumentFont.mono(12))
-                    .foregroundStyle(AppTheme.textTertiary)
-            }
-        }
-    }
-
-    private var rightBay: some View {
-        bayChrome {
-            Capsule()
-                .strokeBorder(AppTheme.rule, lineWidth: 1)
-                .frame(width: 3, height: 26)
-                .background(
-                    Capsule()
-                        .fill(AppTheme.rule.opacity(isComplete || progress > 0.85 ? 0.45 : 0.2))
-                )
-
-            Text(isComplete ? "●" : "◻")
-                .font(InstrumentFont.mono(10))
-                .foregroundStyle(
-                    isComplete || progress > 0.85
-                        ? AppTheme.textSecondary
-                        : AppTheme.textTertiary
-                )
-        }
-        .scaleEffect(isComplete ? 1.02 : (progress > 0.9 ? 1.01 : 1))
-        .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isComplete)
-        .animation(.easeOut(duration: 0.12), value: progress > 0.9)
-    }
-
-    private func bayChrome<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(AppTheme.bg)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 2)
-                        .strokeBorder(AppTheme.rule, lineWidth: 1)
-                }
-                .frame(width: bayWidth - 6, height: trackHeight - 20)
-
-            VStack(spacing: 6) {
-                content()
-            }
-        }
-        .frame(width: bayWidth, height: trackHeight - 12)
-        .allowsHitTesting(false)
-    }
-
-    // MARK: - Thumb
-
-    @ViewBuilder
-    private var thumb: some View {
-        Group {
-            if hasRoll {
-                monochromeRollMark
-                    .offset(x: inset + (bayWidth - thumbSize) / 2 + dragOffset)
-                    .scaleEffect(isComplete ? 0.94 : 1)
-                    .opacity(isComplete ? 0.55 : 1)
-                    .highPriorityGesture(dragGesture)
-            } else {
-                Button {
-                    haptics.chooseRoll()
-                    onChooseRoll?()
-                } label: {
-                    RoundedRectangle(cornerRadius: 2)
-                        .strokeBorder(AppTheme.rule, lineWidth: 1)
-                        .background(AppTheme.bg)
-                        .overlay {
-                            Text("◎")
-                                .font(InstrumentFont.mono(14))
-                                .foregroundStyle(AppTheme.textTertiary)
-                        }
-                        .frame(width: thumbSize - 8, height: thumbSize - 8)
-                }
-                .buttonStyle(.plain)
-                .offset(x: inset + (bayWidth - thumbSize) / 2)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-    }
-
-    private var monochromeRollMark: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(AppTheme.rule.opacity(0.2))
-            RoundedRectangle(cornerRadius: 2)
-                .strokeBorder(AppTheme.rule, lineWidth: 1)
-            Text(stock?.shortCode ?? "FILM")
-                .font(InstrumentFont.mono(9, weight: .bold))
-                .foregroundStyle(AppTheme.textTertiary)
+            Text(showsMark ? stockLabel : " ")
+                .font(InstrumentFont.mono(6))
+                .foregroundStyle(edgeInk)
+                .tracking(0.3)
                 .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .padding(.horizontal, 4)
+                .minimumScaleFactor(0.5)
+                .frame(maxWidth: .infinity)
+                .frame(height: FilmStripFrameMetrics.edgeBandHeight)
+                .padding(.horizontal, inset + 1)
+
+            ZStack {
+                Rectangle()
+                    .fill(Color.black)
+
+                if width > gateWidth {
+                    HStack(spacing: 0) {
+                        ForEach(0..<sprocketTickCount, id: \.self) { index in
+                            let notchProgress = CGFloat(index) / CGFloat(sprocketTickCount)
+                            Rectangle()
+                                .fill(
+                                    AppTheme.rule.opacity(
+                                        progress > notchProgress ? 0.95 : 0.35
+                                    )
+                                )
+                                .frame(width: stroke)
+                                .frame(maxHeight: .infinity)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .padding(.vertical, 6)
+                }
+
+                if showsMark {
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .strokeBorder(edgeInk.opacity(0.7), lineWidth: stroke)
+                        .frame(width: 11, height: 11)
+                }
+            }
+            .padding(.horizontal, inset)
+            .frame(height: layout.frameSize.height)
+
+            Color.clear
+                .frame(height: FilmStripFrameMetrics.edgeBandHeight)
+
+            if layout.showsSprockets {
+                sprocketRail(width: width)
+            }
         }
-        .frame(width: thumbSize - 8, height: thumbSize - 8)
+        .frame(width: width, height: chassisHeight, alignment: .leading)
+        .background(FilmStripView.filmBase)
+        .opacity(dimmed ? 0.45 : 1)
+    }
+
+    private func sprocketRail(width: CGFloat) -> some View {
+        let count = max(Int(width / 12), FilmStripFrameMetrics.sprocketCount)
+        return HStack(spacing: 0) {
+            ForEach(0..<count, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: FilmStripFrameMetrics.sprocketCorner)
+                    .fill(FilmStripFrameMetrics.sprocketCutout)
+                    .frame(
+                        width: FilmStripFrameMetrics.sprocketWidth,
+                        height: FilmStripFrameMetrics.sprocketHeight
+                    )
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .frame(width: width, height: FilmStripFrameMetrics.railHeight)
+        .padding(.horizontal, gateInset)
     }
 
     // MARK: - Gesture
@@ -294,7 +228,7 @@ struct FilmLoadSlider: View {
     private var dragGesture: some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                guard hasRoll, !isComplete else { return }
+                guard hasRoll, isEnabled, !isComplete else { return }
                 if dragOffset == 0 && value.translation.width > 0 {
                     haptics.prepare()
                     haptics.grab()
@@ -315,7 +249,7 @@ struct FilmLoadSlider: View {
                 dragOffset = next
             }
             .onEnded { _ in
-                guard hasRoll, !isComplete else { return }
+                guard hasRoll, isEnabled, !isComplete else { return }
                 if progress >= 0.9 {
                     complete()
                 } else {
@@ -330,16 +264,16 @@ struct FilmLoadSlider: View {
 
     private func sprocketIndex(for progress: CGFloat) -> Int {
         let clamped = min(max(progress, 0), 1)
-        return Int((clamped * CGFloat(sprocketCount)).rounded(.down))
+        return Int((clamped * CGFloat(sprocketTickCount)).rounded(.down))
     }
 
     private func complete() {
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
+        withAnimation(.spring(response: 0.36, dampingFraction: 0.82)) {
             dragOffset = maxTravel
             isComplete = true
         }
         haptics.lockIn()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
             onComplete?()
         }
     }

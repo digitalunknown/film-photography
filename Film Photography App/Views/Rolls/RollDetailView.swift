@@ -12,7 +12,6 @@ struct RollDetailView: View {
     @State private var exportText = ""
     @State private var showingAddDatePicker = false
     @State private var addDateDraft = Date()
-    @State private var pendingLoadReveal = false
     @FocusState private var isNotesFocused: Bool
 
     private var roll: Roll? {
@@ -73,7 +72,7 @@ struct RollDetailView: View {
             ToolbarItem(placement: .principal) {
                 HStack(spacing: AppTheme.Spacing.sm) {
                     Text(rollTitle)
-                        .font(InstrumentFont.mono(13))
+                        .font(InstrumentFont.mono(17, weight: .semibold))
                         .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
                     if roll?.isExpired == true {
@@ -84,7 +83,7 @@ struct RollDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button("Printable Summary Sheet", systemImage: "doc.text") {
-                        exportText = store.rollDataSheetText(for: rollId) ?? ""
+                        exportText = store.rollDataSheetText(for: rollId) ?? "Roll summary unavailable."
                         showingExportSheet = true
                     }
                     Divider()
@@ -99,10 +98,9 @@ struct RollDetailView: View {
 
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") {
+                InstrumentKeyboardDoneButton {
                     isNotesFocused = false
                 }
-                .font(InstrumentFont.mono(13))
             }
         }
         .sheet(isPresented: $showingExportSheet) {
@@ -145,9 +143,7 @@ struct RollDetailView: View {
         let selectedCamera = loadCameraId.flatMap { store.camera(for: $0) }
             ?? roll.cameraId.flatMap { store.camera(for: $0) }
         let startMode: LoadExposureStage.StartMode = {
-            if roll.status.isInventory { return .slide }
-            if pendingLoadReveal { return .reveal }
-            return .carousel
+            roll.status.isInventory ? .slide : .carousel
         }()
 
         LoadExposureStage(
@@ -156,15 +152,6 @@ struct RollDetailView: View {
             cameraName: selectedCamera?.name ?? "camera",
             canSlide: selectedCamera != nil && roll.status.isInventory,
             startMode: startMode,
-            emptyPrompt: availableCameras(for: roll).isEmpty
-                ? "no empty cameras"
-                : "choose a camera",
-            footnote: {
-                if roll.status.isInventory, let selectedCamera {
-                    return selectedCamera.name
-                }
-                return nil
-            }(),
             onChoose: {
                 showingCameraPicker = true
             },
@@ -172,19 +159,17 @@ struct RollDetailView: View {
                 showingCameraPicker = true
             },
             onCommitLoad: {
-                pendingLoadReveal = true
                 if let cameraId = loadCameraId ?? selectedCamera?.id {
                     store.assignRoll(roll.id, to: cameraId)
                 }
             },
             onAdvance: { store.advanceExposure(on: roll.id) },
-            onSetCount: { store.setFrameCount($0, for: roll.id) },
-            onRevealFinished: {
-                pendingLoadReveal = false
-            }
+            onUndo: { store.removeLastFrame(from: roll.id) },
+            onSetCount: { store.setFrameCount($0, for: roll.id) }
         )
-        // Stable across load→camera reveal; remount when returning to inventory so Load shows again.
-        .id("load-stage-\(roll.id)-\(roll.status.isInventory ? "stock" : "active")-\(loadCameraId?.uuidString ?? "pick")")
+        // Keep identity stable across load so the slide→carousel transition isn't remounted away.
+        // Remount when the chosen camera changes so the entrance animation can replay.
+        .id("load-stage-\(roll.id)-\(loadCameraId?.uuidString ?? roll.cameraId?.uuidString ?? "pick")")
     }
 
     private func cameraPickerSheet(for rollId: UUID) -> some View {
@@ -220,6 +205,7 @@ struct RollDetailView: View {
             }
         }
         .presentationDetents([.medium])
+        .presentationDragIndicator(.hidden)
     }
 
     private func pipelineSection(_ roll: Roll) -> some View {
@@ -251,7 +237,6 @@ struct RollDetailView: View {
 
     private func selectPipelineStatus(_ status: RollStatus, for roll: Roll) {
         if status.isInventory {
-            pendingLoadReveal = false
             loadCameraId = nil
         }
         store.setRollStatus(roll.id, to: status, cameraId: roll.cameraId ?? loadCameraId)
@@ -398,11 +383,8 @@ struct RollDetailView: View {
             .font(InstrumentFont.mono(12))
             .foregroundStyle(AppTheme.textPrimary)
             .lineLimit(3...8)
-            .submitLabel(.done)
+            .submitLabel(.return)
             .focused($isNotesFocused)
-            .onSubmit {
-                isNotesFocused = false
-            }
             .padding(.vertical, AppTheme.Spacing.sm)
         }
     }
@@ -410,23 +392,62 @@ struct RollDetailView: View {
     private var exportSheet: some View {
         NavigationStack {
             ScrollView {
-                Text(exportText)
+                Text(exportText.isEmpty ? "Roll summary unavailable." : exportText)
                     .font(InstrumentFont.mono(11))
                     .foregroundStyle(AppTheme.textPrimary)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(AppTheme.horizontalPadding)
+                    .padding(.vertical, AppTheme.Spacing.md)
             }
             .instrumentScreen()
             .navigationTitle("Summary")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        showingExportSheet = false
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                    }
+                    .accessibilityLabel("Close")
+                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { showingExportSheet = false }
-                        .font(InstrumentFont.mono(13))
+                    Button("Print") {
+                        printSummary()
+                    }
+                    .font(InstrumentFont.mono(13))
+                    .disabled(exportText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .onAppear {
+                if exportText.isEmpty {
+                    exportText = store.rollDataSheetText(for: rollId) ?? "Roll summary unavailable."
                 }
             }
         }
+    }
+
+    private func printSummary() {
+        let text = exportText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+
+        let formatter = UISimpleTextPrintFormatter(text: text)
+        formatter.font = UIFont.monospacedSystemFont(ofSize: 10, weight: .regular)
+        formatter.color = .black
+        formatter.perPageContentInsets = UIEdgeInsets(top: 36, left: 36, bottom: 36, right: 36)
+
+        let info = UIPrintInfo.printInfo()
+        info.outputType = .general
+        info.jobName = store.roll(for: rollId).map { "\($0.shortId) Summary" } ?? "Roll Summary"
+        info.orientation = .portrait
+
+        let controller = UIPrintInteractionController.shared
+        controller.printInfo = info
+        controller.printFormatter = formatter
+        controller.present(animated: true)
     }
 
     // MARK: - Bindings
@@ -585,7 +606,7 @@ struct RollDetailView: View {
             }
         }
         .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
+        .presentationDragIndicator(.hidden)
     }
 
     private func addDateDisplayValue(for roll: Roll) -> String {
@@ -598,16 +619,8 @@ struct RollDetailView: View {
             get: { store.roll(for: rollId)?.notes ?? "" },
             set: { newValue in
                 guard var updated = store.roll(for: rollId) else { return }
-                var text = newValue
-                // Vertical TextFields treat the Done key as Return; dismiss instead of a new line.
-                if text.hasSuffix("\n") {
-                    text = String(text.dropLast())
-                    Task { @MainActor in
-                        isNotesFocused = false
-                    }
-                }
-                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                updated.notes = trimmed.isEmpty ? nil : text
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                updated.notes = trimmed.isEmpty ? nil : newValue
                 store.updateRoll(updated)
             }
         )

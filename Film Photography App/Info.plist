@@ -4,10 +4,13 @@
 <dict>
 	<key>UIAppFonts</key>
 	<array>
-		<string>SpaceMono-Regular.ttf</string>
-		<string>SpaceMono-Bold.ttf</string>
-		<string>SpaceMono-Italic.ttf</string>
-		<string>SpaceMono-BoldItalic.ttf</string>
+		<string>Figtree-Light.ttf</string>
+		<string>Figtree-Regular.ttf</string>
+		<string>Figtree-Medium.ttf</string>
+		<string>Figtree-SemiBold.ttf</string>
+		<string>Figtree-Bold.ttf</string>
+		<string>Figtree-Italic.ttf</string>
+		<string>Figtree-BoldItalic.ttf</string>
 	</array>
 </dict>
 </plist>

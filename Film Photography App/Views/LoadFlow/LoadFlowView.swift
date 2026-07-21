@@ -424,6 +424,7 @@ struct LoadFlowView: View {
             }
         }
         .presentationDetents([.medium])
+        .presentationDragIndicator(.hidden)
     }
 
     // MARK: - Actions

@@ -21,19 +21,19 @@ enum AppTheme {
     static let rowSpacing = Spacing.md
     static let sectionSpacing = Spacing.xl
 
-    /// Apply Space Mono to navigation titles and other UIKit chrome once at launch.
+    /// Apply Figtree to navigation titles and other UIKit chrome once at launch.
     static func applyTypography() {
-        let regular = UIFont(name: InstrumentFont.regularName, size: 17)
-            ?? .monospacedSystemFont(ofSize: 17, weight: .regular)
-        let bold = UIFont(name: InstrumentFont.boldName, size: 34)
-            ?? .monospacedSystemFont(ofSize: 34, weight: .bold)
-        let barRegular = UIFont(name: InstrumentFont.regularName, size: 13)
-            ?? .monospacedSystemFont(ofSize: 13, weight: .regular)
+        let largeTitle = UIFont(name: InstrumentFont.boldName, size: InstrumentFont.scaled(34))
+            ?? .systemFont(ofSize: InstrumentFont.scaled(34), weight: .bold)
+        let inlineTitle = UIFont(name: InstrumentFont.semiBoldName, size: InstrumentFont.scaled(17))
+            ?? .systemFont(ofSize: InstrumentFont.scaled(17), weight: .semibold)
+        let barRegular = UIFont(name: InstrumentFont.regularName, size: InstrumentFont.scaled(13))
+            ?? .systemFont(ofSize: InstrumentFont.scaled(13), weight: .regular)
 
         // Font only — avoid replacing bar appearances so Liquid Glass stays intact.
         let navBar = UINavigationBar.appearance()
-        navBar.titleTextAttributes = [.font: regular]
-        navBar.largeTitleTextAttributes = [.font: bold]
+        navBar.titleTextAttributes = [.font: inlineTitle]
+        navBar.largeTitleTextAttributes = [.font: largeTitle]
 
         let tabAttrs: [NSAttributedString.Key: Any] = [.font: barRegular]
         let tabItem = UITabBarItem.appearance()
@@ -47,10 +47,20 @@ enum AppTheme {
 }
 
 enum InstrumentFont {
-    static let regularName = "SpaceMono-Regular"
-    static let boldName = "SpaceMono-Bold"
-    static let italicName = "SpaceMono-Italic"
-    static let boldItalicName = "SpaceMono-BoldItalic"
+    static let lightName = "Figtree-Light"
+    static let regularName = "Figtree-Regular"
+    static let mediumName = "Figtree-Medium"
+    static let semiBoldName = "Figtree-SemiBold"
+    static let boldName = "Figtree-Bold"
+    static let italicName = "Figtree-Italic"
+    static let boldItalicName = "Figtree-BoldItalic"
+
+    /// Slight bump over the previous Space Mono sizes for Figtree’s proportions.
+    private static let sizeBump: CGFloat = 1
+
+    static func scaled(_ size: CGFloat) -> CGFloat {
+        size + sizeBump
+    }
 
     static func display(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
         custom(size, weight: weight)
@@ -61,14 +71,22 @@ enum InstrumentFont {
     }
 
     private static func custom(_ size: CGFloat, weight: Font.Weight) -> Font {
-        let name: String
+        .custom(postScriptName(for: weight), size: scaled(size))
+    }
+
+    private static func postScriptName(for weight: Font.Weight) -> String {
         switch weight {
-        case .bold, .heavy, .black, .semibold:
-            name = boldName
+        case .ultraLight, .thin, .light:
+            return lightName
+        case .medium:
+            return mediumName
+        case .semibold:
+            return semiBoldName
+        case .bold, .heavy, .black:
+            return boldName
         default:
-            name = regularName
+            return regularName
         }
-        return .custom(name, size: size)
     }
 }
 

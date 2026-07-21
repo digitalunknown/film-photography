@@ -17,7 +17,7 @@ struct StocksTabView: View {
             )
             .instrumentScreen()
             .instrumentTabNavigation(title: "Library")
-            .searchable(text: $searchText, prompt: "Search library")
+            .searchable(text: $searchText, prompt: "Search")
             .navigationDestination(item: $selectedStockId) { stockId in
                 StockDetailView(stockId: stockId)
             }
@@ -33,55 +33,59 @@ private struct StocksLibraryContent: View {
     @Binding var selectedFilmType: String
     @Binding var selectedStockId: UUID?
 
-    private var brandFilters: [String] {
-        [FilmStock.allBrandsLabel] + FilmStock.brandsByCount(in: store.stocks)
+    private var allBrandFilters: [String] {
+        FilmStock.brandsByCount(in: store.stocks)
     }
 
-    private var disabledBrands: Set<String> {
-        guard selectedFilmType != FilmStockType.allTypesLabel else { return [] }
+    private var allFilmTypeFilters: [String] {
+        FilmStockType.allCases.map(\.label)
+    }
+
+    /// Brands that have at least one stock matching the current type filter.
+    private var brandFilters: [String] {
+        guard selectedFilmType != FilmStockType.allTypesLabel else { return allBrandFilters }
         let available = Set(
             store.stocks
                 .filter { $0.filmType.label == selectedFilmType }
                 .map(\.brand)
         )
-        return Set(brandFilters.filter { $0 != FilmStock.allBrandsLabel && !available.contains($0) })
+        return allBrandFilters.filter { available.contains($0) }
     }
 
-    private var disabledFilmTypes: Set<String> {
-        guard selectedBrand != FilmStock.allBrandsLabel else { return [] }
+    /// Types that have at least one stock matching the current brand filter.
+    private var filmTypeFilters: [String] {
+        guard selectedBrand != FilmStock.allBrandsLabel else { return allFilmTypeFilters }
         let available = Set(
             store.stocks
                 .filter { $0.brand == selectedBrand }
                 .map(\.filmType.label)
         )
-        return Set(
-            FilmStockType.filterOptions.filter {
-                $0 != FilmStockType.allTypesLabel && !available.contains($0)
-            }
-        )
+        return allFilmTypeFilters.filter { available.contains($0) }
+    }
+
+    private var chipAnimation: Animation {
+        .spring(response: 0.38, dampingFraction: 0.82)
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-                    FilterTextRow(
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                    FilterChipRow(
                         options: brandFilters,
                         selection: $selectedBrand,
-                        disabledOptions: disabledBrands
+                        clearValue: FilmStock.allBrandsLabel,
+                        tintForOption: FilmStock.brandFilterTint(for:)
                     )
-                    FilterTextRow(
-                        options: FilmStockType.filterOptions,
+                    FilterChipRow(
+                        options: filmTypeFilters,
                         selection: $selectedFilmType,
-                        disabledOptions: disabledFilmTypes
+                        clearValue: FilmStockType.allTypesLabel
                     )
                 }
                 .padding(.horizontal, AppTheme.horizontalPadding)
-                .padding(.bottom, 24)
-
-                HairlineRule()
-                    .padding(.horizontal, AppTheme.horizontalPadding)
-                    .padding(.bottom, 24)
+                .padding(.top, -4)
+                .padding(.bottom, 16)
 
                 LazyVGrid(columns: [
                     GridItem(.flexible(), spacing: AppTheme.Spacing.md, alignment: .top),
@@ -98,14 +102,18 @@ private struct StocksLibraryContent: View {
         }
         .onChange(of: selectedBrand) { _, _ in
             if selectedFilmType != FilmStockType.allTypesLabel,
-               disabledFilmTypes.contains(selectedFilmType) {
-                selectedFilmType = FilmStockType.allTypesLabel
+               !filmTypeFilters.contains(selectedFilmType) {
+                withAnimation(chipAnimation) {
+                    selectedFilmType = FilmStockType.allTypesLabel
+                }
             }
         }
         .onChange(of: selectedFilmType) { _, _ in
             if selectedBrand != FilmStock.allBrandsLabel,
-               disabledBrands.contains(selectedBrand) {
-                selectedBrand = FilmStock.allBrandsLabel
+               !brandFilters.contains(selectedBrand) {
+                withAnimation(chipAnimation) {
+                    selectedBrand = FilmStock.allBrandsLabel
+                }
             }
         }
     }
@@ -136,19 +144,21 @@ private struct StockPlateRow: View {
             StockPlate(stock: stock)
                 .frame(maxWidth: .infinity)
 
-            Text(stock.name)
-                .font(InstrumentFont.mono(12))
-                .foregroundStyle(AppTheme.textPrimary)
-                .lineLimit(2)
-                .frame(height: 34, alignment: .topLeading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(stock.name)
+                    .font(InstrumentFont.mono(12))
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .lineLimit(2)
+                    .frame(height: 34, alignment: .topLeading)
 
-            Text(stock.filmType.label)
-                .font(InstrumentFont.mono(11))
-                .foregroundStyle(AppTheme.textSecondary)
+                Text(stock.filmType.label)
+                    .font(InstrumentFont.mono(11))
+                    .foregroundStyle(AppTheme.textSecondary)
 
-            Text(rollsShotLabel)
-                .font(InstrumentFont.mono(11))
-                .foregroundStyle(AppTheme.textSecondary)
+                Text(rollsShotLabel)
+                    .font(InstrumentFont.mono(11))
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }

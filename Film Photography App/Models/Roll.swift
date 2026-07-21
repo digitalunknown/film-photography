@@ -162,6 +162,7 @@ struct FrameMarker: Identifiable, Codable, Hashable {
     var longitude: Double
     var aperture: Double?
     var shutterSpeed: Double?
+    var iso: Int?
     var location: String?
     var notes: String?
     var tags: [String]
@@ -174,6 +175,7 @@ struct FrameMarker: Identifiable, Codable, Hashable {
         longitude: Double = 0,
         aperture: Double? = nil,
         shutterSpeed: Double? = nil,
+        iso: Int? = nil,
         location: String? = nil,
         notes: String? = nil,
         tags: [String] = []
@@ -185,6 +187,7 @@ struct FrameMarker: Identifiable, Codable, Hashable {
         self.longitude = longitude
         self.aperture = aperture
         self.shutterSpeed = shutterSpeed
+        self.iso = iso
         self.location = location
         self.notes = notes
         self.tags = tags
@@ -199,6 +202,7 @@ struct FrameMarker: Identifiable, Codable, Hashable {
         longitude = try container.decodeIfPresent(Double.self, forKey: .longitude) ?? 0
         aperture = try container.decodeIfPresent(Double.self, forKey: .aperture)
         shutterSpeed = try container.decodeIfPresent(Double.self, forKey: .shutterSpeed)
+        iso = try container.decodeIfPresent(Int.self, forKey: .iso)
         location = try container.decodeIfPresent(String.self, forKey: .location)
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
         tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []

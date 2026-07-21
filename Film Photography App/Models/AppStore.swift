@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import WidgetKit
 
 struct LoadRecognitionResult {
     var cameraId: UUID?
@@ -88,6 +89,7 @@ final class AppStore {
             devRecipePresets: devRecipePresets,
             customStocks: customStocks
         )
+        WidgetCenter.shared.reloadTimelines(ofKind: AppGroupStorage.widgetKind)
     }
 
     /// Creates a user-entered stock and keeps it across launches.
@@ -108,7 +110,7 @@ final class AppStore {
     }
 
     func stock(for id: UUID) -> FilmStock? {
-        stocks.first { $0.id == id }
+        stocks.first { $0.id == id } ?? customStocks.first { $0.id == id }
     }
 
     func roll(for id: UUID) -> Roll? {
@@ -440,6 +442,10 @@ final class AppStore {
             roll.cameraId = cameraId
 
             if roll.status.isInventory || roll.status == .inCamera {
+                // Fresh load from inventory — no exposures taken yet; focus frame 1 at 0/N.
+                if roll.status.isInventory {
+                    roll.frameCount = 0
+                }
                 roll.status = .inCamera
                 if roll.loadedDate == nil {
                     roll.loadedDate = Date()
@@ -629,9 +635,15 @@ final class AppStore {
         if duplicateLast, let last = roll.frameMarkers.last {
             marker.aperture = last.aperture
             marker.shutterSpeed = last.shutterSpeed
+            marker.iso = last.iso
             marker.location = last.location
             marker.notes = last.notes
             marker.tags = last.tags
+        }
+
+        if marker.iso == nil {
+            let stockISO = stocks.first(where: { $0.id == roll.stockId })?.iso
+            marker.iso = roll.shootingISO ?? stockISO
         }
 
         roll.frameMarkers.removeAll { $0.frameIndex == frameIndex }
@@ -833,43 +845,150 @@ final class AppStore {
     }
 
     func rollDataSheetText(for rollId: UUID) -> String? {
-        guard let roll = roll(for: rollId),
-              let stock = stock(for: roll.stockId) else { return nil }
+        guard let roll = roll(for: rollId) else { return nil }
+        let stock = stock(for: roll.stockId)
         let camera = camera(for: roll.cameraId)
+        let iso = roll.shootingISO ?? stock?.iso
+        let scanCount = max(roll.scanFileNames.count, roll.framePhotoFileNames.count)
+        let markerByFrame = Dictionary(
+            roll.frameMarkers.map { ($0.frameIndex, $0) },
+            uniquingKeysWith: { _, latest in latest }
+        )
 
         var lines: [String] = [
-            roll.shortId,
-            stock.name,
-            roll.format.displayName,
-            camera?.name ?? "—",
+            "FILM ROLL SUMMARY",
+            String(repeating: "─", count: 28),
             "",
-            "Loaded: \(roll.loadedDate.map { DateFormatters.medium.string(from: $0) } ?? "—")",
-            "Finished: \(roll.finishedDate.map { DateFormatters.medium.string(from: $0) } ?? "—")",
+            "Roll ID: \(roll.shortId)",
+            "Status: \(roll.status.displayName)",
+            "Stock: \(stock?.name ?? "Unknown stock")",
+            "Manufacturer: \(stock?.manufacturer ?? "—")",
+            "Format: \(roll.format.displayName)",
+            "ISO: \(iso.map(String.init) ?? "—")",
+            "Push / pull: \(roll.pushPullDisplayValue)",
+            "Camera: \(camera?.name ?? "Not set")",
         ]
 
+        if let lens = camera?.listSubtitle {
+            lines.append("Lens: \(lens)")
+        }
+        if let cameraType = camera?.cameraType, !cameraType.isEmpty {
+            lines.append("Camera type: \(cameraType)")
+        }
+
+        lines.append("")
+        lines.append("EXPOSURES")
+        lines.append("Shot: \(roll.frameCount) / \(max(roll.totalExposures, 1))")
+        if scanCount > 0 {
+            lines.append("Scans attached: \(scanCount)")
+        }
+
+        lines.append("")
+        lines.append("DATES")
+        lines.append("Loaded: \(dateLine(roll.loadedDate))")
+        lines.append("Finished: \(dateLine(roll.finishedDate))")
+        lines.append("Lab drop-off: \(dateLine(roll.dropOffDate))")
+        lines.append("Developed: \(dateLine(roll.developedDate))")
+        lines.append("Scanned: \(dateLine(roll.scannedDate))")
+        lines.append("Archived: \(dateLine(roll.archivedDate))")
+        if let expiry = roll.expiryDate {
+            lines.append("Expiry: \(DateFormatters.monthYear.string(from: expiry))")
+        }
+
         if let development = roll.development {
-            lines.append("Development: \(development.summary)")
-        }
-
-        if !roll.tags.isEmpty {
-            lines.append("Tags: \(roll.tags.joined(separator: ", "))")
-        }
-
-        if !roll.frameMarkers.isEmpty {
             lines.append("")
-            lines.append("Frames")
-            for (index, marker) in roll.frameMarkers.enumerated() {
-                lines.append("  \(index + 1). \(DateFormatters.telemetry.string(from: marker.timestamp))")
+            lines.append("DEVELOPMENT")
+            lines.append(development.summary)
+            if let lab = development.labName ?? roll.labName, !lab.isEmpty {
+                lines.append("Lab: \(lab)")
+            }
+            if let developer = development.developer, !developer.isEmpty {
+                lines.append("Developer: \(developer)")
+            }
+            if let dilution = development.dilution, !dilution.isEmpty {
+                lines.append("Dilution: \(dilution)")
+            }
+            if let time = development.timeMinutes {
+                lines.append("Time: \(time) min")
+            }
+            if let temp = development.temperatureC {
+                lines.append("Temp: \(temp) °C")
+            }
+            if let agitation = development.agitationNotes, !agitation.isEmpty {
+                lines.append("Agitation: \(agitation)")
+            }
+        } else if let lab = roll.labName, !lab.isEmpty {
+            lines.append("")
+            lines.append("DEVELOPMENT")
+            lines.append("Lab: \(lab)")
+        }
+
+        if let storage = roll.storageLocation, !storage.isEmpty {
+            lines.append("")
+            lines.append("Storage: \(storage)")
+        }
+
+        let frameSpan = max(roll.frameCount, markerByFrame.keys.max() ?? 0, scanCount, 0)
+        if frameSpan > 0 {
+            lines.append("")
+            lines.append("FRAME LOG")
+            for index in 1...frameSpan {
+                let marker = markerByFrame[index]
+                var parts: [String] = ["#\(index)"]
+                if let iso = marker?.iso {
+                    parts.append("ISO \(iso)")
+                }
+                if let aperture = marker?.aperture {
+                    parts.append("f/\(formatAperture(aperture))")
+                }
+                if let shutter = marker?.shutterSpeed {
+                    parts.append(formatShutter(shutter))
+                }
+                if let location = marker?.location, !location.isEmpty {
+                    parts.append(location)
+                }
+                if let notes = marker?.notes, !notes.isEmpty {
+                    parts.append(notes)
+                }
+                if marker == nil, roll.framePhotoFileName(forFrame: index) == nil,
+                   roll.scanFileName(forFrame: index) == nil {
+                    if index <= roll.frameCount {
+                        parts.append("exposed")
+                    } else {
+                        parts.append("—")
+                    }
+                }
+                lines.append(parts.joined(separator: " · "))
             }
         }
 
-        if let notes = roll.notes, !notes.isEmpty {
+        if let notes = roll.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
             lines.append("")
-            lines.append("Notes")
+            lines.append("NOTES")
             lines.append(notes)
         }
 
+        if !roll.tags.isEmpty {
+            lines.append("")
+            lines.append("Tags: \(roll.tags.joined(separator: ", "))")
+        }
+
+        lines.append("")
+        lines.append("Generated \(DateFormatters.telemetry.string(from: Date()))")
+
         return lines.joined(separator: "\n")
+    }
+
+    private func dateLine(_ date: Date?) -> String {
+        guard let date else { return "—" }
+        return DateFormatters.medium.string(from: date)
+    }
+
+    private func formatAperture(_ value: Double) -> String {
+        if value == floor(value) {
+            return String(format: "%.0f", value)
+        }
+        return String(format: "%g", value)
     }
 
     private func csvEscape(_ value: String) -> String {

@@ -117,8 +117,9 @@ struct AddCameraView: View {
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") { focusedField = nil }
-                        .font(InstrumentFont.mono(13))
+                    InstrumentKeyboardDoneButton {
+                        focusedField = nil
+                    }
                 }
             }
         }

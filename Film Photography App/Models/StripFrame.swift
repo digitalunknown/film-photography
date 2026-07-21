@@ -79,6 +79,9 @@ struct FilmStripLayout {
     let showsSprockets: Bool
     let framesPerCell: Int
 
+    /// Real full-frame pitch uses roughly 2mm of gutter for every 38mm of advance.
+    static let interframeGapFraction: CGFloat = 2.0 / 38.0
+
     /// Aspect ratio width / height for the gate interior (not including sprocket rails).
     static func aspectRatio(for format: FilmFormat) -> CGFloat {
         switch format {
@@ -110,7 +113,8 @@ struct FilmStripLayout {
         )
     }
 
-    /// Size cells so `visibleCount` frames fill the strip viewport width.
+    /// Size cells so `visibleCount` frame pitches fill the strip viewport width.
+    /// Gate height follows real aspect from the gate width (pitch minus interframe gutter).
     static func layout(
         for format: FilmFormat,
         visibleCount: CGFloat,
@@ -118,11 +122,12 @@ struct FilmStripLayout {
         horizontalInset: CGFloat = 12
     ) -> FilmStripLayout {
         let usable = max(containerWidth - horizontalInset, 1)
-        let width = usable / max(visibleCount, 1)
+        let pitch = usable / max(visibleCount, 1)
         let aspect = aspectRatio(for: format)
-        let height = width / aspect
+        let gateWidth = pitch * (1 - interframeGapFraction)
+        let height = gateWidth / aspect
         return FilmStripLayout(
-            frameSize: CGSize(width: width, height: height),
+            frameSize: CGSize(width: pitch, height: height),
             showsSprockets: showsSprockets(for: format),
             framesPerCell: format == .format35Half ? 2 : 1
         )

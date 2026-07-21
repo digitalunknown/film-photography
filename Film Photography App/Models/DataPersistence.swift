@@ -38,19 +38,15 @@ struct PersistedAppData: Codable {
 }
 
 enum DataPersistence {
-    private static let fileName = "app-data.json"
-
     private static var fileURL: URL {
-        let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-            .appendingPathComponent("FilmPhotographyApp", isDirectory: true)
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return directory.appendingPathComponent(fileName)
+        AppGroupStorage.resolvedDataURL()
     }
 
     static func load() -> PersistedAppData? {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
+        let url = fileURL
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         do {
-            let data = try Data(contentsOf: fileURL)
+            let data = try Data(contentsOf: url)
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             return try decoder.decode(PersistedAppData.self, from: data)

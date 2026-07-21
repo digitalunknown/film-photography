@@ -255,15 +255,35 @@ struct FilmStock: Identifiable, Codable, Hashable {
     /// Manufacturer brand for filters and plate art.
     var brand: String { manufacturer }
 
+    /// Brand accent for library filter chips. `nil` uses the same neutral style as type chips.
+    static func brandFilterTint(for brand: String) -> Color? {
+        switch brand {
+        case "Kodak":
+            return Color(red: 0.95, green: 0.72, blue: 0.12)
+        case "Fujifilm":
+            return Color(red: 0.18, green: 0.72, blue: 0.42)
+        case "Ilford":
+            return Color(red: 0.78, green: 0.78, blue: 0.80)
+        case "Lomography":
+            return Color(red: 0.88, green: 0.28, blue: 0.28)
+        case "CineStill":
+            return Color(red: 0.72, green: 0.38, blue: 0.88)
+        default:
+            return nil
+        }
+    }
+
     /// Brands in the catalog, ordered by stock count (most to least).
     static func brandsByCount(in stocks: [FilmStock]) -> [String] {
         let grouped = Dictionary(grouping: stocks, by: \.brand)
-        return grouped.keys.sorted { lhs, rhs in
-            let leftCount = grouped[lhs]?.count ?? 0
-            let rightCount = grouped[rhs]?.count ?? 0
-            if leftCount != rightCount { return leftCount > rightCount }
-            return lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
-        }
+        return grouped.keys
+            .filter { $0 != "Custom" }
+            .sorted { lhs, rhs in
+                let leftCount = grouped[lhs]?.count ?? 0
+                let rightCount = grouped[rhs]?.count ?? 0
+                if leftCount != rightCount { return leftCount > rightCount }
+                return lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
+            }
     }
 
     /// Asset catalog roll canister art, keyed by stock then manufacturer.
@@ -273,6 +293,7 @@ struct FilmStock: Identifiable, Codable, Hashable {
         if upper.contains("BERGGER") || upper.contains("PANCRO") { return "roll_bergger_pancro" }
         if upper.contains("STREETPAN") || manufacturer == "JCH" { return "roll_jch_streetpan" }
         if upper.contains("KOSMO") { return "roll_kosmo_foto_mono" }
+        if upper.contains("OPTIMONO") || manufacturer == "Optikoldschool" { return "roll_optimono" }
         if upper.contains("WASHI") { return "roll_film_washi" }
         if upper.contains("SHANGHAI") || upper.contains("GP3") { return "roll_shanghai_gp3" }
         if upper.contains("ARISTA") { return "roll_arista_edu_ultra" }
@@ -282,12 +303,19 @@ struct FilmStock: Identifiable, Codable, Hashable {
         if upper.contains("FERRANIA") || manufacturer == "Ferrania" { return "roll_ferrania" }
         if upper.contains("ORWO") || manufacturer == "ORWO" { return "roll_orwo" }
         if upper.contains("ADOX") || manufacturer == "Adox" { return "roll_adox" }
+        if upper.contains("HARMAN") || manufacturer == "Harman" { return "roll_harman" }
+
+        if manufacturer == "CineStill" || upper.contains("CINESTILL") {
+            if upper.contains("800T") || upper.contains("800 T") { return "roll_cinestill_800t" }
+            if upper.contains("400D") || upper.contains("400 D") { return "roll_cinestill_400d" }
+            if upper.contains("50D") || upper.contains("50 D") { return "roll_cinestill_50d" }
+            return "roll_cinestill_400d"
+        }
 
         switch manufacturer {
         case "Kodak": return "roll_kodak"
         case "Fujifilm": return "roll_fujifilm"
         case "Ilford": return "roll_ilford"
-        case "CineStill": return "roll_cinestill"
         case "Rollei": return "roll_rollei"
         case "Agfa": return "roll_agfa"
         case "Lomography": return "roll_lomography"

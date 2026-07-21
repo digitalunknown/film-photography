@@ -262,33 +262,103 @@ struct InstrumentEmptyState: View {
     }
 }
 
-struct FilterTextRow: View {
+struct FilterChipRow: View {
     let options: [String]
     @Binding var selection: String
-    var disabledOptions: Set<String> = []
+    /// Sentinel for “no filter” (not shown as a chip).
+    var clearValue: String
+    /// When set, returns a brand tint — or `nil` for the neutral type-chip style.
+    var tintForOption: ((String) -> Color?)? = nil
+
+    @Namespace private var chipNamespace
+
+    private var isFiltered: Bool {
+        selection != clearValue && options.contains(selection)
+    }
+
+    private var visibleOptions: [String] {
+        isFiltered ? [selection] : options
+    }
+
+    private var chipAnimation: Animation {
+        .spring(response: 0.38, dampingFraction: 0.82)
+    }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: AppTheme.Spacing.md) {
-                ForEach(options, id: \.self) { option in
+            HStack(spacing: AppTheme.Spacing.sm) {
+                ForEach(visibleOptions, id: \.self) { option in
                     let isSelected = selection == option
-                    let isDisabled = disabledOptions.contains(option)
                     Button {
-                        selection = option
+                        withAnimation(chipAnimation) {
+                            if isSelected {
+                                selection = clearValue
+                            } else {
+                                selection = option
+                            }
+                        }
                     } label: {
-                        Text(option)
-                            .font(InstrumentFont.mono(12))
-                            .foregroundStyle(
-                                isSelected ? AppTheme.textPrimary : AppTheme.textTertiary
-                            )
-                            .underline(isSelected, color: AppTheme.textPrimary)
-                            .opacity(isDisabled && !isSelected ? 0.4 : 1)
+                        chipLabel(
+                            option: option,
+                            isSelected: isSelected,
+                            showsClear: isSelected
+                        )
                     }
                     .buttonStyle(.plain)
-                    .disabled(isDisabled)
-                    .accessibilityAddTraits(isDisabled ? .isStaticText : [])
+                    .matchedGeometryEffect(id: option, in: chipNamespace)
+                    .transition(
+                        .asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.85, anchor: .leading)),
+                            removal: .opacity.combined(with: .scale(scale: 0.85, anchor: .leading))
+                        )
+                    )
+                    .accessibilityLabel(option)
+                    .accessibilityValue(isSelected ? "Selected" : "Not selected")
                 }
             }
+            .animation(chipAnimation, value: selection)
+            .animation(chipAnimation, value: options)
+        }
+    }
+
+    @ViewBuilder
+    private func chipLabel(option: String, isSelected: Bool, showsClear: Bool) -> some View {
+        let content = HStack(spacing: 6) {
+            if showsClear {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            Text(option)
+                .font(InstrumentFont.mono(12, weight: .medium))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+
+        if let tintForOption, let tint = tintForOption(option) {
+            content
+                .foregroundStyle(tint)
+                .background(tint.opacity(isSelected ? 0.22 : 0.14), in: Capsule())
+                .overlay(
+                    Capsule()
+                        .strokeBorder(tint.opacity(isSelected ? 0.85 : 0.55), lineWidth: 1)
+                )
+        } else {
+            content
+                .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                .background(
+                    (isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                        .opacity(isSelected ? 0.10 : 0.06),
+                    in: Capsule()
+                )
+                .overlay(
+                    Capsule()
+                        .strokeBorder(
+                            (isSelected ? AppTheme.textPrimary : AppTheme.textTertiary)
+                                .opacity(isSelected ? 0.45 : 0.55),
+                            lineWidth: 1
+                        )
+                )
         }
     }
 }
@@ -326,6 +396,7 @@ struct FrameExposureCounter: View {
     let total: Int
     var showsSegmentBar: Bool = true
     var onIncrement: (() -> Void)? = nil
+    var onDecrement: (() -> Void)? = nil
     var onSetCount: ((Int) -> Void)? = nil
 
     @State private var scrubShot: Int?
@@ -336,6 +407,9 @@ struct FrameExposureCounter: View {
     private var displayedShot: Int { scrubShot ?? safeShot }
     private var remaining: Int { max(safeTotal - displayedShot, 0) }
     private var canIncrement: Bool { remaining > 0 && onIncrement != nil }
+    private var canDecrement: Bool {
+        displayedShot > 0 && (onDecrement != nil || onSetCount != nil)
+    }
     private var canScrub: Bool { onSetCount != nil }
 
     var body: some View {
@@ -343,11 +417,12 @@ struct FrameExposureCounter: View {
             HStack(alignment: .center, spacing: AppTheme.Spacing.sm) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
-                        Text("\(displayedShot)")
-                            .font(InstrumentFont.mono(36, weight: .bold))
-                            .foregroundStyle(AppTheme.textPrimary)
-                            .monospacedDigit()
-                            .contentTransition(.numericText())
+                        VerticalSpinnerNumber(
+                            value: displayedShot,
+                            font: InstrumentFont.mono(36, weight: .bold),
+                            color: AppTheme.textPrimary,
+                            digitHeight: 40
+                        )
                         Text("/\(safeTotal)")
                             .font(InstrumentFont.mono(16))
                             .foregroundStyle(AppTheme.textSecondary)
@@ -357,11 +432,16 @@ struct FrameExposureCounter: View {
                     Text(statusLabel)
                         .font(InstrumentFont.mono(11))
                         .foregroundStyle(AppTheme.textSecondary)
+                        .contentTransition(.opacity)
+                        .animation(.easeOut(duration: 0.2), value: statusLabel)
                 }
 
                 Spacer(minLength: AppTheme.Spacing.sm)
 
-                shutterButton
+                HStack(spacing: AppTheme.Spacing.md) {
+                    undoButton
+                    shutterButton
+                }
             }
 
             if showsSegmentBar {
@@ -382,26 +462,77 @@ struct FrameExposureCounter: View {
         return remaining == 1 ? "1 left" : "\(remaining) left"
     }
 
-    private var shutterButton: some View {
+    private var undoButton: some View {
         Button {
+            guard canDecrement else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
+                if let onDecrement {
+                    onDecrement()
+                } else {
+                    onSetCount?(max(displayedShot - 1, 0))
+                }
+            }
+        } label: {
+            Image(systemName: "arrow.uturn.backward")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+                .frame(width: 32, height: 32)
+                .overlay {
+                    Circle()
+                        .strokeBorder(AppTheme.rule, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .disabled(!canDecrement)
+        .opacity(canDecrement ? 1 : 0.28)
+        .accessibilityLabel("Undo exposure")
+        .accessibilityHint(canDecrement ? "Steps frames shot back by one" : "No exposures to undo")
+    }
+
+    private var shutterButton: some View {
+        let progress = CGFloat(displayedShot) / CGFloat(safeTotal)
+        let ringSize: CGFloat = 54
+        let buttonSize: CGFloat = 44
+        let ringLine: CGFloat = 3
+
+        return Button {
             guard canIncrement else { return }
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            onIncrement?()
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
+                onIncrement?()
+            }
         } label: {
             ZStack {
                 Circle()
+                    .stroke(AppTheme.rule, lineWidth: ringLine)
+                    .frame(width: ringSize, height: ringSize)
+
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(
+                        AppTheme.textPrimary,
+                        style: StrokeStyle(lineWidth: ringLine, lineCap: .butt)
+                    )
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: ringSize, height: ringSize)
+                    .animation(.easeOut(duration: 0.2), value: displayedShot)
+
+                Circle()
                     .fill(AppTheme.textPrimary)
-                    .frame(width: 44, height: 44)
+                    .frame(width: buttonSize, height: buttonSize)
                 Image(systemName: "camera.fill")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(AppTheme.bg)
             }
+            .frame(width: ringSize, height: ringSize)
         }
         .buttonStyle(.plain)
         .disabled(!canIncrement)
         .opacity(canIncrement ? 1 : 0.35)
         .accessibilityLabel("Log exposure")
         .accessibilityHint(canIncrement ? "Increments frames shot by one" : "Roll is finished")
+        .accessibilityValue("\(displayedShot) of \(safeTotal) frames")
     }
 
     private var segmentBar: some View {
@@ -451,7 +582,9 @@ struct FrameExposureCounter: View {
                 }
                 if lastScrubbed != next {
                     lastScrubbed = next
-                    scrubShot = next
+                    withAnimation(.spring(response: 0.36, dampingFraction: 0.8)) {
+                        scrubShot = next
+                    }
                     UISelectionFeedbackGenerator().selectionChanged()
                 } else {
                     scrubShot = next
@@ -464,12 +597,14 @@ struct FrameExposureCounter: View {
                     return
                 }
                 let next = count(at: value.location.x, width: width)
-                scrubShot = next
                 lastScrubbed = nil
-                if next != safeShot {
-                    onSetCount(next)
-                } else {
-                    scrubShot = nil
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
+                    scrubShot = next
+                    if next != safeShot {
+                        onSetCount(next)
+                    } else {
+                        scrubShot = nil
+                    }
                 }
             }
     }
@@ -480,6 +615,76 @@ struct FrameExposureCounter: View {
         if clampedX <= 0 { return 0 }
         let raw = Int((clampedX / width * CGFloat(safeTotal)).rounded(.up))
         return min(max(raw, 0), safeTotal)
+    }
+}
+
+/// Vertical reel-style digits that spin when the value changes.
+struct VerticalSpinnerNumber: View {
+    let value: Int
+    var font: Font
+    var color: Color
+    var digitHeight: CGFloat = 40
+
+    /// Digits keyed by place from the right (0 = ones) so columns keep identity while spinning.
+    private var places: [(place: Int, digit: Int)] {
+        let chars = Array(String(max(value, 0)))
+        return chars.enumerated().compactMap { index, character in
+            guard let digit = Int(String(character)) else { return nil }
+            return (chars.count - 1 - index, digit)
+        }
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 0) {
+            ForEach(places, id: \.place) { item in
+                VerticalSpinnerDigit(
+                    digit: item.digit,
+                    font: font,
+                    color: color,
+                    height: digitHeight
+                )
+                .transition(
+                    .asymmetric(
+                        insertion: .opacity.combined(with: .offset(y: digitHeight * 0.35)),
+                        removal: .opacity.combined(with: .offset(y: -digitHeight * 0.25))
+                    )
+                )
+            }
+        }
+        .frame(height: digitHeight)
+        .clipped()
+        .animation(.spring(response: 0.42, dampingFraction: 0.78), value: value)
+        .accessibilityLabel("\(value)")
+    }
+}
+
+private struct VerticalSpinnerDigit: View {
+    let digit: Int
+    var font: Font
+    var color: Color
+    var height: CGFloat
+
+    var body: some View {
+        ZStack {
+            // Invisible sizing glyph keeps mono columns stable.
+            Text("0")
+                .font(font)
+                .monospacedDigit()
+                .opacity(0)
+
+            VStack(spacing: 0) {
+                ForEach(0..<10, id: \.self) { number in
+                    Text("\(number)")
+                        .font(font)
+                        .foregroundStyle(color)
+                        .monospacedDigit()
+                        .frame(height: height)
+                }
+            }
+            .offset(y: -CGFloat(digit) * height)
+        }
+        .frame(height: height, alignment: .top)
+        .clipped()
     }
 }
 
@@ -571,8 +776,10 @@ struct DetailSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionLabel(title: title)
-                .padding(.bottom, AppTheme.Spacing.sm)
+            if !title.isEmpty {
+                SectionLabel(title: title)
+                    .padding(.bottom, AppTheme.Spacing.sm)
+            }
             content()
         }
         .padding(.bottom, AppTheme.Spacing.md)
@@ -605,6 +812,41 @@ extension View {
             .contentMargins(.bottom, 0, for: .scrollContent)
             .scrollBounceBehavior(.basedOnSize)
     }
+
+    /// Dismisses the software keyboard regardless of which field holds focus.
+    func dismissKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
+    }
+}
+
+/// Keyboard accessory Done control with a little air above the keys.
+struct InstrumentKeyboardDoneButton: View {
+    var action: () -> Void = {}
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button("Done") {
+                action()
+                UIApplication.shared.sendAction(
+                    #selector(UIResponder.resignFirstResponder),
+                    to: nil,
+                    from: nil,
+                    for: nil
+                )
+            }
+            .font(InstrumentFont.mono(13))
+
+            // Gap between the accessory and the keyboard — not inside the button.
+            Color.clear
+                .frame(height: 8)
+                .allowsHitTesting(false)
+        }
+    }
 }
 
 struct StockPlate: View {
@@ -626,7 +868,7 @@ struct StockPlate: View {
 
     var body: some View {
         ZStack {
-            if let imageName {
+            if let imageName, UIImage(named: imageName) != nil {
                 Image(imageName)
                     .resizable()
                     .scaledToFit()
@@ -681,7 +923,7 @@ struct RollPlate: View {
 
     var body: some View {
         ZStack {
-            if let imageName {
+            if let imageName, UIImage(named: imageName) != nil {
                 Image(imageName)
                     .resizable()
                     .scaledToFill()
@@ -900,7 +1142,7 @@ extension View {
     /// Half-height by default, expandable to full; matches instrument chrome.
     func instrumentSheetChrome() -> some View {
         presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
+            .presentationDragIndicator(.hidden)
             .presentationBackground(AppTheme.bg)
             .preferredColorScheme(.dark)
     }

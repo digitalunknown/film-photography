@@ -131,8 +131,9 @@ struct AddRollView: View {
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") { focusedField = nil }
-                        .font(InstrumentFont.mono(13))
+                    InstrumentKeyboardDoneButton {
+                        focusedField = nil
+                    }
                 }
             }
             .sheet(isPresented: $showingStockPicker, onDismiss: {
@@ -208,7 +209,7 @@ struct AddRollView: View {
             }
         }
         .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
+        .presentationDragIndicator(.hidden)
     }
 
     private func handOffToLoadFlow(image: UIImage?) {

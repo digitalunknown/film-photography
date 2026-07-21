@@ -26,6 +26,15 @@ struct FilmStripView: View {
         StripFrameBuilder.frames(for: roll)
     }
 
+    /// Frame highlighted for the next exposure (frame 1 when nothing has been shot yet).
+    private var currentExposureFrame: Int {
+        let total = max(roll.totalExposures, 1)
+        if roll.frameCount >= total {
+            return total
+        }
+        return roll.frameCount + 1
+    }
+
     private var layout: FilmStripLayout {
         if containerWidth > 1 {
             return FilmStripLayout.layout(
@@ -79,22 +88,19 @@ struct FilmStripView: View {
     private var stripScrollView: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(spacing: 0) {
-                ForEach(Array(frames.enumerated()), id: \.element.id) { offset, frame in
+                ForEach(frames) { frame in
                     FilmStripFrameCell(
                         frame: frame,
                         roll: roll,
                         stock: stock,
                         layout: layout,
-                        isSelected: selectedFrameIndex == frame.index,
-                        showsTrailingMarks: offset < frames.count - 1
+                        isCurrent: frame.index == currentExposureFrame
                     )
                     .id(frame.index)
                     .onTapGesture {
                         selectedFrameIndex = frame.index
                         onFrameTap?(frame)
-                        if frame.state == .scanned {
-                            onOpenScan?(frame)
-                        }
+                        onOpenScan?(frame)
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     }
                     .onLongPressGesture {
@@ -106,17 +112,16 @@ struct FilmStripView: View {
         }
         .scrollTargetBehavior(.viewAligned)
         .scrollPosition(id: $scrollPosition)
+        .onAppear {
+            scrollToCurrentExposure(animated: false)
+        }
         .onChange(of: scrollPosition) { _, newValue in
             guard let newValue, newValue != lastHapticFrame else { return }
             lastHapticFrame = newValue
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
-        .onChange(of: roll.frameCount) { previous, newCount in
-            guard newCount > previous, newCount > 0 else { return }
-            selectedFrameIndex = newCount
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-                scrollPosition = newCount
-            }
+        .onChange(of: roll.frameCount) { _, _ in
+            scrollToCurrentExposure(animated: true)
         }
         .onChange(of: selectedFrameIndex) { _, newValue in
             guard let newValue, scrollPosition != newValue else { return }
@@ -127,6 +132,18 @@ struct FilmStripView: View {
         .frame(height: layout.frameSize.height + Self.stripChromeHeight)
         .background(Self.filmBase)
         .clipShape(RoundedRectangle(cornerRadius: 2))
+    }
+
+    private func scrollToCurrentExposure(animated: Bool) {
+        let current = currentExposureFrame
+        selectedFrameIndex = current
+        if animated {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                scrollPosition = current
+            }
+        } else {
+            scrollPosition = current
+        }
     }
 
     private var scanAlignmentControls: some View {
@@ -159,10 +176,58 @@ struct FilmStripView: View {
 }
 
 enum FilmStripFrameMetrics {
-    static let railHeight: CGFloat = 16
-    static let edgeBandHeight: CGFloat = 14
-    static let gateInset: CGFloat = 5
+    /// Perforation band — kept slim so the gate dominates (~24 of 35mm).
+    static let railHeight: CGFloat = 10
+    /// Edge print sits between the holes and the gate.
+    static let edgeBandHeight: CGFloat = 8
+    static let sprocketCount = 8
+    static let sprocketWidth: CGFloat = 5
+    static let sprocketHeight: CGFloat = 4
+    static let sprocketCorner: CGFloat = 0.75
+    /// Hairline strokes for strip chrome (1 display pixel).
+    static var strokeWidth: CGFloat { 1 / max(UIScreen.main.scale, 1) }
+    /// Cut-out perforation color — matches the page behind the strip.
+    static let sprocketCutout = Color.black
+
     static var chromeHeight: CGFloat { (railHeight + edgeBandHeight) * 2 }
+
+    static func gateInset(forCellWidth width: CGFloat) -> CGFloat {
+        max(width * FilmStripLayout.interframeGapFraction * 0.5, 2)
+    }
+}
+
+/// L-shaped corner marks for the current exposure frame.
+private struct FrameCornerStroke: Shape {
+    var length: CGFloat = 8
+    var lineWidth: CGFloat = 2
+
+    func path(in rect: CGRect) -> Path {
+        let inset = lineWidth / 2
+        let arm = min(length, min(rect.width, rect.height) / 2)
+        var path = Path()
+
+        // Top-left
+        path.move(to: CGPoint(x: inset, y: inset + arm))
+        path.addLine(to: CGPoint(x: inset, y: inset))
+        path.addLine(to: CGPoint(x: inset + arm, y: inset))
+
+        // Top-right
+        path.move(to: CGPoint(x: rect.maxX - inset - arm, y: inset))
+        path.addLine(to: CGPoint(x: rect.maxX - inset, y: inset))
+        path.addLine(to: CGPoint(x: rect.maxX - inset, y: inset + arm))
+
+        // Bottom-right
+        path.move(to: CGPoint(x: rect.maxX - inset, y: rect.maxY - inset - arm))
+        path.addLine(to: CGPoint(x: rect.maxX - inset, y: rect.maxY - inset))
+        path.addLine(to: CGPoint(x: rect.maxX - inset - arm, y: rect.maxY - inset))
+
+        // Bottom-left
+        path.move(to: CGPoint(x: inset + arm, y: rect.maxY - inset))
+        path.addLine(to: CGPoint(x: inset, y: rect.maxY - inset))
+        path.addLine(to: CGPoint(x: inset, y: rect.maxY - inset - arm))
+
+        return path
+    }
 }
 
 private struct FilmStripFrameCell: View {
@@ -170,10 +235,12 @@ private struct FilmStripFrameCell: View {
     let roll: Roll
     let stock: FilmStock?
     let layout: FilmStripLayout
-    let isSelected: Bool
-    var showsTrailingMarks: Bool = true
+    var isCurrent: Bool = false
 
     private var edgeInk: Color { AppTheme.textSecondary.opacity(0.85) }
+    private var gateInset: CGFloat {
+        FilmStripFrameMetrics.gateInset(forCellWidth: layout.frameSize.width)
+    }
 
     private var stockLabel: String {
         (stock?.name ?? "FILM").uppercased()
@@ -189,80 +256,60 @@ private struct FilmStripFrameCell: View {
         }
         .frame(width: layout.frameSize.width)
         .background(FilmStripView.filmBase)
-        .overlay(alignment: .trailing) {
-            if showsTrailingMarks {
-                interFrameMarks
-            }
-        }
-    }
-
-    private var interFrameMarks: some View {
-        VStack(spacing: 0) {
-            Color.clear.frame(height: FilmStripFrameMetrics.railHeight)
-            Text("→")
-                .font(InstrumentFont.mono(7))
-                .foregroundStyle(edgeInk)
-                .frame(height: FilmStripFrameMetrics.edgeBandHeight)
-            Spacer(minLength: 0)
-            Text("◎")
-                .font(InstrumentFont.mono(8))
-                .foregroundStyle(edgeInk)
-                .frame(height: FilmStripFrameMetrics.edgeBandHeight)
-            Color.clear.frame(height: FilmStripFrameMetrics.railHeight)
-        }
-        .offset(x: 4)
-        .allowsHitTesting(false)
     }
 
     @ViewBuilder
     private var sprocketRail: some View {
         if layout.showsSprockets {
             HStack(spacing: 0) {
-                ForEach(0..<4, id: \.self) { _ in
+                ForEach(0..<FilmStripFrameMetrics.sprocketCount, id: \.self) { _ in
                     sprocketHole
                         .frame(maxWidth: .infinity)
                 }
             }
             .frame(height: FilmStripFrameMetrics.railHeight)
-            .padding(.horizontal, 6)
+            .padding(.horizontal, gateInset)
         } else {
-            Color.clear.frame(height: 4)
+            Color.clear.frame(height: 3)
         }
     }
 
     private var sprocketHole: some View {
-        RoundedRectangle(cornerRadius: 1.5)
-            .strokeBorder(edgeInk, lineWidth: 1)
-            .frame(width: 9, height: 7)
+        RoundedRectangle(cornerRadius: FilmStripFrameMetrics.sprocketCorner)
+            .fill(FilmStripFrameMetrics.sprocketCutout)
+            .frame(
+                width: FilmStripFrameMetrics.sprocketWidth,
+                height: FilmStripFrameMetrics.sprocketHeight
+            )
     }
 
     private var topEdgeBand: some View {
         Text(stockLabel)
-            .font(InstrumentFont.mono(7))
+            .font(InstrumentFont.mono(6))
             .foregroundStyle(edgeInk)
-            .tracking(0.4)
+            .tracking(0.3)
             .lineLimit(1)
-            .minimumScaleFactor(0.55)
+            .minimumScaleFactor(0.5)
             .frame(maxWidth: .infinity)
             .frame(height: FilmStripFrameMetrics.edgeBandHeight)
-            .padding(.horizontal, FilmStripFrameMetrics.gateInset + 2)
+            .padding(.horizontal, gateInset + 1)
     }
 
     @ViewBuilder
     private var frameArea: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 1)
+            RoundedRectangle(cornerRadius: 0.5)
                 .fill(Color.black)
 
             switch frame.state {
             case .unexposed, .exposed:
                 emptyGateMark
             case .pinned:
-                VStack(spacing: 6) {
+                VStack(spacing: 4) {
                     emptyGateMark
                     if let location = frame.marker?.location, !location.isEmpty {
                         Text(location)
-                            .font(InstrumentFont.mono(7))
+                            .font(InstrumentFont.mono(6))
                             .foregroundStyle(AppTheme.textTertiary)
                             .lineLimit(1)
                     }
@@ -284,29 +331,31 @@ private struct FilmStripFrameCell: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: 1))
+                .clipShape(RoundedRectangle(cornerRadius: 0.5))
             }
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 1)
-                .strokeBorder(
-                    isSelected ? AppTheme.textSecondary : Color.clear,
-                    lineWidth: 1
-                )
+            if isCurrent {
+                FrameCornerStroke(length: 8, lineWidth: 2)
+                    .stroke(
+                        AppTheme.textPrimary,
+                        style: StrokeStyle(lineWidth: 2, lineCap: .square, lineJoin: .miter)
+                    )
+            }
         }
-        .padding(.horizontal, FilmStripFrameMetrics.gateInset)
+        .padding(.horizontal, gateInset)
         .frame(width: layout.frameSize.width, height: layout.frameSize.height)
     }
 
     private var emptyGateMark: some View {
-        RoundedRectangle(cornerRadius: 2)
-            .strokeBorder(edgeInk.opacity(0.7), lineWidth: 1)
-            .frame(width: 14, height: 14)
+        RoundedRectangle(cornerRadius: 1.5)
+            .strokeBorder(edgeInk.opacity(0.7), lineWidth: FilmStripFrameMetrics.strokeWidth)
+            .frame(width: 11, height: 11)
     }
 
     private var bottomEdgeBand: some View {
-        Text(frame.negativeNotation)
-            .font(InstrumentFont.mono(7))
+        Text("\(frame.index)")
+            .font(InstrumentFont.mono(6))
             .foregroundStyle(edgeInk)
             .frame(maxWidth: .infinity)
             .frame(height: FilmStripFrameMetrics.edgeBandHeight)
