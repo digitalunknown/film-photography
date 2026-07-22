@@ -27,6 +27,7 @@ struct StocksTabView: View {
 
 private struct StocksLibraryContent: View {
     @Environment(AppStore.self) private var store
+    @Environment(\.isSearching) private var isSearching
 
     @Binding var searchText: String
     @Binding var selectedBrand: String
@@ -70,22 +71,25 @@ private struct StocksLibraryContent: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                    FilterChipRow(
-                        options: brandFilters,
-                        selection: $selectedBrand,
-                        clearValue: FilmStock.allBrandsLabel,
-                        tintForOption: FilmStock.brandFilterTint(for:)
-                    )
-                    FilterChipRow(
-                        options: filmTypeFilters,
-                        selection: $selectedFilmType,
-                        clearValue: FilmStockType.allTypesLabel
-                    )
+                if !isSearching {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                        FilterChipRow(
+                            options: brandFilters,
+                            selection: $selectedBrand,
+                            clearValue: FilmStock.allBrandsLabel,
+                            tintForOption: FilmStock.brandFilterTint(for:)
+                        )
+                        FilterChipRow(
+                            options: filmTypeFilters,
+                            selection: $selectedFilmType,
+                            clearValue: FilmStockType.allTypesLabel
+                        )
+                    }
+                    .padding(.horizontal, AppTheme.horizontalPadding)
+                    .padding(.top, -4)
+                    .padding(.bottom, 16)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
-                .padding(.horizontal, AppTheme.horizontalPadding)
-                .padding(.top, -4)
-                .padding(.bottom, 16)
 
                 LazyVGrid(columns: [
                     GridItem(.flexible(), spacing: AppTheme.Spacing.md, alignment: .top),
@@ -99,6 +103,7 @@ private struct StocksLibraryContent: View {
                 .padding(.horizontal, AppTheme.horizontalPadding)
             }
             .padding(.bottom, 32)
+            .animation(chipAnimation, value: isSearching)
         }
         .onChange(of: selectedBrand) { _, _ in
             if selectedFilmType != FilmStockType.allTypesLabel,
@@ -222,37 +227,67 @@ struct StockDetailView: View {
     private func specificationsSection(_ stock: FilmStock) -> some View {
         DetailSection(title: "Technical Specifications") {
             VStack(spacing: 0) {
-                DataRow(label: "Manufacturer", value: stock.manufacturer, showsDivider: false)
-                DataRow(label: "Type", value: stock.filmType.label)
-                DataRow(label: "Process", value: stock.process.label)
-                DataRow(label: "Box speed", value: "ISO \(stock.iso)")
-                DataRow(label: "Usable range", value: "ISO \(stock.usableRange)")
-                DataRow(label: "Push / pull", value: stock.pushPullTolerance, valueBright: false)
-                DataRow(label: "Status", value: stock.productionStatus.label)
-                DataRow(label: "Formats", value: stock.formatsSummary, valueBright: false)
-                DataRow(label: "Grain", value: stock.grainSummary)
-                DataRow(label: "Years active", value: stock.yearsActive)
+                specRow("Manufacturer", stock.manufacturer, showsDivider: false)
+                specRow("Type", stock.filmType.label)
+                specRow("Process", stock.process.label)
+                specRow("Box speed", "ISO \(stock.iso)")
+                specRow("Usable range", stock.usableRange.isEmpty ? "" : "ISO \(stock.usableRange)")
+                specRow("Push / pull", stock.pushPullTolerance)
+                specRow("Status", stock.productionStatus.label)
+                specRow("Formats", stock.formatsSummary)
+                specRow("Grain", stock.grainSummary)
+                specRow("Years active", stock.yearsActive)
                 if !stock.bestFor.isEmpty {
-                    DataRow(label: "Best for", value: stock.bestForSummary, valueBright: false)
+                    specRow("Best for", stock.bestForSummary)
                 }
-                DataRow(label: "Price tier", value: stock.priceTier.label)
+                specRow("Price tier", stock.priceTier.label)
             }
         }
+    }
+
+    private func specRow(_ label: String, _ value: String, showsDivider: Bool = true) -> some View {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isPlaceholder = trimmed.isEmpty
+            || trimmed.caseInsensitiveCompare("Not Set") == .orderedSame
+            || trimmed == "—"
+            || trimmed == "-"
+        return DataRow(
+            label: label,
+            value: isPlaceholder ? (trimmed.isEmpty ? "Not Set" : trimmed) : trimmed,
+            valueBright: !isPlaceholder,
+            showsDivider: showsDivider
+        )
     }
 
     private var historySection: some View {
         DetailSection(title: "History") {
             VStack(spacing: 0) {
                 ForEach(Array(historyRolls.enumerated()), id: \.element.id) { index, roll in
-                    DataRow(
-                        label: roll.shortId,
-                        value: roll.historySummary,
-                        valueBright: roll.status == .inCamera || roll.status == .scanned,
+                    InstrumentRow(
+                        label: historyDateText(for: roll),
                         showsDivider: index > 0
-                    )
+                    ) {
+                        VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                            let cameraName = store.camera(for: roll.cameraId)?.name
+                            Text(cameraName ?? "Not Set")
+                                .font(InstrumentFont.mono(12))
+                                .foregroundStyle(cameraName == nil ? AppTheme.textSecondary : AppTheme.textPrimary)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text(roll.status.displayName)
+                                .font(InstrumentFont.mono(12))
+                                .foregroundStyle(AppTheme.textPrimary)
+                                .multilineTextAlignment(.leading)
+                        }
+                    }
                 }
             }
         }
+    }
+
+    private func historyDateText(for roll: Roll) -> String {
+        guard let date = roll.historyDate else { return "—" }
+        return DateFormatters.medium.string(from: date)
     }
 }
 

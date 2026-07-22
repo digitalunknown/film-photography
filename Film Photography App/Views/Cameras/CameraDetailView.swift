@@ -148,23 +148,29 @@ struct CameraDetailView: View {
     }
 
     private func loadSection(_ camera: Camera) -> some View {
-        DetailSection(title: "Load") {
+        DetailSection(title: "") {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-                FilmLoadSlider(
-                    stock: currentLoadSelection?.stock,
-                    layout: loadSliderLayout(for: camera),
-                    isEnabled: currentLoadSelection != nil
-                ) {
-                    if let selection = currentLoadSelection {
+                if let selection = currentLoadSelection {
+                    FilmLoadSlider(
+                        stock: selection.stock,
+                        layout: loadSliderLayout(for: camera),
+                        isEnabled: true
+                    ) {
                         performLoad(onto: camera, selection: selection)
                     }
+                    .id(selection.id)
+                    .transition(
+                        .asymmetric(
+                            insertion: .move(edge: .leading).combined(with: .opacity),
+                            removal: .opacity
+                        )
+                    )
                 }
-                .id(currentLoadSelection?.id ?? "empty-load")
 
                 Button {
                     showingLoadPicker = true
                 } label: {
-                    Text("Choose Roll")
+                    Text(currentLoadSelection?.title ?? "Load Roll")
                         .font(InstrumentFont.mono(12))
                         .foregroundStyle(AppTheme.textPrimary)
                         .frame(maxWidth: .infinity)
@@ -176,6 +182,7 @@ struct CameraDetailView: View {
                 }
                 .buttonStyle(.plain)
             }
+            .animation(.spring(response: 0.48, dampingFraction: 0.84), value: currentLoadSelection?.id)
         }
     }
 
@@ -305,7 +312,22 @@ struct CameraDetailView: View {
                     Button {
                         selectedHistoryRoll = roll
                     } label: {
-                        cameraHistoryRow(roll, showsDivider: index > 0)
+                        InstrumentRow(
+                            label: historyDateText(for: roll),
+                            showsDivider: index > 0
+                        ) {
+                            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                                Text(store.stock(for: roll.stockId)?.name ?? roll.shortId)
+                                    .font(InstrumentFont.mono(12))
+                                    .foregroundStyle(AppTheme.textPrimary)
+                                    .multilineTextAlignment(.leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(roll.status.displayName)
+                                    .font(InstrumentFont.mono(12))
+                                    .foregroundStyle(AppTheme.textSecondary)
+                                    .multilineTextAlignment(.leading)
+                            }
+                        }
                     }
                     .buttonStyle(.plain)
                 }
@@ -313,41 +335,9 @@ struct CameraDetailView: View {
         }
     }
 
-    private func cameraHistoryRow(_ roll: Roll, showsDivider: Bool) -> some View {
-        VStack(spacing: 0) {
-            if showsDivider {
-                HairlineRule()
-            }
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(historyDateText(for: roll))
-                        .font(InstrumentFont.mono(12))
-                        .foregroundStyle(AppTheme.textPrimary)
-                    Spacer(minLength: AppTheme.Spacing.sm)
-                    Text(historyFilmType(for: roll))
-                        .font(InstrumentFont.mono(12))
-                        .foregroundStyle(AppTheme.textSecondary)
-                }
-                Text(store.stock(for: roll.stockId)?.name ?? roll.shortId)
-                    .font(InstrumentFont.mono(12))
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text(roll.status.displayName)
-                    .font(InstrumentFont.mono(11))
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .padding(.vertical, AppTheme.Spacing.md)
-        }
-    }
-
     private func historyDateText(for roll: Roll) -> String {
         guard let date = roll.historyDate else { return "—" }
         return DateFormatters.medium.string(from: date)
-    }
-
-    private func historyFilmType(for roll: Roll) -> String {
-        store.stock(for: roll.stockId)?.filmType.label ?? roll.format.displayName
     }
 
     private func currencyMenuCodes(for camera: Camera) -> [String] {
@@ -473,6 +463,15 @@ struct CameraDetailView: View {
         var stock: FilmStock? {
             switch self {
             case .roll(_, let stock), .fridgeItem(_, let stock): return stock
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .roll(let roll, let stock):
+                return stock?.name ?? roll.shortId
+            case .fridgeItem(let item, let stock):
+                return stock?.name ?? item.format.displayName
             }
         }
     }
