@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "Kodak.png",
+      "filename" : "roll_kodak.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "Kodak 1.png",
+      "filename" : "roll_kodak 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "Kodak 2.png",
+      "filename" : "roll_kodak 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

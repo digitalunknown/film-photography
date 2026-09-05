@@ -89,16 +89,16 @@ struct InCameraRollsWidgetView: View {
             }
         }
         .containerBackground(for: .widget) {
-            Color.black
+            AppPalette.bg
         }
     }
 
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             Spacer(minLength: 0)
             Text("No rolls in camera")
                 .font(widgetFont(13))
-                .foregroundStyle(Color.white)
+                .foregroundStyle(AppPalette.textPrimary)
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -110,7 +110,7 @@ struct InCameraRollsWidgetView: View {
             ForEach(Array(entry.rows.enumerated()), id: \.element.id) { index, row in
                 if index > 0 {
                     Rectangle()
-                        .fill(Color(red: 0.173, green: 0.173, blue: 0.180))
+                        .fill(AppPalette.rule)
                         .frame(height: 1)
                 }
                 rollRow(row)
@@ -120,8 +120,8 @@ struct InCameraRollsWidgetView: View {
             if entry.totalCount > entry.rows.count {
                 Text("+\(entry.totalCount - entry.rows.count) more")
                     .font(widgetFont(11))
-                    .foregroundStyle(Color(red: 0.541, green: 0.541, blue: 0.557))
-                    .padding(.top, 6)
+                    .foregroundStyle(AppPalette.textSecondary)
+                    .padding(.top, 8)
             }
 
             Spacer(minLength: 0)
@@ -137,18 +137,18 @@ struct InCameraRollsWidgetView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(row.stockName)
                     .font(widgetFont(13))
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(AppPalette.textPrimary)
                     .lineLimit(1)
                 Text(row.cameraName)
                     .font(widgetFont(11))
-                    .foregroundStyle(Color(red: 0.541, green: 0.541, blue: 0.557))
+                    .foregroundStyle(AppPalette.textSecondary)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(row.exposuresLabel)
                 .font(widgetFont(13))
-                .foregroundStyle(Color.white)
+                .foregroundStyle(AppPalette.textPrimary)
                 .monospacedDigit()
                 .layoutPriority(1)
         }
@@ -162,10 +162,10 @@ struct InCameraRollsWidgetView: View {
                     .scaledToFill()
             } else {
                 Rectangle()
-                    .fill(Color(red: 0.173, green: 0.173, blue: 0.180))
-                Text("◎")
-                    .font(widgetFont(12))
-                    .foregroundStyle(Color.white.opacity(0.45))
+                    .fill(AppPalette.surface)
+                Image(systemName: "film")
+                    .font(.system(size: 16))
+                    .foregroundStyle(AppPalette.textSecondary)
             }
         }
         .frame(width: plateSize, height: plateSize)
@@ -185,7 +185,7 @@ struct InCameraRollsWidgetView: View {
         default:
             name = "Figtree-Regular"
         }
-        return .custom(name, size: size + 1)
+        return .custom(name, size: size)
     }
 }
 

@@ -92,9 +92,9 @@ private struct StocksLibraryContent: View {
                 }
 
                 LazyVGrid(columns: [
-                    GridItem(.flexible(), spacing: AppTheme.Spacing.md, alignment: .top),
-                    GridItem(.flexible(), spacing: AppTheme.Spacing.md, alignment: .top),
-                ], spacing: AppTheme.Spacing.lg) {
+                    GridItem(.flexible(), spacing: AppTheme.Spacing.lg, alignment: .top),
+                    GridItem(.flexible(), spacing: AppTheme.Spacing.lg, alignment: .top),
+                ], spacing: AppTheme.Spacing.xl) {
                     ForEach(filteredStocks) { stock in
                         StockPlateRow(stock: stock)
                             .onTapGesture { selectedStockId = stock.id }
@@ -102,7 +102,7 @@ private struct StocksLibraryContent: View {
                 }
                 .padding(.horizontal, AppTheme.horizontalPadding)
             }
-            .padding(.bottom, 32)
+            .padding(.bottom, AppTheme.Spacing.xl)
             .animation(chipAnimation, value: isSearching)
         }
         .onChange(of: selectedBrand) { _, _ in
@@ -149,19 +149,19 @@ private struct StockPlateRow: View {
             StockPlate(stock: stock)
                 .frame(maxWidth: .infinity)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                 Text(stock.name)
-                    .font(InstrumentFont.mono(12))
+                    .font(AppType.body)
                     .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(2)
                     .frame(height: 34, alignment: .topLeading)
 
                 Text(stock.filmType.label)
-                    .font(InstrumentFont.mono(11))
+                    .font(AppType.callout)
                     .foregroundStyle(AppTheme.textSecondary)
 
                 Text(rollsShotLabel)
-                    .font(InstrumentFont.mono(11))
+                    .font(AppType.callout)
                     .foregroundStyle(AppTheme.textSecondary)
             }
         }
@@ -189,8 +189,8 @@ struct StockDetailView: View {
     }
 
     private var sectionDivider: some View {
-        SectionRule()
-            .padding(.bottom, AppTheme.Spacing.md)
+        HairlineRule()
+            .padding(.bottom, AppTheme.Spacing.lg)
     }
 
     var body: some View {
@@ -214,7 +214,7 @@ struct StockDetailView: View {
             } else {
                 VStack(alignment: .leading) {
                     Text("Stock not found")
-                        .font(InstrumentFont.mono(13))
+                        .font(AppType.body)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
                 .padding(.horizontal, AppTheme.horizontalPadding)
@@ -270,12 +270,12 @@ struct StockDetailView: View {
                         VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                             let cameraName = store.camera(for: roll.cameraId)?.name
                             Text(cameraName ?? "Not Set")
-                                .font(InstrumentFont.mono(12))
+                                .font(AppType.body)
                                 .foregroundStyle(cameraName == nil ? AppTheme.textSecondary : AppTheme.textPrimary)
                                 .multilineTextAlignment(.leading)
                                 .fixedSize(horizontal: false, vertical: true)
                             Text(roll.status.displayName)
-                                .font(InstrumentFont.mono(12))
+                                .font(AppType.body)
                                 .foregroundStyle(AppTheme.textPrimary)
                                 .multilineTextAlignment(.leading)
                         }

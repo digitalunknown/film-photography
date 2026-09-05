@@ -10,12 +10,10 @@ struct PipelineRailView: View {
     var onAdvance: () -> Void
     var onRevert: (() -> Void)?
 
-    private var emulsion: Color {
-        stock?.emulsionTint ?? AppTheme.textSecondary
-    }
+    private var emulsion: Color { AppTheme.textPrimary }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
             PipelineStageStrip(status: status, emulsion: emulsion)
 
             if status.isInventory {
@@ -34,8 +32,8 @@ struct PipelineRailView: View {
 
             if canRevert, let onRevert, let previous = status.previousStatus {
                 Button(action: onRevert) {
-                    Text("← Back to \(previous.displayName)")
-                        .font(InstrumentFont.mono(11))
+                    Text("Back to \(previous.displayName)")
+                        .font(AppType.callout)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
                 .buttonStyle(.plain)
@@ -45,11 +43,10 @@ struct PipelineRailView: View {
 
     private var inventoryHint: some View {
         HStack(spacing: AppTheme.Spacing.sm) {
-            Text("◎")
-                .font(InstrumentFont.mono(12))
-                .foregroundStyle(AppTheme.textTertiary)
+            LucideIcon(.film)
+                .foregroundStyle(AppTheme.textSecondary)
             Text("Pull the roll into a camera above to advance.")
-                .font(InstrumentFont.mono(11))
+                .font(AppType.callout)
                 .foregroundStyle(AppTheme.textSecondary)
         }
         .padding(.vertical, AppTheme.Spacing.sm)
@@ -58,10 +55,10 @@ struct PipelineRailView: View {
     private var completedHint: some View {
         HStack(spacing: AppTheme.Spacing.sm) {
             Text("●")
-                .font(InstrumentFont.mono(12))
+                .font(AppType.body)
                 .foregroundStyle(emulsion)
             Text("Roll archived — end of the line.")
-                .font(InstrumentFont.mono(11))
+                .font(AppType.callout)
                 .foregroundStyle(AppTheme.textSecondary)
         }
         .padding(.vertical, AppTheme.Spacing.sm)
@@ -189,9 +186,7 @@ private struct PipelineAdvanceSlider: View {
         return min(max(dragOffset / maxTravel, 0), 1)
     }
 
-    private var emulsion: Color {
-        stock?.emulsionTint ?? AppTheme.textSecondary
-    }
+    private var emulsion: Color { AppTheme.textPrimary }
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -223,8 +218,8 @@ private struct PipelineAdvanceSlider: View {
             RoundedRectangle(cornerRadius: 3)
                 .fill(AppTheme.bg)
             RoundedRectangle(cornerRadius: 2)
-                .fill(Color.white.opacity(0.03))
-                .padding(.vertical, 10)
+                .fill(AppTheme.textPrimary.opacity(0.03))
+                .padding(.vertical, AppTheme.Spacing.sm)
                 .padding(.leading, inset)
                 .padding(.trailing, gateWidth - 4)
             RoundedRectangle(cornerRadius: 3)
@@ -258,14 +253,14 @@ private struct PipelineAdvanceSlider: View {
     }
 
     private var promptLabel: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: AppTheme.Spacing.xs) {
             Text(isComplete ? "advanced" : prompt)
-                .font(InstrumentFont.mono(11))
+                .font(AppType.callout)
                 .foregroundStyle(isComplete ? emulsion : AppTheme.textSecondary)
                 .tracking(1.0)
             if !isComplete {
-                Text("pull →")
-                    .font(InstrumentFont.mono(10))
+                Text("pull")
+                    .font(AppType.footnote)
                     .foregroundStyle(AppTheme.textTertiary)
                     .opacity(0.5 + 0.5 * Double(sin(progress * .pi)))
             }
@@ -333,8 +328,7 @@ private struct PipelineAdvanceSlider: View {
                     .strokeBorder(AppTheme.rule, lineWidth: 0.5)
                     .frame(width: thumbSize, height: thumbSize)
                     .overlay(
-                        Text("→")
-                            .font(InstrumentFont.mono(14))
+                        LucideIcon(.chevronRight)
                             .foregroundStyle(AppTheme.textSecondary)
                     )
                     .offset(x: inset + dragOffset)

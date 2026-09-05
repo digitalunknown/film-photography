@@ -8,8 +8,9 @@ struct AddCameraView: View {
     @State private var lensSubtitle = ""
     @State private var cameraType = "Rangefinder"
     @State private var serialNumber = ""
-    @State private var purchaseDate = Date()
-    @State private var includePurchaseDate = false
+    @State private var purchaseDate: Date?
+    @State private var purchaseDateDraft = Date()
+    @State private var showingPurchaseDatePicker = false
     @State private var purchasePrice = ""
     @State private var quirkNote = ""
     @FocusState private var focusedField: Field?
@@ -25,79 +26,11 @@ struct AddCameraView: View {
         !lensSubtitle.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    private var sectionDivider: some View {
-        SectionRule()
-            .padding(.bottom, AppTheme.Spacing.md)
-    }
-
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    DetailSection(title: "Body") {
-                        VStack(spacing: 0) {
-                            InstrumentEditableRow(label: "Name", showsDivider: false) {
-                                TextField("Konica C35 FD", text: $name)
-                                    .focused($focusedField, equals: .name)
-                            }
-                            InstrumentEditableRow(label: "Lens") {
-                                TextField("38mm f/1.8", text: $lensSubtitle)
-                                    .focused($focusedField, equals: .lens)
-                            }
-                            InstrumentMenuRow(
-                                label: "Type",
-                                value: cameraType,
-                                valueBright: true
-                            ) {
-                                ForEach(cameraTypes, id: \.self) { type in
-                                    Button(type) { cameraType = type }
-                                }
-                            }
-                        }
-                    }
-
-                    sectionDivider
-
-                    DetailSection(title: "Collection") {
-                        VStack(spacing: 0) {
-                            InstrumentEditableRow(label: "Serial", showsDivider: false) {
-                                TextField("Optional", text: $serialNumber)
-                                    .focused($focusedField, equals: .serial)
-                            }
-                            InstrumentRow(label: "Purchase date") {
-                                Toggle("", isOn: $includePurchaseDate)
-                                    .labelsHidden()
-                                    .tint(AppTheme.textPrimary)
-                            }
-                            if includePurchaseDate {
-                                InstrumentRow(label: "Date") {
-                                    DatePicker(
-                                        "Date",
-                                        selection: $purchaseDate,
-                                        displayedComponents: .date
-                                    )
-                                    .labelsHidden()
-                                    .colorScheme(.dark)
-                                }
-                            }
-                            InstrumentEditableRow(label: "Price") {
-                                TextField("Optional", text: $purchasePrice)
-                                    .keyboardType(.decimalPad)
-                                    .focused($focusedField, equals: .price)
-                            }
-                        }
-                    }
-
-                    sectionDivider
-
-                    DetailSection(title: "Notes") {
-                        TextField("Quirks, servicing, tips", text: $quirkNote, axis: .vertical)
-                            .font(InstrumentFont.mono(12))
-                            .foregroundStyle(AppTheme.textPrimary)
-                            .lineLimit(3...6)
-                            .focused($focusedField, equals: .quirks)
-                            .padding(.vertical, AppTheme.Spacing.sm)
-                    }
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
+                    formRows
                 }
                 .instrumentDetailContent()
             }
@@ -105,14 +38,17 @@ struct AddCameraView: View {
             .instrumentScreen()
             .navigationTitle("Add Camera")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showingPurchaseDatePicker) {
+                purchaseDatePickerSheet
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .font(InstrumentFont.mono(13))
+                        .font(AppType.body)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") { save() }
-                        .font(InstrumentFont.mono(13))
+                        .font(AppType.body)
                         .disabled(!canSave)
                 }
                 ToolbarItemGroup(placement: .keyboard) {
@@ -126,13 +62,149 @@ struct AddCameraView: View {
         .instrumentSheetChrome()
     }
 
+    /// One 16pt stack of label/value rows with explicit rules — no section headings, and
+    /// every value pinned to the trailing edge, matching the camera detail table.
+    @ViewBuilder
+    private var formRows: some View {
+        HairlineRule()
+        fieldRow("Name") {
+            TextField(placeholder: "Konica C35 FD", text: $name)
+                .focused($focusedField, equals: .name)
+        }
+        HairlineRule()
+        fieldRow("Lens") {
+            TextField(placeholder: "38mm f/1.8", text: $lensSubtitle)
+                .focused($focusedField, equals: .lens)
+        }
+        HairlineRule()
+        menuRow("Type", value: cameraType) {
+            ForEach(cameraTypes, id: \.self) { type in
+                Button(type) { cameraType = type }
+            }
+        }
+        HairlineRule()
+        fieldRow("Serial number") {
+            TextField(placeholder: "Optional", text: $serialNumber)
+                .focused($focusedField, equals: .serial)
+        }
+        HairlineRule()
+        purchaseDateRow
+        HairlineRule()
+        fieldRow("Purchase price") {
+            TextField(placeholder: "Optional", text: $purchasePrice)
+                .keyboardType(.decimalPad)
+                .focused($focusedField, equals: .price)
+        }
+        HairlineRule()
+        SectionLabel(title: "Notes", style: .detail)
+        TextField(placeholder: "Add a note", text: $quirkNote, axis: .vertical)
+            .font(AppType.body)
+            .foregroundStyle(AppTheme.textPrimary)
+            .lineLimit(2...8)
+            .submitLabel(.return)
+            .focused($focusedField, equals: .quirks)
+    }
+
+    private var purchaseDateRow: some View {
+        Button {
+            purchaseDateDraft = purchaseDate ?? Date()
+            focusedField = nil
+            showingPurchaseDatePicker = true
+        } label: {
+            DetailFieldRow(label: "Purchase date") {
+                DetailFieldValue(text: purchaseDateDisplay)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var purchaseDateDisplay: String {
+        guard let purchaseDate else { return "Not set" }
+        return DateFormatters.medium.string(from: purchaseDate)
+    }
+
+    private var purchaseDatePickerSheet: some View {
+        NavigationStack {
+            VStack(spacing: AppTheme.Spacing.xl) {
+                DatePicker(
+                    "Purchase date",
+                    selection: $purchaseDateDraft,
+                    displayedComponents: .date
+                )
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                .tint(AppTheme.textPrimary)
+                .padding(.horizontal, AppTheme.horizontalPadding)
+
+                Spacer(minLength: 0)
+            }
+            .instrumentScreen()
+            .navigationTitle("Purchase date")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Clear") {
+                        purchaseDate = nil
+                        showingPurchaseDatePicker = false
+                    }
+                    .font(AppType.body)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        purchaseDate = Calendar.current.startOfDay(for: purchaseDateDraft)
+                        showingPurchaseDatePicker = false
+                    }
+                    .font(AppType.body)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.hidden)
+    }
+
+    // MARK: - Row builders
+
+    private func menuRow<Content: View>(
+        _ label: String,
+        value: String,
+        @ViewBuilder menu: @escaping () -> Content
+    ) -> some View {
+        DetailFieldRow(label: label) {
+            Menu {
+                menu()
+            } label: {
+                HStack(spacing: AppTheme.Spacing.xs) {
+                    DetailFieldValue(text: value)
+                    LucideIcon(.chevronsUpDown)
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(label)
+        }
+    }
+
+    /// Editable variant — the field right-aligns into the value column.
+    private func fieldRow<Content: View>(
+        _ label: String,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        DetailFieldRow(label: label) {
+            content()
+                .font(AppType.body)
+                .foregroundStyle(AppTheme.textPrimary)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
     private func save() {
         store.addCamera(
             name: name.trimmingCharacters(in: .whitespaces),
             lensSubtitle: lensSubtitle.trimmingCharacters(in: .whitespaces),
             cameraType: cameraType,
             serialNumber: serialNumber,
-            purchaseDate: includePurchaseDate ? purchaseDate : nil,
+            purchaseDate: purchaseDate,
             purchasePrice: Double(purchasePrice.replacingOccurrences(of: ",", with: ".")),
             quirkNote: quirkNote
         )

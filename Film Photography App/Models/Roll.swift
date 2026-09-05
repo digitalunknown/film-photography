@@ -121,7 +121,7 @@ enum RollStatus: String, CaseIterable, Codable, Comparable {
     /// Short slide prompt for the advance gate.
     var pipelineSlidePrompt: String? {
         switch self {
-        case .acquired, .inFridge: nil // uses FilmLoadSlider instead
+        case .acquired, .inFridge: nil // inventory rolls load via the camera picker
         case .inCamera: "slide to unload"
         case .shotUndeveloped: "slide to lab"
         case .atLab: "slide to developed"
@@ -158,6 +158,9 @@ struct FrameMarker: Identifiable, Codable, Hashable {
     let id: UUID
     var frameIndex: Int
     var timestamp: Date
+    /// Date the frame was shot, as entered by the photographer. `timestamp` stays the
+    /// record's own creation time so marker ordering and exports are unaffected.
+    var captureDate: Date?
     var latitude: Double
     var longitude: Double
     var aperture: Double?
@@ -171,6 +174,7 @@ struct FrameMarker: Identifiable, Codable, Hashable {
         id: UUID = UUID(),
         frameIndex: Int = 1,
         timestamp: Date = Date(),
+        captureDate: Date? = nil,
         latitude: Double = 0,
         longitude: Double = 0,
         aperture: Double? = nil,
@@ -183,6 +187,7 @@ struct FrameMarker: Identifiable, Codable, Hashable {
         self.id = id
         self.frameIndex = frameIndex
         self.timestamp = timestamp
+        self.captureDate = captureDate
         self.latitude = latitude
         self.longitude = longitude
         self.aperture = aperture
@@ -198,6 +203,7 @@ struct FrameMarker: Identifiable, Codable, Hashable {
         id = try container.decode(UUID.self, forKey: .id)
         frameIndex = try container.decodeIfPresent(Int.self, forKey: .frameIndex) ?? 1
         timestamp = try container.decode(Date.self, forKey: .timestamp)
+        captureDate = try container.decodeIfPresent(Date.self, forKey: .captureDate)
         latitude = try container.decodeIfPresent(Double.self, forKey: .latitude) ?? 0
         longitude = try container.decodeIfPresent(Double.self, forKey: .longitude) ?? 0
         aperture = try container.decodeIfPresent(Double.self, forKey: .aperture)
@@ -211,7 +217,6 @@ struct FrameMarker: Identifiable, Codable, Hashable {
 
 struct Roll: Identifiable, Codable, Hashable {
     let id: UUID
-    var shortId: String
     var stockId: UUID
     var cameraId: UUID?
     var status: RollStatus
@@ -288,7 +293,6 @@ struct Roll: Identifiable, Codable, Hashable {
 
     init(
         id: UUID,
-        shortId: String,
         stockId: UUID,
         cameraId: UUID?,
         status: RollStatus,
@@ -316,7 +320,6 @@ struct Roll: Identifiable, Codable, Hashable {
         framePhotoFileNames: [String: String] = [:]
     ) {
         self.id = id
-        self.shortId = shortId
         self.stockId = stockId
         self.cameraId = cameraId
         self.status = status.normalized
@@ -347,7 +350,6 @@ struct Roll: Identifiable, Codable, Hashable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
-        shortId = try container.decode(String.self, forKey: .shortId)
         stockId = try container.decode(UUID.self, forKey: .stockId)
         cameraId = try container.decodeIfPresent(UUID.self, forKey: .cameraId)
         let decodedStatus = try container.decode(RollStatus.self, forKey: .status)

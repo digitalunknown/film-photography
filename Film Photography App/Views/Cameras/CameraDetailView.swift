@@ -7,8 +7,6 @@ struct CameraDetailView: View {
     let cameraId: UUID
 
     @State private var photoItem: PhotosPickerItem?
-    @State private var selectedLoadRollId: UUID?
-    @State private var selectedFridgeItemId: UUID?
     @State private var showingLoadPicker = false
     @State private var showingPurchaseDatePicker = false
     @State private var purchaseDateDraft = Date()
@@ -34,11 +32,6 @@ struct CameraDetailView: View {
             .sorted { ($0.historyDate ?? .distantPast) > ($1.historyDate ?? .distantPast) }
     }
 
-    private var sectionDivider: some View {
-        SectionRule()
-            .padding(.bottom, AppTheme.Spacing.md)
-    }
-
     var body: some View {
         Group {
             if let camera {
@@ -48,22 +41,12 @@ struct CameraDetailView: View {
 
                         if let roll = loadedRoll {
                             loadedRollSection(roll)
-                            sectionDivider
                             loadedExposureStage(roll)
-                            sectionDivider
                         } else {
-                            loadSection(camera)
-                            sectionDivider
+                            loadSection
                         }
 
-                        notesSection(camera)
-                        sectionDivider
-                        specificationsSection(camera)
-
-                        if !historyRolls.isEmpty {
-                            sectionDivider
-                            historySection
-                        }
+                        cameraFields(camera)
                     }
                     .instrumentDetailContent()
                 }
@@ -71,7 +54,7 @@ struct CameraDetailView: View {
             } else {
                 VStack(alignment: .leading) {
                     Text("Camera not found")
-                        .font(InstrumentFont.mono(13))
+                        .font(AppType.body)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
                 .padding(.horizontal, AppTheme.horizontalPadding)
@@ -107,7 +90,7 @@ struct CameraDetailView: View {
         DetailHeroBlock {
             Menu {
                 PhotosPicker(selection: $photoItem, matching: .images) {
-                    Label("Upload Photo", systemImage: "photo.badge.plus")
+                    Label("Upload Photo", lucide: .imagePlus)
                 }
                 if camera.photoData != nil {
                     Button("Remove", role: .destructive) {
@@ -125,213 +108,207 @@ struct CameraDetailView: View {
         LoadExposureStage(
             roll: roll,
             stock: store.stock(for: roll.stockId),
-            cameraName: camera?.name ?? "camera",
-            canSlide: false,
-            startMode: .carousel,
             onAdvance: { store.advanceExposure(on: roll.id) },
             onUndo: { store.removeLastFrame(from: roll.id) },
-            onSetCount: { store.setFrameCount($0, for: roll.id) }
+            onSetCount: { store.setFrameCount($0, for: roll.id) },
+            onFinishRoll: { store.setRollStatus(roll.id, to: .shotUndeveloped) }
         )
         .id("camera-load-stage-\(roll.id)")
     }
 
     private func loadedRollSection(_ roll: Roll) -> some View {
-        DetailSection(title: "Loaded") {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
+            SectionLabel(title: "Loaded", style: .detail)
             Button {
                 selectedHistoryRoll = roll
             } label: {
                 RollLedgerRow(roll: roll, showsCameraName: false)
             }
             .buttonStyle(.plain)
-            .padding(.top, AppTheme.Spacing.xs)
         }
+        .padding(.bottom, AppTheme.Spacing.lg)
     }
 
-    private func loadSection(_ camera: Camera) -> some View {
-        DetailSection(title: "") {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-                if let selection = currentLoadSelection {
-                    FilmLoadSlider(
-                        stock: selection.stock,
-                        layout: loadSliderLayout(for: camera),
-                        isEnabled: true
-                    ) {
-                        performLoad(onto: camera, selection: selection)
-                    }
-                    .id(selection.id)
-                    .transition(
-                        .asymmetric(
-                            insertion: .move(edge: .leading).combined(with: .opacity),
-                            removal: .opacity
-                        )
-                    )
-                }
-
-                Button {
-                    showingLoadPicker = true
-                } label: {
-                    Text(currentLoadSelection?.title ?? "Load Roll")
-                        .font(InstrumentFont.mono(12))
-                        .foregroundStyle(AppTheme.textPrimary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .overlay {
-                            Rectangle()
-                                .strokeBorder(AppTheme.rule, lineWidth: 1)
-                        }
-                }
-                .buttonStyle(.plain)
-            }
-            .animation(.spring(response: 0.48, dampingFraction: 0.84), value: currentLoadSelection?.id)
+    private var loadSection: some View {
+        Button {
+            showingLoadPicker = true
+        } label: {
+            PillButtonLabel(title: "Load Roll", icon: .film)
         }
+        .buttonStyle(.plain)
+        .padding(.bottom, AppTheme.Spacing.lg)
     }
 
-    private func loadSliderLayout(for camera: Camera) -> FilmStripLayout {
-        let format: FilmFormat = {
-            switch currentLoadSelection {
-            case .roll(let roll, _):
-                return roll.format
-            case .fridgeItem(let item, _):
-                return item.format
-            case nil:
-                return camera.defaultFormat ?? .format35Full
+    /// Everything below the exposure stage: the spec table, then history, then notes
+    /// last. One 16pt stack with explicit rules and trailing-aligned values, mirroring
+    /// the roll detail layout.
+    private func cameraFields(_ camera: Camera) -> some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
+            specRows(camera)
+            historyRows
+            notesRows(camera)
+        }
+        .padding(.bottom, AppTheme.Spacing.lg)
+    }
+
+    @ViewBuilder
+    private func specRows(_ camera: Camera) -> some View {
+        HairlineRule()
+        fieldRow("Name") {
+            TextField(placeholder: "Camera name", text: binding(camera, \.name))
+        }
+        HairlineRule()
+        fieldRow("Lens") {
+            TextField(placeholder: "38mm f/1.8", text: binding(camera, \.lensSubtitle))
+        }
+        HairlineRule()
+        menuRow("Type", value: camera.cameraType.isEmpty ? "Not set" : camera.cameraType) {
+            ForEach(cameraTypes, id: \.self) { type in
+                Button(type) {
+                    update(camera) { $0.cameraType = type }
+                }
             }
-        }()
-        return FilmStripLayout.layout(for: format, cellHeight: 110)
+        }
+        HairlineRule()
+        menuRow("Default format", value: camera.defaultFormat?.displayName ?? "Not set") {
+            Button("Not set") {
+                update(camera) { $0.defaultFormat = nil }
+            }
+            ForEach(FilmFormat.allCases) { fmt in
+                Button(fmt.displayName) {
+                    update(camera) { $0.defaultFormat = fmt }
+                }
+            }
+        }
+        HairlineRule()
+        fieldRow("Serial number") {
+            TextField(placeholder: "Optional", text: optionalStringBinding(camera, \.serialNumber))
+        }
+        HairlineRule()
+        purchaseDateRow(camera)
+        HairlineRule()
+        purchasePriceRow(camera)
     }
 
-    private func specificationsSection(_ camera: Camera) -> some View {
-        DetailSection(title: "Technical Specifications") {
-            VStack(alignment: .leading, spacing: 0) {
-                InstrumentEditableRow(label: "Name", showsDivider: false) {
-                    TextField("Camera name", text: binding(camera, \.name))
-                        .multilineTextAlignment(.leading)
-                }
-                InstrumentEditableRow(label: "Lens") {
-                    TextField("38mm f/1.8", text: binding(camera, \.lensSubtitle))
-                        .multilineTextAlignment(.leading)
-                }
-                InstrumentMenuRow(
-                    label: "Type",
-                    value: camera.cameraType.isEmpty ? "Not Set" : camera.cameraType,
-                    valueBright: !camera.cameraType.isEmpty
-                ) {
-                    ForEach(cameraTypes, id: \.self) { type in
-                        Button(type) {
-                            update(camera) { $0.cameraType = type }
+    private func purchaseDateRow(_ camera: Camera) -> some View {
+        Button {
+            purchaseDateDraft = camera.purchaseDate ?? Date()
+            showingPurchaseDatePicker = true
+        } label: {
+            DetailFieldRow(label: "Purchase date") {
+                DetailFieldValue(text: purchaseDateDisplay(for: camera))
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The amount right-aligns into the value column and the currency menu keeps its
+    /// chevron at the trailing edge, where every other dropdown row puts it.
+    private func purchasePriceRow(_ camera: Camera) -> some View {
+        DetailFieldRow(label: "Purchase price") {
+            HStack(spacing: AppTheme.Spacing.xs) {
+                TextField(placeholder: "0", text: priceBinding(camera))
+                    .font(AppType.body)
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .focused($isPriceFocused)
+
+                Menu {
+                    ForEach(currencyMenuCodes(for: camera), id: \.self) { code in
+                        Button(code) {
+                            update(camera) { $0.purchaseCurrency = code }
                         }
                     }
-                }
-                InstrumentMenuRow(
-                    label: "Default format",
-                    value: camera.defaultFormat?.displayName ?? "Not Set",
-                    valueBright: camera.defaultFormat != nil
-                ) {
-                    Button("Not Set") {
-                        update(camera) { $0.defaultFormat = nil }
-                    }
-                    ForEach(FilmFormat.allCases) { fmt in
-                        Button(fmt.displayName) {
-                            update(camera) { $0.defaultFormat = fmt }
-                        }
-                    }
-                }
-                InstrumentEditableRow(label: "Serial number") {
-                    TextField("Optional", text: optionalStringBinding(camera, \.serialNumber))
-                        .multilineTextAlignment(.leading)
-                }
-                Button {
-                    purchaseDateDraft = camera.purchaseDate ?? Date()
-                    showingPurchaseDatePicker = true
                 } label: {
-                    InstrumentRow(label: "Purchase date") {
-                        HStack(spacing: AppTheme.Spacing.xs) {
-                            Text(purchaseDateDisplay(for: camera))
-                                .font(InstrumentFont.mono(12))
-                                .foregroundStyle(camera.purchaseDate != nil ? AppTheme.textPrimary : AppTheme.textSecondary)
-                                .multilineTextAlignment(.leading)
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(InstrumentFont.mono(9, weight: .bold))
-                                .foregroundStyle(AppTheme.textTertiary)
-                            Spacer(minLength: 0)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-                InstrumentEditableRow(label: "Purchase price") {
-                    HStack(spacing: AppTheme.Spacing.sm) {
-                        Menu {
-                            ForEach(currencyMenuCodes(for: camera), id: \.self) { code in
-                                Button(code) {
-                                    update(camera) { $0.purchaseCurrency = code }
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: AppTheme.Spacing.xs) {
-                                Text(camera.purchaseCurrency)
-                                    .font(InstrumentFont.mono(12))
-                                    .foregroundStyle(AppTheme.textPrimary)
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(InstrumentFont.mono(9, weight: .bold))
-                                    .foregroundStyle(AppTheme.textTertiary)
-                            }
-                        }
-                        TextField("0", text: priceBinding(camera))
-                            .font(InstrumentFont.mono(12))
+                    HStack(spacing: AppTheme.Spacing.xs) {
+                        DetailFieldValue(text: camera.purchaseCurrency)
+                        LucideIcon(.chevronsUpDown)
                             .foregroundStyle(AppTheme.textPrimary)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.leading)
-                            .focused($isPriceFocused)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
+                .buttonStyle(.plain)
+                .fixedSize()
+                .accessibilityLabel("Currency")
             }
         }
     }
 
-    private func notesSection(_ camera: Camera) -> some View {
-        DetailSection(title: "Notes") {
-            TextField(
-                "Add a note",
-                text: notesBinding(camera),
-                axis: .vertical
-            )
-            .font(InstrumentFont.mono(12))
-            .foregroundStyle(AppTheme.textPrimary)
-            .lineLimit(3...8)
-            .submitLabel(.return)
-            .focused($isNotesFocused)
-            .padding(.vertical, AppTheme.Spacing.sm)
-        }
-    }
-
-    private var historySection: some View {
-        DetailSection(title: "History") {
-            VStack(spacing: 0) {
-                ForEach(Array(historyRolls.enumerated()), id: \.element.id) { index, roll in
-                    Button {
-                        selectedHistoryRoll = roll
-                    } label: {
-                        InstrumentRow(
-                            label: historyDateText(for: roll),
-                            showsDivider: index > 0
-                        ) {
-                            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                                Text(store.stock(for: roll.stockId)?.name ?? roll.shortId)
-                                    .font(InstrumentFont.mono(12))
-                                    .foregroundStyle(AppTheme.textPrimary)
-                                    .multilineTextAlignment(.leading)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Text(roll.status.displayName)
-                                    .font(InstrumentFont.mono(12))
-                                    .foregroundStyle(AppTheme.textSecondary)
-                                    .multilineTextAlignment(.leading)
-                            }
+    @ViewBuilder
+    private var historyRows: some View {
+        if !historyRolls.isEmpty {
+            HairlineRule()
+            SectionLabel(title: "History", style: .detail)
+            ForEach(Array(historyRolls.enumerated()), id: \.element.id) { index, roll in
+                if index > 0 {
+                    HairlineRule()
+                }
+                Button {
+                    selectedHistoryRoll = roll
+                } label: {
+                    DetailFieldRow(label: historyDateText(for: roll)) {
+                        VStack(alignment: .trailing, spacing: AppTheme.Spacing.xs) {
+                            DetailFieldValue(text: store.label(for: roll))
+                            DetailFieldValue(text: roll.status.displayName, isPlaceholder: true)
                         }
                     }
-                    .buttonStyle(.plain)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func notesRows(_ camera: Camera) -> some View {
+        HairlineRule()
+        SectionLabel(title: "Notes", style: .detail)
+        TextField(
+            placeholder: "Add a note",
+            text: notesBinding(camera),
+            axis: .vertical
+        )
+        .font(AppType.body)
+        .foregroundStyle(AppTheme.textPrimary)
+        .lineLimit(2...8)
+        .submitLabel(.return)
+        .focused($isNotesFocused)
+    }
+
+    // MARK: - Row builders
+
+    private func menuRow<Content: View>(
+        _ label: String,
+        value: String,
+        isPlaceholder: Bool = false,
+        @ViewBuilder menu: @escaping () -> Content
+    ) -> some View {
+        DetailFieldRow(label: label) {
+            Menu {
+                menu()
+            } label: {
+                HStack(spacing: AppTheme.Spacing.xs) {
+                    DetailFieldValue(text: value, isPlaceholder: isPlaceholder)
+                    LucideIcon(.chevronsUpDown)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(label)
+        }
+    }
+
+    /// Editable variant — the field right-aligns into the value column.
+    private func fieldRow<Content: View>(
+        _ label: String,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        DetailFieldRow(label: label) {
+            content()
+                .font(AppType.body)
+                .foregroundStyle(AppTheme.textPrimary)
+                .multilineTextAlignment(.trailing)
         }
     }
 
@@ -350,7 +327,7 @@ struct CameraDetailView: View {
 
     private var purchaseDatePickerSheet: some View {
         NavigationStack {
-            VStack(spacing: AppTheme.Spacing.lg) {
+            VStack(spacing: AppTheme.Spacing.xl) {
                 DatePicker(
                     "Purchase date",
                     selection: $purchaseDateDraft,
@@ -374,7 +351,7 @@ struct CameraDetailView: View {
                         }
                         showingPurchaseDatePicker = false
                     }
-                    .font(InstrumentFont.mono(13))
+                    .font(AppType.body)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
@@ -385,7 +362,7 @@ struct CameraDetailView: View {
                         }
                         showingPurchaseDatePicker = false
                     }
-                    .font(InstrumentFont.mono(13))
+                    .font(AppType.body)
                 }
             }
         }
@@ -400,12 +377,11 @@ struct CameraDetailView: View {
                     Section("In stock") {
                         ForEach(store.inventoryRolls) { roll in
                             Button {
-                                selectedLoadRollId = roll.id
-                                selectedFridgeItemId = nil
                                 showingLoadPicker = false
+                                store.assignRoll(roll.id, to: cameraId)
                             } label: {
                                 Text(inventoryRollLabel(for: roll))
-                                    .font(InstrumentFont.mono(13))
+                                    .font(AppType.body)
                                     .foregroundStyle(AppTheme.textPrimary)
                             }
                         }
@@ -416,12 +392,11 @@ struct CameraDetailView: View {
                     Section("Unopened stock") {
                         ForEach(store.availableFridgeItems) { item in
                             Button {
-                                selectedFridgeItemId = item.id
-                                selectedLoadRollId = nil
                                 showingLoadPicker = false
+                                loadFridgeItem(item)
                             } label: {
                                 Text(fridgeItemLabel(for: item))
-                                    .font(InstrumentFont.mono(13))
+                                    .font(AppType.body)
                                     .foregroundStyle(AppTheme.textPrimary)
                             }
                         }
@@ -430,7 +405,7 @@ struct CameraDetailView: View {
 
                 if store.inventoryRolls.isEmpty && store.availableFridgeItems.isEmpty {
                     Text(loadEmptyMessage)
-                        .font(InstrumentFont.mono(12))
+                        .font(AppType.body)
                         .foregroundStyle(AppTheme.textSecondary)
                         .listRowBackground(Color.clear)
                 }
@@ -441,50 +416,12 @@ struct CameraDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { showingLoadPicker = false }
-                        .font(InstrumentFont.mono(13))
+                        .font(AppType.body)
                 }
             }
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.hidden)
-    }
-
-    private enum LoadSelection {
-        case roll(Roll, FilmStock?)
-        case fridgeItem(FridgeItem, FilmStock?)
-
-        var id: String {
-            switch self {
-            case .roll(let roll, _): return "roll-\(roll.id)"
-            case .fridgeItem(let item, _): return "fridge-\(item.id)"
-            }
-        }
-
-        var stock: FilmStock? {
-            switch self {
-            case .roll(_, let stock), .fridgeItem(_, let stock): return stock
-            }
-        }
-
-        var title: String {
-            switch self {
-            case .roll(let roll, let stock):
-                return stock?.name ?? roll.shortId
-            case .fridgeItem(let item, let stock):
-                return stock?.name ?? item.format.displayName
-            }
-        }
-    }
-
-    private var currentLoadSelection: LoadSelection? {
-        if let selectedLoadRollId, let roll = store.roll(for: selectedLoadRollId) {
-            return .roll(roll, store.stock(for: roll.stockId))
-        }
-        if let selectedFridgeItemId,
-           let item = store.fridgeItems.first(where: { $0.id == selectedFridgeItemId }) {
-            return .fridgeItem(item, store.stock(for: item.stockId))
-        }
-        return nil
     }
 
     private var loadEmptyMessage: String {
@@ -494,12 +431,12 @@ struct CameraDetailView: View {
             }
             return "No unloadable stock. Set a roll to In stock — or add unopened stock — then choose it here."
         }
-        return "Choose a roll, then slide to load."
+        return "Choose a roll to load it."
     }
 
     private func inventoryRollLabel(for roll: Roll) -> String {
-        let stockName = store.stock(for: roll.stockId)?.name ?? roll.shortId
-        return "\(stockName) · \(roll.shortId)"
+        let exposures = "\(roll.totalExposures) exp"
+        return "\(store.label(for: roll)) · \(roll.format.displayName) · \(exposures)"
     }
 
     private func fridgeItemLabel(for item: FridgeItem) -> String {
@@ -509,27 +446,21 @@ struct CameraDetailView: View {
     }
 
     private func purchaseDateDisplay(for camera: Camera) -> String {
-        guard let date = camera.purchaseDate else { return "Not Set" }
+        guard let date = camera.purchaseDate else { return "Not set" }
         return DateFormatters.medium.string(from: date)
     }
 
-    private func performLoad(onto camera: Camera, selection: LoadSelection) {
-        switch selection {
-        case .roll(let roll, _):
-            store.assignRoll(roll.id, to: camera.id)
-        case .fridgeItem(let item, let stock):
-            store.loadRoll(
-                cameraId: camera.id,
-                stockId: item.stockId,
-                format: item.format,
-                iso: stock?.iso ?? 400,
-                exposures: item.format.defaultExposures,
-                expiryDate: item.expiryDate,
-                fromFridgeItemId: item.id
-            )
-        }
-        selectedLoadRollId = nil
-        selectedFridgeItemId = nil
+    /// Unopened stock becomes a fresh roll that is loaded straight into this camera.
+    private func loadFridgeItem(_ item: FridgeItem) {
+        store.loadRoll(
+            cameraId: cameraId,
+            stockId: item.stockId,
+            format: item.format,
+            iso: store.stock(for: item.stockId)?.iso ?? 400,
+            exposures: item.format.defaultExposures,
+            expiryDate: item.expiryDate,
+            fromFridgeItemId: item.id
+        )
     }
 
     // MARK: - Bindings

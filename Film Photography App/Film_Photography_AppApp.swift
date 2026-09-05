@@ -12,7 +12,11 @@ struct Film_Photography_AppApp: App {
         WindowGroup {
             ContentView()
                 .environment(store)
-                .font(InstrumentFont.mono(13))
+                .font(AppType.body)
+                // Set once at the root rather than per scroll view: the visibility is an
+                // environment value, so it reaches every scroll view and list in the app,
+                // sheets included.
+                .scrollIndicators(.hidden)
         }
     }
 }

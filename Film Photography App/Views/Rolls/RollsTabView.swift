@@ -12,18 +12,20 @@ struct RollsTabView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         if store.activeRolls.isEmpty {
                             InstrumentEmptyState(
-                                message: "No rolls in the pipeline. Tap + to add a roll.",
-                                primaryAction: "Add roll →",
-                                primaryHandler: { store.showingAddRoll = true }
+                                message: "No rolls in the pipeline.",
+                                primaryAction: "Choose from library",
+                                primaryHandler: { store.addRollEntry = .library },
+                                secondaryAction: "Add manually",
+                                secondaryHandler: { store.addRollEntry = .manual }
                             )
                             .padding(.horizontal, AppTheme.horizontalPadding)
                             .padding(.top, AppTheme.Spacing.sm)
                         } else {
                             ForEach(Array(visibleSections.enumerated()), id: \.element.status) { index, section in
                                 if index > 0 {
-                                    SectionRule()
+                                    HairlineRule()
                                         .padding(.horizontal, AppTheme.horizontalPadding)
-                                        .padding(.vertical, AppTheme.Spacing.md)
+                                        .padding(.vertical, AppTheme.Spacing.lg)
                                 }
 
                                 rollSection(status: section.status, rolls: section.rolls, isFirst: index == 0)
@@ -34,18 +36,31 @@ struct RollsTabView: View {
                             archiveLink
                         }
                     }
-                    .padding(.bottom, store.pendingDeletion != nil ? AppTheme.Spacing.xl + AppTheme.Spacing.md : AppTheme.Spacing.xl)
+                    .padding(.bottom, store.pendingDeletion != nil ? AppTheme.Spacing.xl + AppTheme.Spacing.lg : AppTheme.Spacing.xl)
                 }
 
                 if let pending = store.pendingDeletion {
-                    UndoDeletionBanner(rollLabel: pending.roll.shortId) {
+                    UndoDeletionBanner(rollLabel: store.label(for: pending.roll)) {
                         store.undoDelete()
                     }
                 }
             }
             .instrumentScreen()
-            .instrumentTabNavigation(title: "My Film") {
-                store.showingAddRoll = true
+            .instrumentTabNavigation(title: "My Film")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button("Choose from library", lucide: .library) {
+                            store.addRollEntry = .library
+                        }
+                        Button("Add manually", lucide: .fileText) {
+                            store.addRollEntry = .manual
+                        }
+                    } label: {
+                        LucideIcon(.plus)
+                    }
+                    .accessibilityLabel("Add roll")
+                }
             }
             .navigationDestination(item: $selectedRoll) { roll in
                 RollDetailView(rollId: roll.id)
@@ -82,28 +97,28 @@ struct RollsTabView: View {
 
     private func deleteMessage(for roll: Roll) -> String {
         if roll.status == .inCamera {
-            return "\(roll.shortId) is loaded in a camera. You can undo for 5 seconds."
+            return "\(store.label(for: roll)) is loaded in a camera. You can undo for 5 seconds."
         }
-        return "\(roll.shortId) will be removed. You can undo for 5 seconds."
+        return "\(store.label(for: roll)) will be removed. You can undo for 5 seconds."
     }
 
     private var archiveLink: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionRule()
+            HairlineRule()
                 .padding(.horizontal, AppTheme.horizontalPadding)
-                .padding(.vertical, AppTheme.Spacing.md)
+                .padding(.vertical, AppTheme.Spacing.lg)
 
             NavigationLink {
                 ArchiveRollsView()
             } label: {
-                HStack {
-                    Text("ARCHIVE")
-                        .font(InstrumentFont.mono(12, weight: .semibold))
-                        .foregroundStyle(AppTheme.textPrimary)
-                        .tracking(1.0)
+                HStack(spacing: AppTheme.Spacing.xs) {
+                    SectionLabel(title: "Archive")
                     Spacer()
-                    Text("\(store.archivedRolls.count) →")
-                        .font(InstrumentFont.mono(12))
+                    Text("\(store.archivedRolls.count)")
+                        .font(AppType.body)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .monospacedDigit()
+                    LucideIcon(.chevronRight)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
                 .padding(.horizontal, AppTheme.horizontalPadding)
@@ -120,10 +135,14 @@ struct RollsTabView: View {
         }
     }
 
+    /// Most recently added first. Rolls are appended as they are created, so the
+    /// store's own order is the order they arrived in.
     private func rolls(for status: RollStatus) -> [Roll] {
-        store.activeRolls
-            .filter { $0.status.normalized == status }
-            .sorted { $0.shortId > $1.shortId }
+        Array(
+            store.activeRolls
+                .filter { $0.status.normalized == status }
+                .reversed()
+        )
     }
 
     private func rollSection(status: RollStatus, rolls: [Roll], isFirst: Bool) -> some View {
@@ -141,7 +160,7 @@ struct RollsTabView: View {
                         Button(role: .destructive) {
                             rollToDelete = roll
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label("Delete", lucide: .trash)
                         }
                     }
                     .padding(.horizontal, AppTheme.horizontalPadding)

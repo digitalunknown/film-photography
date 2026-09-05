@@ -33,12 +33,12 @@ struct StockPickerSheet: View {
             ScrollView {
                 if filteredStocks.isEmpty {
                     Text(searchText.isEmpty ? "No stocks in library." : "No matches.")
-                        .font(InstrumentFont.mono(12))
+                        .font(AppType.body)
                         .foregroundStyle(AppTheme.textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.top, AppTheme.Spacing.xl)
                 } else {
-                    LazyVGrid(columns: columns, spacing: AppTheme.Spacing.md) {
+                    LazyVGrid(columns: columns, spacing: AppTheme.Spacing.lg) {
                         ForEach(filteredStocks) { stock in
                             Button {
                                 onSelect(stock)
@@ -61,7 +61,7 @@ struct StockPickerSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .font(InstrumentFont.mono(13))
+                        .font(AppType.body)
                 }
             }
         }
@@ -81,8 +81,8 @@ struct StockPickerSheet: View {
                 }
 
             Text(stock.name)
-                .font(InstrumentFont.mono(11))
-                .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                .font(AppType.callout)
+                .foregroundStyle(AppTheme.textPrimary)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -94,6 +94,6 @@ struct StockPickerSheet: View {
 }
 
 #Preview {
-    StockPickerSheet(title: "Choose film", selectedStockId: nil) { _ in }
+    StockPickerSheet(title: "Choose Film", selectedStockId: nil) { _ in }
         .environment(AppStore())
 }

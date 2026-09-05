@@ -2,48 +2,89 @@ import SwiftUI
 import UIKit
 
 enum AppTheme {
-    static let bg = Color.black
-    static let textPrimary = Color.white
-    static let textSecondary = Color(red: 0.541, green: 0.541, blue: 0.557) // ~#8A8A8E
-    static let textTertiary = Color(red: 0.282, green: 0.282, blue: 0.290) // ~#48484A
-    static let rule = Color(red: 0.173, green: 0.173, blue: 0.180) // ~#2C2C2E
+    static let bg = AppPalette.bg
+    static let well = AppPalette.well
+    static let surface = AppPalette.surface
+    static let textPrimary = AppPalette.textPrimary
+    static let textSecondary = AppPalette.textSecondary
+    static let textTertiary = AppPalette.textSecondary
+    static let accent = AppPalette.accent
+    static let indicator = AppPalette.indicator
+    static let canisterBody = AppPalette.canisterBody
+    /// Hairline: `textPrimary` at 10% — every divider and hairline border in the app.
+    static let rule = AppPalette.rule
 
     static let horizontalPadding: CGFloat = 20
+    static let iconSize: CGFloat = 24
 
     enum Spacing {
         static let xs: CGFloat = 4
         static let sm: CGFloat = 8
-        static let md: CGFloat = 16
-        static let lg: CGFloat = 24
-        static let xl: CGFloat = 32
+        static let md: CGFloat = 12
+        static let lg: CGFloat = 16
+        static let xl: CGFloat = 24
     }
 
-    static let rowSpacing = Spacing.md
+    static let rowSpacing = Spacing.lg
     static let sectionSpacing = Spacing.xl
 
     /// Apply Figtree to navigation titles and other UIKit chrome once at launch.
     static func applyTypography() {
-        let largeTitle = UIFont(name: InstrumentFont.boldName, size: InstrumentFont.scaled(34))
-            ?? .systemFont(ofSize: InstrumentFont.scaled(34), weight: .bold)
-        let inlineTitle = UIFont(name: InstrumentFont.semiBoldName, size: InstrumentFont.scaled(17))
-            ?? .systemFont(ofSize: InstrumentFont.scaled(17), weight: .semibold)
-        let barRegular = UIFont(name: InstrumentFont.regularName, size: InstrumentFont.scaled(13))
-            ?? .systemFont(ofSize: InstrumentFont.scaled(13), weight: .regular)
+        let largeTitle = UIFont(name: InstrumentFont.boldName, size: 32)
+            ?? .systemFont(ofSize: 32, weight: .bold)
+        let inlineTitle = UIFont(name: InstrumentFont.semiBoldName, size: 17)
+            ?? .systemFont(ofSize: 17, weight: .semibold)
+        let barRegular = UIFont(name: InstrumentFont.semiBoldName, size: 11)
+            ?? .systemFont(ofSize: 11, weight: .semibold)
 
         // Font only — avoid replacing bar appearances so Liquid Glass stays intact.
         let navBar = UINavigationBar.appearance()
-        navBar.titleTextAttributes = [.font: inlineTitle]
-        navBar.largeTitleTextAttributes = [.font: largeTitle]
+        navBar.titleTextAttributes = [.font: inlineTitle, .foregroundColor: UIColor(AppPalette.textPrimary)]
+        navBar.largeTitleTextAttributes = [.font: largeTitle, .foregroundColor: UIColor(AppPalette.textPrimary)]
 
-        let tabAttrs: [NSAttributedString.Key: Any] = [.font: barRegular]
+        let tabAttrs: [NSAttributedString.Key: Any] = [
+            .font: barRegular,
+            .foregroundColor: UIColor(AppPalette.textSecondary),
+        ]
+        let tabSelected: [NSAttributedString.Key: Any] = [
+            .font: barRegular,
+            .foregroundColor: UIColor(AppPalette.textPrimary),
+        ]
         let tabItem = UITabBarItem.appearance()
         tabItem.setTitleTextAttributes(tabAttrs, for: .normal)
-        tabItem.setTitleTextAttributes(tabAttrs, for: .selected)
+        tabItem.setTitleTextAttributes(tabSelected, for: .selected)
 
-        UIBarButtonItem.appearance().setTitleTextAttributes([.font: barRegular], for: .normal)
-        UIBarButtonItem.appearance().setTitleTextAttributes([.font: barRegular], for: .highlighted)
-        UIBarButtonItem.appearance().setTitleTextAttributes([.font: barRegular], for: .disabled)
+        UIBarButtonItem.appearance().setTitleTextAttributes([.font: inlineTitle], for: .normal)
+        UIBarButtonItem.appearance().setTitleTextAttributes([.font: inlineTitle], for: .highlighted)
+        UIBarButtonItem.appearance().setTitleTextAttributes([.font: inlineTitle], for: .disabled)
     }
+}
+
+enum AppType {
+    /// 32/Bold — screen titles.
+    static let largeTitle = InstrumentFont.display(32, weight: .bold)
+    /// 17/SemiBold — list row titles, inline nav titles.
+    static let title = InstrumentFont.display(17, weight: .semibold)
+    /// 17/Regular — counter units and trailing counter copy.
+    static let titleRegular = InstrumentFont.display(17, weight: .regular)
+    /// 15/SemiBold — detail section headers.
+    static let section = InstrumentFont.display(15, weight: .semibold)
+    /// 15/Regular — detail row labels and values.
+    static let body = InstrumentFont.display(15, weight: .regular)
+    /// 13/SemiBold — list section headers, button labels.
+    static let calloutEmphasized = InstrumentFont.display(13, weight: .semibold)
+    /// 13/Regular — list secondary lines and notes.
+    static let callout = InstrumentFont.display(13, weight: .regular)
+    static let button = calloutEmphasized
+    static let footnote = callout
+    static let micro = InstrumentFont.display(11, weight: .semibold)
+    /// 11/Regular — printed dial scale values.
+    static let microRegular = InstrumentFont.display(11, weight: .regular)
+    /// 10/SemiBold — EXPIRED tag.
+    static let badge = InstrumentFont.display(10, weight: .semibold)
+    /// 50/Bold, 35pt line box — exposure counter.
+    static let counter = InstrumentFont.display(50, weight: .bold)
+    static let counterDigitHeight: CGFloat = 35
 }
 
 enum InstrumentFont {
@@ -55,13 +96,6 @@ enum InstrumentFont {
     static let italicName = "Figtree-Italic"
     static let boldItalicName = "Figtree-BoldItalic"
 
-    /// Slight bump over the previous Space Mono sizes for Figtree’s proportions.
-    private static let sizeBump: CGFloat = 1
-
-    static func scaled(_ size: CGFloat) -> CGFloat {
-        size + sizeBump
-    }
-
     static func display(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
         custom(size, weight: weight)
     }
@@ -71,7 +105,7 @@ enum InstrumentFont {
     }
 
     private static func custom(_ size: CGFloat, weight: Font.Weight) -> Font {
-        .custom(postScriptName(for: weight), size: scaled(size))
+        .custom(postScriptName(for: weight), size: size)
     }
 
     private static func postScriptName(for weight: Font.Weight) -> String {
@@ -168,7 +202,10 @@ extension View {
             .toolbar {
                 if let addAction {
                     ToolbarItem(placement: .primaryAction) {
-                        Button("Add", systemImage: "plus", action: addAction)
+                        Button(action: addAction) {
+                            LucideIcon(.plus)
+                        }
+                        .accessibilityLabel("Add")
                     }
                 }
             }

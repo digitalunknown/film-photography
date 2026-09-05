@@ -521,6 +521,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Film Photography App/Info.plist";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Photograph your camera and film canister to load a roll.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Tag a frame with where you shot it.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save your scans back to Photos with the exposure details you logged.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -556,6 +558,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Film Photography App/Info.plist";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Photograph your camera and film canister to load a roll.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Tag a frame with where you shot it.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save your scans back to Photos with the exposure details you logged.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

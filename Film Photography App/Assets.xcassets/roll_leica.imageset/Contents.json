@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "Leica.png",
+      "filename" : "leica 3.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "Leica 1.png",
+      "filename" : "leica 4.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "Leica 2.png",
+      "filename" : "leica.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

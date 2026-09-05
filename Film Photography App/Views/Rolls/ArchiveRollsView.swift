@@ -32,23 +32,31 @@ private struct ArchiveRollRow: View {
     let roll: Roll
 
     var body: some View {
-        HStack(alignment: .center, spacing: AppTheme.Spacing.md) {
+        HStack(alignment: .center, spacing: AppTheme.Spacing.lg) {
             RollPlate(stock: store.stock(for: roll.stockId), size: 64)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(store.stock(for: roll.stockId)?.name ?? roll.shortId)
-                    .font(InstrumentFont.mono(13))
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                Text(store.label(for: roll))
+                    .font(AppType.body)
                     .foregroundStyle(AppTheme.textPrimary)
-                Text(roll.shortId)
-                    .font(InstrumentFont.mono(11))
+                Text(subtitle)
+                    .font(AppType.callout)
                     .foregroundStyle(AppTheme.textSecondary)
             }
             Spacer()
             if let date = roll.archivedDate ?? roll.scannedDate {
                 Text(DateFormatters.short.string(from: date))
-                    .font(InstrumentFont.mono(11))
+                    .font(AppType.callout)
                     .foregroundStyle(AppTheme.textSecondary)
             }
         }
+    }
+
+    /// The camera it was shot on, or failing that what the roll itself was.
+    private var subtitle: String {
+        if let camera = store.camera(for: roll.cameraId) {
+            return camera.name
+        }
+        return "\(roll.format.displayName) · \(roll.totalExposures) exp"
     }
 }
 

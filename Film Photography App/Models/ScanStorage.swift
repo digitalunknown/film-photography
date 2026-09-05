@@ -1,7 +1,13 @@
 import Foundation
+import ImageIO
 import UIKit
 
-enum ScanStorage {
+/// Pure file and image I/O — deliberately off the main actor so decoding never blocks UI.
+nonisolated enum ScanStorage {
+    /// Decoded gate images are re-requested on every SwiftUI layout pass, so they are
+    /// cached rather than re-read and re-rendered from disk each time.
+    private static let thumbnailCache = NSCache<NSString, UIImage>()
+
     private static var scansDirectory: URL {
         let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             .appendingPathComponent("FilmPhotographyApp/Scans", isDirectory: true)
@@ -15,6 +21,7 @@ enum ScanStorage {
         let url = rollDir.appendingPathComponent(fileName)
         do {
             try data.write(to: url, options: .atomic)
+            thumbnailCache.removeAllObjects()
             return fileName
         } catch {
             return nil
@@ -27,16 +34,58 @@ enum ScanStorage {
             .appendingPathComponent(fileName)
     }
 
-    static func thumbnail(for rollId: UUID, fileName: String, maxSize: CGFloat = 200) -> UIImage? {
-        let fileURL = url(for: rollId, fileName: fileName)
-        guard let data = try? Data(contentsOf: fileURL),
-              let image = UIImage(data: data) else { return nil }
-        let scale = min(maxSize / image.size.width, maxSize / image.size.height, 1)
-        let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
-        let renderer = UIGraphicsImageRenderer(size: size)
-        return renderer.image { _ in
-            image.draw(in: CGRect(origin: .zero, size: size))
+    /// Downsamples straight out of the image source, so a 6000px scan never gets fully
+    /// decoded just to fill a small gate. Pass `laidOnSide` to bake the portrait rotation
+    /// into the result instead of paying for it on every draw.
+    static func thumbnail(
+        for rollId: UUID,
+        fileName: String,
+        maxSize: CGFloat = 200,
+        laidOnSide: Bool = false
+    ) -> UIImage? {
+        let key = cacheKey(rollId: rollId, fileName: fileName, maxSize: maxSize, laidOnSide: laidOnSide)
+        if let cached = thumbnailCache.object(forKey: key) {
+            return cached
         }
+
+        let fileURL = url(for: rollId, fileName: fileName)
+        guard let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil),
+              let image = downsample(source, maxSize: maxSize, laidOnSide: laidOnSide)
+        else { return nil }
+        thumbnailCache.setObject(image, forKey: key)
+        return image
+    }
+
+    /// Preview for scan data that has been picked but not written to the roll yet.
+    static func preview(from data: Data, maxSize: CGFloat = 240, laidOnSide: Bool = false) -> UIImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        return downsample(source, maxSize: maxSize, laidOnSide: laidOnSide)
+    }
+
+    private static func downsample(
+        _ source: CGImageSource,
+        maxSize: CGFloat,
+        laidOnSide: Bool
+    ) -> UIImage? {
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: max(maxSize, 1),
+        ]
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return nil
+        }
+        let image = UIImage(cgImage: cgImage)
+        return laidOnSide ? image.laidOnSide : image
+    }
+
+    private static func cacheKey(
+        rollId: UUID,
+        fileName: String,
+        maxSize: CGFloat,
+        laidOnSide: Bool
+    ) -> NSString {
+        "\(rollId.uuidString)/\(fileName)@\(Int(maxSize))\(laidOnSide ? "-side" : "")" as NSString
     }
 
     /// Flattens EXIF orientation into pixel data so strip fills stay upright.
@@ -64,5 +113,23 @@ enum ScanStorage {
     static func deleteScan(rollId: UUID, fileName: String) {
         let fileURL = url(for: rollId, fileName: fileName)
         try? FileManager.default.removeItem(at: fileURL)
+        thumbnailCache.removeAllObjects()
+    }
+}
+
+nonisolated extension UIImage {
+    /// Lays a portrait scan on its side so it fills the landscape frame gate. The rotation
+    /// is flattened into pixels rather than left on the orientation flag, because an
+    /// orientation-flagged image is re-transformed on every draw and stutters badly.
+    var laidOnSide: UIImage {
+        guard size.height > size.width, let cgImage else { return self }
+        let oriented = UIImage(cgImage: cgImage, scale: scale, orientation: .right)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = scale
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: oriented.size, format: format)
+        return renderer.image { _ in
+            oriented.draw(in: CGRect(origin: .zero, size: oriented.size))
+        }
     }
 }

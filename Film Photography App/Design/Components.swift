@@ -1,22 +1,46 @@
 import SwiftUI
 import UIKit
 
-// MARK: - Structure
+// MARK: - Fields
 
-struct HairlineRule: View {
-    var body: some View {
-        Rectangle()
-            .fill(AppTheme.rule)
-            .frame(height: 0.5)
+extension Text {
+    /// Placeholder copy for an empty field. The palette has one weak text colour, so
+    /// prompts use it rather than the system placeholder grey.
+    static func fieldPrompt(_ placeholder: String) -> Text {
+        Text(placeholder).foregroundStyle(AppTheme.textSecondary)
     }
 }
 
-/// Stronger rule between detail sections.
-struct SectionRule: View {
+extension TextField where Label == Text {
+    /// Text field whose placeholder is drawn in the palette's weak text colour. The
+    /// placeholder doubles as the accessibility label, as it would with a plain title.
+    init(placeholder: String, text: Binding<String>, axis: Axis = .horizontal) {
+        self.init(
+            text: text,
+            prompt: .fieldPrompt(placeholder),
+            axis: axis
+        ) {
+            Text(placeholder)
+        }
+    }
+}
+
+// MARK: - Structure
+
+/// The one divider style — `#F0F1F5` at 10%, one point thick. Used between rows, between
+/// detail sections, and to split card columns; nothing else should draw its own separator.
+struct HairlineRule: View {
+    var axis: Axis = .horizontal
+
+    private static let thickness: CGFloat = 1
+
     var body: some View {
         Rectangle()
-            .fill(AppTheme.textPrimary)
-            .frame(height: 2)
+            .fill(AppTheme.rule)
+            .frame(
+                width: axis == .vertical ? Self.thickness : nil,
+                height: axis == .horizontal ? Self.thickness : nil
+            )
     }
 }
 
@@ -30,11 +54,11 @@ struct ScreenHeader: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                 Text(title)
-                    .font(InstrumentFont.display(32, weight: .regular))
+                    .font(AppType.largeTitle)
                     .foregroundStyle(AppTheme.textPrimary)
                 if let subtitle {
                     Text(subtitle)
-                        .font(InstrumentFont.mono(12))
+                        .font(AppType.callout)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
             }
@@ -42,10 +66,10 @@ struct ScreenHeader: View {
             if let action {
                 Button(action: action) {
                     Text(actionLabel)
-                        .font(InstrumentFont.mono(20))
+                        .font(AppType.title)
                         .foregroundStyle(AppTheme.textPrimary)
-                        .frame(width: 36, height: 36)
-                        .overlay(Circle().strokeBorder(AppTheme.rule, lineWidth: 1))
+                        .frame(width: 40, height: 40)
+                        .background(Circle().fill(AppTheme.textPrimary.opacity(0.1)))
                 }
                 .buttonStyle(.plain)
             }
@@ -55,12 +79,17 @@ struct ScreenHeader: View {
 
 struct SectionLabel: View {
     let title: String
+    var style: Style = .list
+
+    enum Style {
+        case list
+        case detail
+    }
 
     var body: some View {
         Text(title.uppercased())
-            .font(InstrumentFont.mono(12, weight: .semibold))
+            .font(style == .detail ? AppType.section : AppType.calloutEmphasized)
             .foregroundStyle(AppTheme.textPrimary)
-            .tracking(1.0)
     }
 }
 
@@ -73,11 +102,43 @@ struct DataRow: View {
     var body: some View {
         InstrumentRow(label: label, showsDivider: showsDivider) {
             Text(value)
-                .font(InstrumentFont.mono(12))
+                .font(AppType.body)
                 .foregroundStyle(valueBright ? AppTheme.textPrimary : AppTheme.textSecondary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+}
+
+/// Figma detail row: secondary label on the left, value pinned to the trailing edge.
+/// The label absorbs the slack, so short values sit flush right. Dividers and the 16pt
+/// rhythm come from the enclosing stack, matching the Figma auto-layout.
+struct DetailFieldRow<Value: View>: View {
+    let label: String
+    @ViewBuilder var value: () -> Value
+
+    var body: some View {
+        HStack(spacing: AppTheme.Spacing.lg) {
+            Text(label)
+                .font(AppType.body)
+                .foregroundStyle(AppTheme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            value()
+        }
+    }
+}
+
+/// Trailing value text for a `DetailFieldRow`.
+struct DetailFieldValue: View {
+    let text: String
+    var isPlaceholder: Bool = false
+
+    var body: some View {
+        Text(text)
+            .font(AppType.body)
+            .foregroundStyle(isPlaceholder ? AppTheme.textSecondary : AppTheme.textPrimary)
+            .multilineTextAlignment(.trailing)
     }
 }
 
@@ -92,9 +153,9 @@ struct InstrumentRow<Trailing: View>: View {
             if showsDivider {
                 HairlineRule()
             }
-            HStack(alignment: .top, spacing: AppTheme.Spacing.md) {
+            HStack(alignment: .top, spacing: AppTheme.Spacing.lg) {
                 Text(label)
-                    .font(InstrumentFont.mono(12))
+                    .font(AppType.body)
                     .foregroundStyle(AppTheme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -102,7 +163,7 @@ struct InstrumentRow<Trailing: View>: View {
                 trailing()
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.vertical, AppTheme.Spacing.md)
+            .padding(.vertical, AppTheme.Spacing.lg)
         }
     }
 }
@@ -122,12 +183,11 @@ struct InstrumentMenuRow<MenuContent: View>: View {
             } label: {
                 HStack(spacing: AppTheme.Spacing.xs) {
                     Text(value)
-                        .font(InstrumentFont.mono(12))
+                        .font(AppType.body)
                         .foregroundStyle(valueBright ? AppTheme.textPrimary : AppTheme.textSecondary)
                         .multilineTextAlignment(.leading)
-                    Image(systemName: "chevron.down")
-                        .font(InstrumentFont.mono(9, weight: .bold))
-                        .foregroundStyle(AppTheme.textTertiary)
+                    LucideIcon(.chevronsUpDown)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Spacer(minLength: 0)
                 }
             }
@@ -144,7 +204,7 @@ struct InstrumentEditableRow<Content: View>: View {
     var body: some View {
         InstrumentRow(label: label, showsDivider: showsDivider) {
             content()
-                .font(InstrumentFont.mono(12))
+                .font(AppType.body)
                 .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.leading)
         }
@@ -156,10 +216,10 @@ struct DetailHeroBlock<Content: View>: View {
     @ViewBuilder var content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
             content()
         }
-        .padding(.bottom, AppTheme.Spacing.lg)
+        .padding(.bottom, AppTheme.Spacing.xl)
     }
 }
 
@@ -173,17 +233,17 @@ struct LedgerRowHeader: View {
     var body: some View {
         HStack(alignment: .center, spacing: AppTheme.Spacing.sm) {
             Text(glyph)
-                .font(InstrumentFont.mono(11))
+                .font(AppType.callout)
                 .foregroundStyle(AppTheme.textSecondary)
                 .frame(width: 12, alignment: .leading)
 
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                 Text(primary)
-                    .font(InstrumentFont.mono(13))
+                    .font(AppType.title)
                     .foregroundStyle(AppTheme.textPrimary)
                 if let secondary {
                     Text(secondary)
-                        .font(InstrumentFont.mono(11))
+                        .font(AppType.callout)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
             }
@@ -192,11 +252,11 @@ struct LedgerRowHeader: View {
 
             VStack(alignment: .trailing, spacing: AppTheme.Spacing.xs) {
                 Text(value)
-                    .font(InstrumentFont.mono(13))
+                    .font(AppType.calloutEmphasized)
                     .foregroundStyle(AppTheme.textPrimary)
                 if let valueSecondary {
                     Text(valueSecondary)
-                        .font(InstrumentFont.mono(11))
+                        .font(AppType.callout)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
             }
@@ -213,7 +273,7 @@ struct DisclosureBlock<Content: View>: View {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                 content()
             }
-            .padding(.leading, 22)
+            .padding(.leading, AppTheme.Spacing.xl)
             .padding(.top, AppTheme.Spacing.sm)
             .padding(.bottom, AppTheme.Spacing.xs)
             .transition(.opacity.combined(with: .move(edge: .top)))
@@ -221,16 +281,93 @@ struct DisclosureBlock<Content: View>: View {
     }
 }
 
+/// 35pt outlined circle wrapping a 24pt Lucide glyph — Figma metadata row accessory.
+struct CircleIconButton: View {
+    let icon: Lucide
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            LucideIcon(icon)
+                .foregroundStyle(AppTheme.textPrimary)
+                .frame(width: 35, height: 35)
+                .background(Circle().strokeBorder(AppTheme.textPrimary, lineWidth: 1.25))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Figma metadata row: label stacked above its value, with an optional round action button
+/// on the trailing edge for a one-tap shortcut (drop a pin, stamp today's date).
+struct StackedFieldRow<Value: View>: View {
+    let label: String
+    var accessory: Lucide? = nil
+    var accessoryLabel: String? = nil
+    var accessoryAction: (() -> Void)? = nil
+    @ViewBuilder var value: () -> Value
+
+    var body: some View {
+        HStack(spacing: AppTheme.Spacing.lg) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                Text(label)
+                    .font(AppType.body)
+                    .foregroundStyle(AppTheme.textSecondary)
+                value()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let accessory, let accessoryAction {
+                CircleIconButton(icon: accessory, action: accessoryAction)
+                    .accessibilityLabel(accessoryLabel ?? label)
+            }
+        }
+    }
+}
+
+/// Full-width outlined pill — Figma "ADD SCANS" primary action.
+struct PillButtonLabel: View {
+    let title: String
+    var icon: Lucide?
+    var isProminent: Bool = false
+
+    var body: some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            if let icon {
+                LucideIcon(icon)
+            }
+            Text(title.uppercased())
+                .font(AppType.button)
+        }
+        .foregroundStyle(isProminent ? AppTheme.bg : AppTheme.textPrimary)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, AppTheme.Spacing.md)
+        .background {
+            if isProminent {
+                Capsule().fill(AppTheme.textPrimary)
+            } else {
+                Capsule().strokeBorder(AppTheme.textPrimary, lineWidth: 1.25)
+            }
+        }
+        .contentShape(Capsule())
+    }
+}
+
 struct TextAction: View {
     let label: String
+    var icon: Lucide? = .chevronRight
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Text(label)
-                .font(InstrumentFont.mono(12))
-                .foregroundStyle(AppTheme.textPrimary)
-                .underline(color: AppTheme.rule)
+            HStack(spacing: AppTheme.Spacing.xs) {
+                Text(label)
+                    .font(AppType.calloutEmphasized)
+                if let icon {
+                    LucideIcon(icon)
+                }
+            }
+            .foregroundStyle(AppTheme.textPrimary)
         }
         .buttonStyle(.plain)
     }
@@ -244,13 +381,13 @@ struct InstrumentEmptyState: View {
     var secondaryHandler: (() -> Void)? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
             Text(message)
-                .font(InstrumentFont.mono(13))
+                .font(AppType.body)
                 .foregroundStyle(AppTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
                 TextAction(label: primaryAction, action: primaryHandler)
                 if let secondaryAction, let secondaryHandler {
                     TextAction(label: secondaryAction, action: secondaryHandler)
@@ -258,7 +395,7 @@ struct InstrumentEmptyState: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 48)
+        .padding(.vertical, AppTheme.Spacing.xl * 2)
     }
 }
 
@@ -267,7 +404,7 @@ struct FilterChipRow: View {
     @Binding var selection: String
     /// Sentinel for “no filter” (not shown as a chip).
     var clearValue: String
-    /// When set, returns a brand tint — or `nil` for the neutral type-chip style.
+    /// When set, returns a brand tint — or `nil` for the neutral chip style.
     var tintForOption: ((String) -> Color?)? = nil
 
     @Namespace private var chipNamespace
@@ -323,43 +460,44 @@ struct FilterChipRow: View {
 
     @ViewBuilder
     private func chipLabel(option: String, isSelected: Bool, showsClear: Bool) -> some View {
-        let content = HStack(spacing: 6) {
+        let content = HStack(spacing: AppTheme.Spacing.xs) {
             if showsClear {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
+                LucideIcon(.x, size: 16)
             }
             Text(option)
-                .font(InstrumentFont.mono(12, weight: .medium))
+                .font(AppType.footnote)
                 .lineLimit(1)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
+        .padding(.horizontal, AppTheme.Spacing.md)
+        .padding(.vertical, AppTheme.Spacing.sm)
 
-        if let tintForOption, let tint = tintForOption(option) {
-            content
-                .foregroundStyle(tint)
-                .background(tint.opacity(isSelected ? 0.22 : 0.14), in: Capsule())
-                .overlay(
-                    Capsule()
-                        .strokeBorder(tint.opacity(isSelected ? 0.85 : 0.55), lineWidth: 1)
-                )
-        } else {
-            content
-                .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
-                .background(
-                    (isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
-                        .opacity(isSelected ? 0.10 : 0.06),
-                    in: Capsule()
-                )
-                .overlay(
-                    Capsule()
-                        .strokeBorder(
-                            (isSelected ? AppTheme.textPrimary : AppTheme.textTertiary)
-                                .opacity(isSelected ? 0.45 : 0.55),
-                            lineWidth: 1
-                        )
-                )
+        // Brand chips keep the shared capsule and spacing; only the colour changes.
+        let tint = tintForOption?(option)
+
+        content
+            .foregroundStyle(tint ?? (isSelected ? AppTheme.textPrimary : AppTheme.textSecondary))
+            // The brand wash sits over the shared surface so branded and neutral chips
+            // carry the same visual weight.
+            .background(wash(tint: tint, isSelected: isSelected), in: Capsule())
+            .background(AppTheme.surface, in: Capsule())
+            .overlay(
+                Capsule()
+                    .strokeBorder(border(tint: tint, isSelected: isSelected), lineWidth: 1)
+            )
+    }
+
+    /// `surface` is light enough that a low-alpha tint reads as dust rather than colour,
+    /// so the wash needs to be strong to survive the composite.
+    private func wash(tint: Color?, isSelected: Bool) -> Color {
+        guard let tint else { return .clear }
+        return tint.opacity(isSelected ? 0.38 : 0.24)
+    }
+
+    private func border(tint: Color?, isSelected: Bool) -> Color {
+        guard let tint else {
+            return isSelected ? AppTheme.textPrimary : AppTheme.textSecondary
         }
+        return isSelected ? tint : tint.opacity(0.7)
     }
 }
 
@@ -369,14 +507,14 @@ struct UnderlineMeter: View {
     var progress: Double
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
             HStack {
                 Text(label)
-                    .font(InstrumentFont.mono(12))
+                    .font(AppType.body)
                     .foregroundStyle(AppTheme.textSecondary)
                 Spacer()
                 Text(value)
-                    .font(InstrumentFont.mono(12))
+                    .font(AppType.body)
                     .foregroundStyle(AppTheme.textPrimary)
             }
             GeometryReader { geo in
@@ -415,22 +553,20 @@ struct FrameExposureCounter: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
             HStack(alignment: .center, spacing: AppTheme.Spacing.sm) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    HStack(alignment: .firstTextBaseline, spacing: 2) {
-                        VerticalSpinnerNumber(
-                            value: displayedShot,
-                            font: InstrumentFont.mono(36, weight: .bold),
-                            color: AppTheme.textPrimary,
-                            digitHeight: 40
-                        )
-                        Text("/\(safeTotal)")
-                            .font(InstrumentFont.mono(16))
-                            .foregroundStyle(AppTheme.textSecondary)
-                            .monospacedDigit()
-                    }
+                HStack(alignment: .firstTextBaseline, spacing: AppTheme.Spacing.xs) {
+                    VerticalSpinnerNumber(
+                        value: displayedShot,
+                        font: AppType.counter,
+                        color: AppTheme.textPrimary,
+                        digitHeight: AppType.counterDigitHeight
+                    )
+                    Text("/\(safeTotal)")
+                        .font(AppType.title)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .monospacedDigit()
 
                     Text(statusLabel)
-                        .font(InstrumentFont.mono(11))
+                        .font(AppType.titleRegular)
                         .foregroundStyle(AppTheme.textSecondary)
                         .contentTransition(.opacity)
                         .animation(.easeOut(duration: 0.2), value: statusLabel)
@@ -438,7 +574,7 @@ struct FrameExposureCounter: View {
 
                 Spacer(minLength: AppTheme.Spacing.sm)
 
-                HStack(spacing: AppTheme.Spacing.md) {
+                HStack(spacing: AppTheme.Spacing.lg) {
                     undoButton
                     shutterButton
                 }
@@ -474,13 +610,12 @@ struct FrameExposureCounter: View {
                 }
             }
         } label: {
-            Image(systemName: "arrow.uturn.backward")
-                .font(.system(size: 13, weight: .semibold))
+            LucideIcon(.chevronsLeft)
                 .foregroundStyle(AppTheme.textSecondary)
-                .frame(width: 32, height: 32)
+                .frame(width: 35, height: 35)
                 .overlay {
                     Circle()
-                        .strokeBorder(AppTheme.rule, lineWidth: 1)
+                        .strokeBorder(AppTheme.textSecondary, lineWidth: 1)
                 }
         }
         .buttonStyle(.plain)
@@ -492,9 +627,9 @@ struct FrameExposureCounter: View {
 
     private var shutterButton: some View {
         let progress = CGFloat(displayedShot) / CGFloat(safeTotal)
-        let ringSize: CGFloat = 54
-        let buttonSize: CGFloat = 44
+        let ringSize: CGFloat = 60
         let ringLine: CGFloat = 3
+        let coreSize: CGFloat = 50
 
         return Button {
             guard canIncrement else { return }
@@ -505,14 +640,14 @@ struct FrameExposureCounter: View {
         } label: {
             ZStack {
                 Circle()
-                    .stroke(AppTheme.rule, lineWidth: ringLine)
+                    .stroke(AppTheme.textSecondary, lineWidth: ringLine)
                     .frame(width: ringSize, height: ringSize)
 
                 Circle()
                     .trim(from: 0, to: progress)
                     .stroke(
                         AppTheme.textPrimary,
-                        style: StrokeStyle(lineWidth: ringLine, lineCap: .butt)
+                        style: StrokeStyle(lineWidth: ringLine, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
                     .frame(width: ringSize, height: ringSize)
@@ -520,9 +655,9 @@ struct FrameExposureCounter: View {
 
                 Circle()
                     .fill(AppTheme.textPrimary)
-                    .frame(width: buttonSize, height: buttonSize)
-                Image(systemName: "camera.fill")
-                    .font(.system(size: 16, weight: .semibold))
+                    .frame(width: coreSize, height: coreSize)
+
+                LucideIcon(.aperture)
                     .foregroundStyle(AppTheme.bg)
             }
             .frame(width: ringSize, height: ringSize)
@@ -554,7 +689,7 @@ struct FrameExposureCounter: View {
             .gesture(scrubGesture(width: geo.size.width))
         }
         .frame(height: 28)
-        .padding(.vertical, 6)
+        .padding(.vertical, AppTheme.Spacing.sm)
         .accessibilityLabel("Exposure strip")
         .accessibilityHint(canScrub ? "Drag to set frames shot" : "")
         .accessibilityValue("\(displayedShot) of \(safeTotal)")
@@ -698,15 +833,15 @@ struct SkeletalBarChart: View {
     }
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 10) {
+        HStack(alignment: .bottom, spacing: AppTheme.Spacing.md) {
             ForEach(Array(values.enumerated()), id: \.offset) { index, value in
-                VStack(spacing: 8) {
+                VStack(spacing: AppTheme.Spacing.sm) {
                     Spacer(minLength: 0)
                     RoundedRectangle(cornerRadius: 1)
                         .fill(value > 0 ? AppTheme.textPrimary : AppTheme.textTertiary)
                         .frame(width: 2, height: max(4, CGFloat(value / max(ceiling, 1)) * 64))
                     Text(labels[index])
-                        .font(InstrumentFont.mono(10))
+                        .font(AppType.micro)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
                 .frame(maxWidth: .infinity)
@@ -725,34 +860,34 @@ struct HeroMetric: View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(label)
-                    .font(InstrumentFont.mono(11))
+                    .font(AppType.callout)
                     .foregroundStyle(AppTheme.textPrimary)
                 if let sublabel {
                     Text(sublabel)
-                        .font(InstrumentFont.mono(11))
+                        .font(AppType.callout)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
             }
             Spacer()
             Text(value)
-                .font(InstrumentFont.display(52, weight: .light))
+                .font(AppType.largeTitle)
                 .foregroundStyle(AppTheme.textPrimary)
                 .monospacedDigit()
         }
     }
 }
 
+/// 40×40 translucent circle matching the Figma toolbar buttons.
 struct GhostCircleButton: View {
-    let label: String
+    let icon: Lucide
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Text(label)
-                .font(InstrumentFont.mono(16))
+            LucideIcon(icon)
                 .foregroundStyle(AppTheme.textPrimary)
-                .frame(width: 36, height: 36)
-                .overlay(Circle().strokeBorder(AppTheme.rule, lineWidth: 1))
+                .frame(width: 40, height: 40)
+                .background(Circle().fill(AppTheme.textPrimary.opacity(0.1)))
         }
         .buttonStyle(.plain)
     }
@@ -763,10 +898,11 @@ struct DetailBackHeader: View {
 
     var body: some View {
         HStack {
-            GhostCircleButton(label: "‹") { dismiss() }
+            GhostCircleButton(icon: .chevronLeft) { dismiss() }
+                .accessibilityLabel("Back")
             Spacer()
         }
-        .padding(.bottom, AppTheme.Spacing.lg)
+        .padding(.bottom, AppTheme.Spacing.xl)
     }
 }
 
@@ -777,12 +913,12 @@ struct DetailSection<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if !title.isEmpty {
-                SectionLabel(title: title)
-                    .padding(.bottom, AppTheme.Spacing.sm)
+                SectionLabel(title: title, style: .detail)
+                    .padding(.bottom, AppTheme.Spacing.lg)
             }
             content()
         }
-        .padding(.bottom, AppTheme.Spacing.md)
+        .padding(.bottom, AppTheme.Spacing.lg)
     }
 }
 
@@ -801,8 +937,8 @@ extension View {
 
     func instrumentDetailContent() -> some View {
         padding(.horizontal, AppTheme.horizontalPadding)
-            .padding(.top, AppTheme.Spacing.md)
-            .padding(.bottom, AppTheme.Spacing.lg)
+            .padding(.top, AppTheme.Spacing.lg)
+            .padding(.bottom, AppTheme.Spacing.xl)
     }
 
     /// Detail ScrollViews inherit large system bottom content margins under TabView.
@@ -839,7 +975,7 @@ struct InstrumentKeyboardDoneButton: View {
                     for: nil
                 )
             }
-            .font(InstrumentFont.mono(13))
+            .font(AppType.body)
 
             // Gap between the accessory and the keyboard — not inside the button.
             Color.clear
@@ -852,7 +988,6 @@ struct InstrumentKeyboardDoneButton: View {
 struct StockPlate: View {
     let name: String
     let shortCode: String
-    let tint: Color
     let imageName: String?
     var square: Bool = true
     var height: CGFloat = 160
@@ -860,7 +995,6 @@ struct StockPlate: View {
     init(stock: FilmStock, square: Bool = true, height: CGFloat = 160) {
         self.name = stock.name
         self.shortCode = stock.shortCode
-        self.tint = stock.emulsionTint
         self.imageName = stock.rollImageName
         self.square = square
         self.height = height
@@ -872,15 +1006,15 @@ struct StockPlate: View {
                 Image(imageName)
                     .resizable()
                     .scaledToFit()
-                    .padding(square ? AppTheme.Spacing.xs : AppTheme.Spacing.md)
+                    .padding(square ? AppTheme.Spacing.xs : AppTheme.Spacing.lg)
             } else {
                 Rectangle()
-                    .fill(tint.opacity(0.22))
+                    .fill(AppTheme.surface)
                 Text(shortCode)
-                    .font(InstrumentFont.mono(square ? 22 : 28))
-                    .foregroundStyle(tint.opacity(0.92))
+                    .font(AppType.title)
+                    .foregroundStyle(AppTheme.textSecondary)
                 Rectangle()
-                    .strokeBorder(AppTheme.rule, lineWidth: 0.5)
+                    .strokeBorder(AppTheme.rule, lineWidth: 1)
             }
         }
         .frame(maxWidth: .infinity)
@@ -929,12 +1063,11 @@ struct RollPlate: View {
                     .scaledToFill()
             } else {
                 Rectangle()
-                    .fill(tint.opacity(0.18))
-                Text("◎")
-                    .font(InstrumentFont.mono(size * 0.32))
-                    .foregroundStyle(tint.opacity(0.85))
+                    .fill(AppTheme.surface)
+                LucideIcon(.film)
+                    .foregroundStyle(AppTheme.textSecondary)
                 Rectangle()
-                    .strokeBorder(AppTheme.rule, lineWidth: 0.5)
+                    .strokeBorder(AppTheme.rule, lineWidth: 1)
             }
         }
         .frame(width: size, height: size)
@@ -942,21 +1075,39 @@ struct RollPlate: View {
     }
 }
 
-/// Shared roll row used on Rolls list and Camera detail.
+/// Expiry flag. Detail headers spell it out; list rows use the compact `E` disc so the
+/// badge doesn't crowd the roll title.
 struct ExpiredLabel: View {
-    private static let red = Color(red: 1, green: 0.23, blue: 0.19)
+    var style: Style = .full
+
+    enum Style {
+        case full
+        case compact
+    }
 
     var body: some View {
-        Text("EXPIRED")
-            .font(InstrumentFont.mono(8, weight: .bold))
-            .foregroundStyle(Self.red)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-            .overlay {
-                Rectangle()
-                    .strokeBorder(Self.red, lineWidth: 1)
+        Group {
+            switch style {
+            case .full:
+                Text("EXPIRED")
+                    .padding(.horizontal, AppTheme.Spacing.xs)
+                    .padding(.vertical, 2)
+                    .background {
+                        Capsule()
+                            .strokeBorder(AppTheme.accent, lineWidth: 1)
+                    }
+            case .compact:
+                Text("E")
+                    .frame(width: 18, height: 18)
+                    .background {
+                        Circle()
+                            .strokeBorder(AppTheme.accent, lineWidth: 1)
+                    }
             }
-            .accessibilityLabel("Expired")
+        }
+        .font(AppType.badge)
+        .foregroundStyle(AppTheme.accent)
+        .accessibilityLabel("Expired")
     }
 }
 
@@ -967,7 +1118,7 @@ struct MonthYearPicker: UIViewRepresentable {
         let picker = UIDatePicker()
         picker.datePickerMode = .yearAndMonth
         picker.preferredDatePickerStyle = .wheels
-        picker.tintColor = .white
+        picker.tintColor = UIColor(AppTheme.textPrimary)
         picker.overrideUserInterfaceStyle = .dark
         picker.addTarget(context.coordinator, action: #selector(Coordinator.changed(_:)), for: .valueChanged)
         return picker
@@ -1001,41 +1152,50 @@ struct RollLedgerRow: View {
     var showsCameraName: Bool = true
 
     var body: some View {
-        HStack(alignment: .center, spacing: AppTheme.Spacing.md) {
-            RollPlate(stock: stock, size: 64)
+        HStack(alignment: .center, spacing: AppTheme.Spacing.sm) {
+            RollPlate(stock: stock, size: 100)
 
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                HStack(alignment: .center, spacing: AppTheme.Spacing.sm) {
+                HStack(alignment: .top, spacing: AppTheme.Spacing.sm) {
                     Text(rowPrimary)
-                        .font(InstrumentFont.mono(13))
+                        .font(AppType.title)
                         .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
 
                     if roll.isExpired {
-                        ExpiredLabel()
+                        ExpiredLabel(style: .compact)
+                            .layoutPriority(1)
+                    }
+
+                    Spacer(minLength: AppTheme.Spacing.xs)
+
+                    if !roll.status.isInventory {
+                        Text("\(roll.frameCount)/\(roll.totalExposures)")
+                            .font(AppType.title)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .monospacedDigit()
                             .layoutPriority(1)
                     }
                 }
 
-                if let secondaryLine {
-                    Text(secondaryLine)
-                        .font(InstrumentFont.mono(11))
-                        .foregroundStyle(AppTheme.textSecondary)
+                if let cameraLine {
+                    Text(cameraLine)
+                        .font(AppType.callout)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(alignment: .trailing, spacing: AppTheme.Spacing.xs) {
-                if !roll.status.isInventory {
-                    Text("\(roll.frameCount)/\(roll.totalExposures)")
-                        .font(InstrumentFont.mono(13))
-                        .foregroundStyle(AppTheme.textPrimary)
-                        .monospacedDigit()
+                if let noteText {
+                    Text(noteText)
+                        .font(AppType.callout)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .multilineTextAlignment(.leading)
                 }
             }
-            .layoutPriority(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -1044,10 +1204,7 @@ struct RollLedgerRow: View {
     }
 
     private var rowPrimary: String {
-        if let stock = store.stock(for: roll.stockId) {
-            return stock.name
-        }
-        return roll.shortId
+        store.label(for: roll)
     }
 
     private var cameraName: String? {
@@ -1061,18 +1218,8 @@ struct RollLedgerRow: View {
         return notes
     }
 
-    private var secondaryLine: String? {
-        let camera = showsCameraName ? cameraName : nil
-        switch (camera, noteText) {
-        case let (camera?, note?):
-            return "\(camera) · \(note)"
-        case let (camera?, nil):
-            return camera
-        case let (nil, note?):
-            return note
-        case (nil, nil):
-            return nil
-        }
+    private var cameraLine: String? {
+        showsCameraName ? cameraName : nil
     }
 }
 
@@ -1090,10 +1237,10 @@ struct CameraPhotoPlate: View {
                     .scaledToFill()
             } else {
                 ZStack {
-                    Rectangle().strokeBorder(AppTheme.rule, lineWidth: 0.5)
-                    Text("◻")
-                        .font(InstrumentFont.mono((square ? size : min(height, 120)) * 0.28))
-                        .foregroundStyle(AppTheme.textTertiary)
+                    Rectangle().fill(AppTheme.surface)
+                    Rectangle().strokeBorder(AppTheme.rule, lineWidth: 1)
+                    LucideIcon(.camera)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
         }
@@ -1109,19 +1256,19 @@ struct UndoDeletionBanner: View {
     let onUndo: () -> Void
 
     var body: some View {
-        HStack(spacing: AppTheme.Spacing.md) {
+        HStack(spacing: AppTheme.Spacing.lg) {
             Text("\(rollLabel) deleted")
-                .font(InstrumentFont.mono(12))
+                .font(AppType.callout)
                 .foregroundStyle(AppTheme.textPrimary)
             Spacer()
             Button("Undo", action: onUndo)
-                .font(InstrumentFont.mono(12))
+                .font(AppType.calloutEmphasized)
                 .foregroundStyle(AppTheme.textPrimary)
                 .underline(color: AppTheme.textPrimary)
         }
         .padding(.horizontal, AppTheme.horizontalPadding)
-        .padding(.vertical, AppTheme.Spacing.md)
-        .background(AppTheme.rule)
+        .padding(.vertical, AppTheme.Spacing.lg)
+        .background(AppTheme.surface)
     }
 }
 

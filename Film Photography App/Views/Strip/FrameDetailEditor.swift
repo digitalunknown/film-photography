@@ -19,13 +19,13 @@ struct FrameDetailEditor: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
             InstrumentRow(label: "Frame \(frame.index)", showsDivider: false) {
                 if frame.state == .scanned {
-                    Button("View scan →") {
+                    Button("View scan") {
                         onViewScan?()
                     }
-                    .font(InstrumentFont.mono(12))
+                    .font(AppType.body)
                     .foregroundStyle(AppTheme.textSecondary)
                 }
             }
@@ -37,7 +37,7 @@ struct FrameDetailEditor: View {
                 frameField(label: "Description", placeholder: "Notes", text: $descriptionText, axis: .vertical)
             } else {
                 Text("Frame not yet exposed.")
-                    .font(InstrumentFont.mono(11))
+                    .font(AppType.callout)
                     .foregroundStyle(AppTheme.textTertiary)
             }
         }
@@ -57,8 +57,8 @@ struct FrameDetailEditor: View {
         keyboard: UIKeyboardType = .default
     ) -> some View {
         InstrumentRow(label: label) {
-            TextField(placeholder, text: text, axis: axis)
-                .font(InstrumentFont.mono(12))
+            TextField(placeholder: placeholder, text: text, axis: axis)
+                .font(AppType.body)
                 .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.trailing)
                 .lineLimit(axis == .vertical ? 2...4 : 1...1)
@@ -78,7 +78,7 @@ struct FrameDetailEditor: View {
             return
         }
         apertureText = marker.aperture.map { String($0) } ?? ""
-        shutterText = marker.shutterSpeed.map(ExposureFormat.shutter) ?? ""
+        shutterText = marker.shutterSpeed.map { ExposureFormat.shutter($0) } ?? ""
         locationText = marker.location ?? ""
         descriptionText = marker.notes ?? ""
     }
@@ -119,6 +119,7 @@ struct FrameDetailEditor: View {
 
 enum ExposureFormat {
     static func shutter(_ seconds: Double) -> String {
+        guard seconds > 0 else { return "B" }
         if seconds >= 1 { return String(format: "%.1f", seconds) }
         let denom = Int(round(1.0 / seconds))
         return "1/\(max(denom, 1))"
@@ -127,6 +128,9 @@ enum ExposureFormat {
     static func parseShutter(_ text: String) -> Double? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
+        if trimmed.caseInsensitiveCompare("B") == .orderedSame {
+            return ExposureScale.bulbSeconds
+        }
         if trimmed.contains("/") {
             let parts = trimmed.split(separator: "/")
             guard parts.count == 2, let denom = Double(parts[1]), denom > 0 else { return nil }

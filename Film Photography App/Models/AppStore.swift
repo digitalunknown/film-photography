@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 import UIKit
 import WidgetKit
@@ -33,6 +34,13 @@ struct PendingRollDeletion {
     let deletedAt: Date
 }
 
+/// What a frame is being given when a roll's scans are laid out: a scan already written
+/// to the roll, or one picked from the library and still only in memory.
+enum ScanAssignment {
+    case existing(fileName: String)
+    case new(Data)
+}
+
 @Observable
 final class AppStore {
     var cameras: [Camera]
@@ -43,7 +51,8 @@ final class AppStore {
     var devRecipePresets: [DevRecipePreset]
     var pendingDeletion: PendingRollDeletion?
     var showingAddCamera = false
-    var showingAddRoll = false
+    /// How the user chose to add a roll. Set to open the add-roll sheet on that path.
+    var addRollEntry: AddRollEntry?
     var showingLoadFlow = false
     var showingArchive = false
     /// Opens Load Flow past the source chooser (camera already taken or about to open).
@@ -51,6 +60,12 @@ final class AppStore {
     var pendingLoadCapture: UIImage?
 
     private var deletionTask: Task<Void, Never>?
+
+    /// How long a location fix stays good enough to reuse for the next frame.
+    private static let fixLifetime: TimeInterval = 90
+
+    @ObservationIgnored private var cachedFix: (place: ResolvedPlace, at: Date)?
+    @ObservationIgnored private var pendingFix: Task<ResolvedPlace?, Never>?
 
     init() {
         let catalog = StockCatalog.loadStocks()
@@ -159,11 +174,20 @@ final class AppStore {
         rolls.filter { $0.status != .archived }
     }
 
-    /// Rolls sitting in inventory and ready to load into a camera.
+    /// Rolls sitting in inventory and ready to load into a camera, most recently added
+    /// first. Rolls are appended as they are created, so the array's own order is the
+    /// order they arrived in.
     var inventoryRolls: [Roll] {
-        activeRolls
-            .filter { $0.status.isInventory || $0.status.normalized == .inFridge }
-            .sorted { $0.shortId > $1.shortId }
+        Array(
+            activeRolls
+                .filter { $0.status.isInventory || $0.status.normalized == .inFridge }
+                .reversed()
+        )
+    }
+
+    /// What to call a roll on screen: the film loaded in it.
+    func label(for roll: Roll) -> String {
+        stock(for: roll.stockId)?.name ?? "Roll"
     }
 
     var archivedRolls: [Roll] {
@@ -345,13 +369,11 @@ final class AppStore {
         expiryDate: Date? = nil,
         tags: [String] = []
     ) {
-        let shortId = nextRollShortId()
         let now = Date()
         let normalizedStatus = status.normalized
 
         var roll = Roll(
             id: UUID(),
-            shortId: shortId,
             stockId: stockId,
             cameraId: normalizedStatus.isInventory ? nil : cameraId,
             status: normalizedStatus,
@@ -465,6 +487,27 @@ final class AppStore {
         persist()
     }
 
+    /// Corrects which camera a roll was shot on. Unlike `assignRoll` this is a plain
+    /// metadata edit — status, frame count and loaded date are left untouched — so it is
+    /// safe to expose from places like the frame detail screen.
+    func setRollCamera(_ rollId: UUID, to cameraId: UUID?) {
+        guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
+        guard rolls[index].cameraId != cameraId else { return }
+
+        // A camera holds at most one loaded roll, so displace the current occupant.
+        if let cameraId, rolls[index].status == .inCamera {
+            for i in rolls.indices where rolls[i].cameraId == cameraId
+                && rolls[i].status == .inCamera
+                && rolls[i].id != rollId {
+                rolls[i].status = .inFridge
+                rolls[i].cameraId = nil
+            }
+        }
+
+        rolls[index].cameraId = cameraId
+        persist()
+    }
+
     func setRollStatus(_ rollId: UUID, to newStatus: RollStatus, cameraId: UUID? = nil) {
         guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
         var roll = rolls[index]
@@ -506,7 +549,6 @@ final class AppStore {
 
         let newRoll = Roll(
             id: UUID(),
-            shortId: nextRollShortId(),
             stockId: stockId,
             cameraId: cameraId,
             status: .inCamera,
@@ -663,7 +705,67 @@ final class AppStore {
         let cap = max(rolls[index].totalExposures, 1)
         guard rolls[index].frameCount < cap else { return }
         rolls[index].frameCount += 1
+        let shotFrame = rolls[index].frameCount
         persist()
+        stampCapture(on: rollId, frameIndex: shotFrame)
+    }
+
+    /// Records when — and where — a frame was shot at the moment the shutter is logged.
+    /// The date lands straight away; the location follows once a fix arrives. Both are
+    /// only ever filled in when empty, so a later edit by the photographer wins.
+    private func stampCapture(on rollId: UUID, frameIndex: Int) {
+        guard let roll = roll(for: rollId), frameIndex > 0 else { return }
+
+        let existing = roll.frameMarkers.first { $0.frameIndex == frameIndex }
+        var marker = existing ?? FrameMarker(frameIndex: frameIndex)
+        if marker.captureDate == nil {
+            marker.captureDate = Date()
+        }
+        if marker != existing {
+            upsertFrameMarker(rollId, marker: marker)
+        }
+
+        // A fix can take a while to arrive, or be refused outright, so a frame can end up
+        // dated but unplaced. Ask again on any later shutter press for the same frame
+        // rather than treating the date as proof the whole stamp already happened.
+        guard marker.location == nil else { return }
+        Task { await stampLocation(on: rollId, frameIndex: frameIndex) }
+    }
+
+    private func stampLocation(on rollId: UUID, frameIndex: Int) async {
+        guard let place = await currentFix() else { return }
+        guard let roll = roll(for: rollId),
+              var marker = roll.frameMarkers.first(where: { $0.frameIndex == frameIndex }),
+              marker.location == nil
+        else { return }
+
+        marker.location = place.name
+        if let coordinate = place.coordinate {
+            marker.latitude = coordinate.latitude
+            marker.longitude = coordinate.longitude
+        }
+        upsertFrameMarker(rollId, marker: marker)
+    }
+
+    /// Shared fix for the shutter. Rapid frames reuse a recent result rather than each
+    /// starting its own location stream, and a lookup already in flight is awaited.
+    private func currentFix() async -> ResolvedPlace? {
+        if let cachedFix, Date().timeIntervalSince(cachedFix.at) < Self.fixLifetime {
+            return cachedFix.place
+        }
+        if let pendingFix {
+            return await pendingFix.value
+        }
+
+        let task = Task<ResolvedPlace?, Never> { try? await CurrentLocation.resolve() }
+        pendingFix = task
+        let place = await task.value
+        pendingFix = nil
+
+        if let place {
+            cachedFix = (place, Date())
+        }
+        return place
     }
 
     func setFramePhoto(on rollId: UUID, frameIndex: Int, imageData: Data) {
@@ -687,6 +789,67 @@ final class AppStore {
         guard let fileName = rolls[index].framePhotoFileNames.removeValue(forKey: key) else { return }
         ScanStorage.deleteScan(rollId: rollId, fileName: fileName)
         persist()
+    }
+
+    /// Lays out every scan on a roll at once: which frame each one belongs to, whether it
+    /// is already on the roll or has just been picked. Frames left out of `placement` end
+    /// up empty.
+    ///
+    /// This has to be done in a single pass. `setFramePhoto` deletes whatever a frame was
+    /// holding before it writes, so replaying a rearrangement frame by frame would throw
+    /// away a scan that another frame is about to claim — swapping two frames would lose
+    /// one of them. Working out what survives first means a file is only deleted once
+    /// nothing points at it any more.
+    func setScanPlacement(on rollId: UUID, placement: [Int: ScanAssignment]) {
+        guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
+
+        flattenScanList(at: index)
+
+        let previous = Set(rolls[index].framePhotoFileNames.values)
+        var mapping: [String: String] = [:]
+
+        for frameIndex in placement.keys.sorted() where frameIndex > 0 {
+            switch placement[frameIndex] {
+            case .existing(let fileName):
+                mapping[String(frameIndex)] = fileName
+            case .new(let data):
+                let fileName = "frame-\(frameIndex)-\(UUID().uuidString.prefix(8)).jpg"
+                if ScanStorage.saveScan(data: data, rollId: rollId, fileName: fileName) != nil {
+                    mapping[String(frameIndex)] = fileName
+                }
+            case nil:
+                continue
+            }
+        }
+
+        for orphan in previous.subtracting(mapping.values) {
+            ScanStorage.deleteScan(rollId: rollId, fileName: orphan)
+        }
+
+        rolls[index].framePhotoFileNames = mapping
+        if let highest = mapping.keys.compactMap(Int.init).max(), rolls[index].frameCount < highest {
+            rolls[index].frameCount = highest
+        }
+        persist()
+    }
+
+    /// Folds a roll's positional scan list into the per-frame mapping.
+    ///
+    /// The list assigns scans to frames by their order in it, so the only way to move one
+    /// is to shift every scan along with it. A scan can't be put on an arbitrary frame
+    /// while it lives there. Both representations already render the same way, and no
+    /// file is touched — only which frame each name is filed under.
+    private func flattenScanList(at index: Int) {
+        let roll = rolls[index]
+        guard !roll.scanFileNames.isEmpty else { return }
+
+        for (offset, fileName) in roll.scanFileNames.enumerated() {
+            let frameIndex = offset + 1 + roll.scanAlignmentOffset
+            guard frameIndex > 0, rolls[index].framePhotoFileNames[String(frameIndex)] == nil else { continue }
+            rolls[index].framePhotoFileNames[String(frameIndex)] = fileName
+        }
+        rolls[index].scanFileNames = []
+        rolls[index].scanAlignmentOffset = 0
     }
 
     func shiftScanAlignment(for rollId: UUID, by delta: Int) {
@@ -810,7 +973,7 @@ final class AppStore {
 
         var lines = [
             "field,value",
-            "roll_id,\(roll.shortId)",
+            "roll_id,\(roll.id.uuidString)",
             "stock,\(csvEscape(stock.name))",
             "iso,\(roll.shootingISO ?? stock.iso)",
             "format,\(roll.format.displayName)",
@@ -844,146 +1007,6 @@ final class AppStore {
         return lines.joined(separator: "\n")
     }
 
-    func rollDataSheetText(for rollId: UUID) -> String? {
-        guard let roll = roll(for: rollId) else { return nil }
-        let stock = stock(for: roll.stockId)
-        let camera = camera(for: roll.cameraId)
-        let iso = roll.shootingISO ?? stock?.iso
-        let scanCount = max(roll.scanFileNames.count, roll.framePhotoFileNames.count)
-        let markerByFrame = Dictionary(
-            roll.frameMarkers.map { ($0.frameIndex, $0) },
-            uniquingKeysWith: { _, latest in latest }
-        )
-
-        var lines: [String] = [
-            "FILM ROLL SUMMARY",
-            String(repeating: "─", count: 28),
-            "",
-            "Roll ID: \(roll.shortId)",
-            "Status: \(roll.status.displayName)",
-            "Stock: \(stock?.name ?? "Unknown stock")",
-            "Manufacturer: \(stock?.manufacturer ?? "—")",
-            "Format: \(roll.format.displayName)",
-            "ISO: \(iso.map(String.init) ?? "—")",
-            "Push / pull: \(roll.pushPullDisplayValue)",
-            "Camera: \(camera?.name ?? "Not set")",
-        ]
-
-        if let lens = camera?.listSubtitle {
-            lines.append("Lens: \(lens)")
-        }
-        if let cameraType = camera?.cameraType, !cameraType.isEmpty {
-            lines.append("Camera type: \(cameraType)")
-        }
-
-        lines.append("")
-        lines.append("EXPOSURES")
-        lines.append("Shot: \(roll.frameCount) / \(max(roll.totalExposures, 1))")
-        if scanCount > 0 {
-            lines.append("Scans attached: \(scanCount)")
-        }
-
-        lines.append("")
-        lines.append("DATES")
-        lines.append("Loaded: \(dateLine(roll.loadedDate))")
-        lines.append("Finished: \(dateLine(roll.finishedDate))")
-        lines.append("Lab drop-off: \(dateLine(roll.dropOffDate))")
-        lines.append("Developed: \(dateLine(roll.developedDate))")
-        lines.append("Scanned: \(dateLine(roll.scannedDate))")
-        lines.append("Archived: \(dateLine(roll.archivedDate))")
-        if let expiry = roll.expiryDate {
-            lines.append("Expiry: \(DateFormatters.monthYear.string(from: expiry))")
-        }
-
-        if let development = roll.development {
-            lines.append("")
-            lines.append("DEVELOPMENT")
-            lines.append(development.summary)
-            if let lab = development.labName ?? roll.labName, !lab.isEmpty {
-                lines.append("Lab: \(lab)")
-            }
-            if let developer = development.developer, !developer.isEmpty {
-                lines.append("Developer: \(developer)")
-            }
-            if let dilution = development.dilution, !dilution.isEmpty {
-                lines.append("Dilution: \(dilution)")
-            }
-            if let time = development.timeMinutes {
-                lines.append("Time: \(time) min")
-            }
-            if let temp = development.temperatureC {
-                lines.append("Temp: \(temp) °C")
-            }
-            if let agitation = development.agitationNotes, !agitation.isEmpty {
-                lines.append("Agitation: \(agitation)")
-            }
-        } else if let lab = roll.labName, !lab.isEmpty {
-            lines.append("")
-            lines.append("DEVELOPMENT")
-            lines.append("Lab: \(lab)")
-        }
-
-        if let storage = roll.storageLocation, !storage.isEmpty {
-            lines.append("")
-            lines.append("Storage: \(storage)")
-        }
-
-        let frameSpan = max(roll.frameCount, markerByFrame.keys.max() ?? 0, scanCount, 0)
-        if frameSpan > 0 {
-            lines.append("")
-            lines.append("FRAME LOG")
-            for index in 1...frameSpan {
-                let marker = markerByFrame[index]
-                var parts: [String] = ["#\(index)"]
-                if let iso = marker?.iso {
-                    parts.append("ISO \(iso)")
-                }
-                if let aperture = marker?.aperture {
-                    parts.append("f/\(formatAperture(aperture))")
-                }
-                if let shutter = marker?.shutterSpeed {
-                    parts.append(formatShutter(shutter))
-                }
-                if let location = marker?.location, !location.isEmpty {
-                    parts.append(location)
-                }
-                if let notes = marker?.notes, !notes.isEmpty {
-                    parts.append(notes)
-                }
-                if marker == nil, roll.framePhotoFileName(forFrame: index) == nil,
-                   roll.scanFileName(forFrame: index) == nil {
-                    if index <= roll.frameCount {
-                        parts.append("exposed")
-                    } else {
-                        parts.append("—")
-                    }
-                }
-                lines.append(parts.joined(separator: " · "))
-            }
-        }
-
-        if let notes = roll.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
-            lines.append("")
-            lines.append("NOTES")
-            lines.append(notes)
-        }
-
-        if !roll.tags.isEmpty {
-            lines.append("")
-            lines.append("Tags: \(roll.tags.joined(separator: ", "))")
-        }
-
-        lines.append("")
-        lines.append("Generated \(DateFormatters.telemetry.string(from: Date()))")
-
-        return lines.joined(separator: "\n")
-    }
-
-    private func dateLine(_ date: Date?) -> String {
-        guard let date else { return "—" }
-        return DateFormatters.medium.string(from: date)
-    }
-
     private func formatAperture(_ value: Double) -> String {
         if value == floor(value) {
             return String(format: "%.0f", value)
@@ -999,6 +1022,7 @@ final class AppStore {
     }
 
     private func formatShutter(_ seconds: Double) -> String {
+        guard seconds > 0 else { return "B" }
         if seconds >= 1 {
             return String(format: "%.1fs", seconds)
         }
@@ -1021,12 +1045,4 @@ final class AppStore {
         )
     }
 
-    func nextRollShortId() -> String {
-        let numbers = rolls.compactMap { roll -> Int? in
-            guard roll.shortId.hasPrefix("R-") else { return nil }
-            return Int(roll.shortId.dropFirst(2))
-        }
-        let next = (numbers.max() ?? 0) + 1
-        return "R-\(next)"
-    }
 }

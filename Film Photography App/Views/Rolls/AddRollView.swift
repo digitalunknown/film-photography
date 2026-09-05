@@ -1,16 +1,19 @@
 import SwiftUI
-import UIKit
+
+/// The two ways into the add-roll form, chosen from the menu behind the + button.
+enum AddRollEntry: String, Identifiable {
+    case library
+    case manual
+
+    var id: String { rawValue }
+}
 
 struct AddRollView: View {
+    let entry: AddRollEntry
+
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
-    private enum EntryMethod {
-        case library
-        case manual
-    }
-
-    @State private var entryMethod: EntryMethod?
     @State private var selectedStockId: UUID?
     @State private var manualStockName = ""
     @State private var boxSpeedText = "400"
@@ -26,7 +29,7 @@ struct AddRollView: View {
     @State private var includeExpiryDate = false
     @State private var expiryDate = Date()
     @State private var showingExpiryPicker = false
-    @State private var showingPhotoCamera = false
+    @State private var hasAppeared = false
     @FocusState private var focusedField: Field?
 
     private enum Field {
@@ -57,16 +60,10 @@ struct AddRollView: View {
     }
 
     private var isManual: Bool {
-        entryMethod == .manual
-    }
-
-    /// Form appears after library pick, or immediately for manual entry.
-    private var showsDetails: Bool {
-        entryMethod == .manual || selectedStockId != nil
+        entry == .manual
     }
 
     private var canSave: Bool {
-        guard showsDetails else { return false }
         if isManual {
             guard !manualStockName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 return false
@@ -82,11 +79,6 @@ struct AddRollView: View {
         Self.pushPullOptions.first { $0.value == pushPull }?.label ?? "Box speed"
     }
 
-    private var sectionDivider: some View {
-        SectionRule()
-            .padding(.bottom, AppTheme.Spacing.md)
-    }
-
     private var availableCameras: [Camera] {
         store.cameras.filter { store.loadedRoll(for: $0.id) == nil || $0.id == selectedCameraId }
     }
@@ -98,14 +90,8 @@ struct AddRollView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if showsDetails {
-                        detailsForm
-                    } else {
-                        entryMethodList
-                    }
-                }
-                .instrumentDetailContent()
+                detailsForm
+                    .instrumentDetailContent()
             }
             .instrumentDetailScroll()
             .instrumentScreen()
@@ -116,18 +102,15 @@ struct AddRollView: View {
                     Button {
                         dismiss()
                     } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 13, weight: .semibold))
+                        LucideIcon(.x)
                             .foregroundStyle(AppTheme.textPrimary)
                     }
                     .accessibilityLabel("Close")
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    if showsDetails {
-                        Button("Add") { save() }
-                            .font(InstrumentFont.mono(13))
-                            .disabled(!canSave)
-                    }
+                    Button("Add") { save() }
+                        .font(AppType.body)
+                        .disabled(!canSave)
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
@@ -137,18 +120,17 @@ struct AddRollView: View {
                 }
             }
             .sheet(isPresented: $showingStockPicker, onDismiss: {
-                if entryMethod == .library, selectedStockId == nil {
-                    entryMethod = nil
+                // Backing out of the picker on the library path leaves nothing to describe,
+                // so the whole flow closes rather than stranding an empty form.
+                if entry == .library, selectedStockId == nil {
+                    dismiss()
                 }
             }) {
                 StockPickerSheet(
-                    title: "Choose film",
+                    title: "Choose Film",
                     selectedStockId: selectedStockId
                 ) { stock in
                     selectedStockId = stock.id
-                    if entryMethod == nil {
-                        entryMethod = .library
-                    }
                     if exposuresText == "36" || exposuresText == "72" || exposuresText == "24" || exposuresText.isEmpty {
                         exposuresText = String(format.defaultExposures)
                     }
@@ -158,19 +140,19 @@ struct AddRollView: View {
                 expirationPickerSheet
             }
             .onAppear {
+                guard !hasAppeared else { return }
+                hasAppeared = true
                 exposuresText = String(format.defaultExposures)
-            }
-            .fullScreenCover(isPresented: $showingPhotoCamera) {
-                DeviceCameraPicker(
-                    onCapture: { image in
-                        showingPhotoCamera = false
-                        handOffToLoadFlow(image: image)
-                    },
-                    onCancel: {
-                        showingPhotoCamera = false
-                    }
-                )
-                .ignoresSafeArea()
+
+                // The library path was already a choice to pick a stock, so it goes
+                // straight there instead of opening on a form with an empty stock row.
+                // A sheet raised while this one is still animating in can be dropped,
+                // hence waiting for it to settle first.
+                guard entry == .library else { return }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(200))
+                    showingStockPicker = true
+                }
             }
         }
         .instrumentSheetChrome()
@@ -196,7 +178,7 @@ struct AddRollView: View {
                         includeExpiryDate = false
                         showingExpiryPicker = false
                     }
-                    .font(InstrumentFont.mono(13))
+                    .font(AppType.body)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
@@ -204,7 +186,7 @@ struct AddRollView: View {
                         expiryDate = ExpirationDate.normalize(expiryDate)
                         showingExpiryPicker = false
                     }
-                    .font(InstrumentFont.mono(13))
+                    .font(AppType.body)
                 }
             }
         }
@@ -212,256 +194,220 @@ struct AddRollView: View {
         .presentationDragIndicator(.hidden)
     }
 
-    private func handOffToLoadFlow(image: UIImage?) {
-        store.pendingLoadCapture = image
-        store.loadFlowStartWithCamera = true
-        store.showingAddRoll = false
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(350))
-            store.showingLoadFlow = true
+    private var detailsForm: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
+            filmRows
+            pipelineRows
+            cameraRows
+            storageRows
+            labRows
         }
+        .padding(.bottom, AppTheme.Spacing.lg)
     }
 
-    private var entryMethodList: some View {
-        VStack(spacing: 0) {
-            entryMethodRow(
-                title: "Choose from library",
-                subtitle: "Pick a stock from your film library"
-            ) {
-                entryMethod = .library
-                showingStockPicker = true
+    @ViewBuilder
+    private var filmRows: some View {
+        SectionLabel(title: "Film", style: .detail)
+
+        if isManual {
+            fieldRow("Stock") {
+                TextField(placeholder: "Film name", text: $manualStockName)
+                    .focused($focusedField, equals: .stock)
             }
-
             HairlineRule()
-
-            entryMethodRow(
-                title: "Add manually",
-                subtitle: "Enter roll details yourself"
-            ) {
-                entryMethod = .manual
+            fieldRow("Box speed") {
+                TextField(placeholder: "400", text: $boxSpeedText)
+                    .keyboardType(.numberPad)
+                    .focused($focusedField, equals: .boxSpeed)
             }
-
+        } else {
+            stockPickerRow
             HairlineRule()
+            valueRow(
+                "Box speed",
+                value: selectedStock.map { "ISO \($0.iso)" } ?? "—",
+                isPlaceholder: selectedStock == nil
+            )
+        }
 
-            entryMethodRow(
-                title: "Add with photo",
-                subtitle: "Scan a canister or roll box"
-            ) {
-                if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                    showingPhotoCamera = true
-                } else {
-                    handOffToLoadFlow(image: nil)
+        HairlineRule()
+        menuRow("Format", value: format.displayName) {
+            ForEach(FilmFormat.allCases) { fmt in
+                Button(fmt.displayName) {
+                    format = fmt
+                    if exposuresText == "36" || exposuresText == "72" || exposuresText == "24" {
+                        exposuresText = String(fmt.defaultExposures)
+                    }
                 }
             }
         }
-        .padding(.top, AppTheme.Spacing.sm)
+
+        HairlineRule()
+        fieldRow("Expected frames") {
+            TextField(placeholder: "36", text: $exposuresText)
+                .keyboardType(.numberPad)
+                .focused($focusedField, equals: .exposures)
+        }
+
+        // Tech-spec values stay in the primary colour even at their defaults,
+        // matching the roll detail screen.
+        HairlineRule()
+        menuRow("Push/pull", value: pushPullLabel) {
+            ForEach(Self.pushPullOptions, id: \.value) { option in
+                Button(option.label) { pushPull = option.value }
+            }
+        }
+
+        HairlineRule()
+        expirationRow
     }
 
-    private func entryMethodRow(
-        title: String,
-        subtitle: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(alignment: .center, spacing: AppTheme.Spacing.md) {
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                    Text(title)
-                        .font(InstrumentFont.mono(13))
-                        .foregroundStyle(AppTheme.textPrimary)
-                    Text(subtitle)
-                        .font(InstrumentFont.mono(11))
-                        .foregroundStyle(AppTheme.textSecondary)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(InstrumentFont.mono(11, weight: .bold))
-                    .foregroundStyle(AppTheme.textTertiary)
+    @ViewBuilder
+    private var pipelineRows: some View {
+        HairlineRule()
+        SectionLabel(title: "Pipeline", style: .detail)
+        menuRow("Status", value: status.displayName) {
+            ForEach(RollStatus.pipelineCases, id: \.self) { stage in
+                Button(stage.displayName) { status = stage }
             }
-            .padding(.vertical, AppTheme.Spacing.md)
+        }
+    }
+
+    @ViewBuilder
+    private var cameraRows: some View {
+        if status == .inCamera {
+            HairlineRule()
+            SectionLabel(title: "Camera", style: .detail)
+            menuRow(
+                "Loaded in",
+                value: selectedCameraName ?? "Select camera",
+                isPlaceholder: selectedCameraId == nil
+            ) {
+                ForEach(availableCameras) { camera in
+                    Button(camera.name) { selectedCameraId = camera.id }
+                }
+            }
+            HairlineRule()
+            fieldRow("Frames shot") {
+                TextField(placeholder: "0", text: $frameCountText)
+                    .keyboardType(.numberPad)
+                    .focused($focusedField, equals: .frames)
+            }
+        } else if status.showsCamera {
+            HairlineRule()
+            SectionLabel(title: "Camera", style: .detail)
+            menuRow("Shot with", value: selectedCameraName ?? "None") {
+                Button("None") { selectedCameraId = nil }
+                ForEach(store.cameras) { camera in
+                    Button(camera.name) { selectedCameraId = camera.id }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var storageRows: some View {
+        if status == .shotUndeveloped {
+            HairlineRule()
+            SectionLabel(title: "Storage", style: .detail)
+            fieldRow("Location") {
+                TextField(placeholder: "Fridge", text: $storageLocation)
+                    .focused($focusedField, equals: .storage)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var labRows: some View {
+        if status == .atLab {
+            HairlineRule()
+            SectionLabel(title: "Lab", style: .detail)
+            fieldRow("Lab name") {
+                TextField(placeholder: "Lab", text: $labName)
+                    .focused($focusedField, equals: .lab)
+            }
+        }
+    }
+
+    private var expirationRow: some View {
+        Button {
+            showingExpiryPicker = true
+        } label: {
+            DetailFieldRow(label: "Expiration date") {
+                DetailFieldValue(
+                    text: includeExpiryDate
+                        ? DateFormatters.monthYear.string(from: expiryDate)
+                        : "Not set"
+                )
+            }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
-    @ViewBuilder
-    private var detailsForm: some View {
-        DetailSection(title: "Film") {
-            VStack(spacing: 0) {
-                if isManual {
-                    InstrumentEditableRow(label: "Stock") {
-                        TextField("Film name", text: $manualStockName)
-                            .focused($focusedField, equals: .stock)
-                    }
-
-                    InstrumentEditableRow(label: "Box speed") {
-                        TextField("400", text: $boxSpeedText)
-                            .keyboardType(.numberPad)
-                            .focused($focusedField, equals: .boxSpeed)
-                    }
-                } else {
-                    stockPickerRow(showsDivider: false)
-
-                    DataRow(
-                        label: "Box speed",
-                        value: selectedStock.map { "ISO \($0.iso)" } ?? "—"
-                    )
-                }
-
-                InstrumentMenuRow(
-                    label: "Format",
-                    value: format.displayName,
-                    valueBright: true
-                ) {
-                    ForEach(FilmFormat.allCases) { fmt in
-                        Button(fmt.displayName) {
-                            format = fmt
-                            if exposuresText == "36" || exposuresText == "72" || exposuresText == "24" {
-                                exposuresText = String(fmt.defaultExposures)
-                            }
-                        }
-                    }
-                }
-
-                InstrumentEditableRow(label: "Expected frames") {
-                    TextField("36", text: $exposuresText)
-                        .keyboardType(.numberPad)
-                        .focused($focusedField, equals: .exposures)
-                }
-
-                InstrumentMenuRow(
-                    label: "Push / pull",
-                    value: pushPullLabel,
-                    valueBright: pushPull != 0
-                ) {
-                    ForEach(Self.pushPullOptions, id: \.value) { option in
-                        Button(option.label) { pushPull = option.value }
-                    }
-                }
-
-                Button {
-                    showingExpiryPicker = true
-                } label: {
-                    InstrumentRow(label: "Expiration date") {
-                        HStack(spacing: AppTheme.Spacing.xs) {
-                            Text(
-                                includeExpiryDate
-                                    ? DateFormatters.monthYear.string(from: expiryDate)
-                                    : "Not set"
-                            )
-                            .font(InstrumentFont.mono(12))
-                            .foregroundStyle(
-                                includeExpiryDate ? AppTheme.textPrimary : AppTheme.textSecondary
-                            )
-                            .multilineTextAlignment(.leading)
-                            Image(systemName: "chevron.down")
-                                .font(InstrumentFont.mono(9, weight: .bold))
-                                .foregroundStyle(AppTheme.textTertiary)
-                            Spacer(minLength: 0)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-        }
-
-        sectionDivider
-
-        DetailSection(title: "Pipeline") {
-            InstrumentMenuRow(
-                label: "Status",
-                value: status.displayName,
-                valueBright: true,
-                showsDivider: false
-            ) {
-                ForEach(RollStatus.pipelineCases, id: \.self) { stage in
-                    Button(stage.displayName) { status = stage }
-                }
-            }
-        }
-
-        if status == .inCamera {
-            sectionDivider
-            DetailSection(title: "Camera") {
-                VStack(spacing: 0) {
-                    InstrumentMenuRow(
-                        label: "Loaded in",
-                        value: selectedCameraName ?? "Select camera",
-                        valueBright: selectedCameraId != nil,
-                        showsDivider: false
-                    ) {
-                        ForEach(availableCameras) { camera in
-                            Button(camera.name) { selectedCameraId = camera.id }
-                        }
-                    }
-                    InstrumentEditableRow(label: "Frames shot") {
-                        TextField("0", text: $frameCountText)
-                            .keyboardType(.numberPad)
-                            .focused($focusedField, equals: .frames)
-                    }
-                }
-            }
-        } else if status.showsCamera {
-            sectionDivider
-            DetailSection(title: "Camera") {
-                InstrumentMenuRow(
-                    label: "Shot with",
-                    value: selectedCameraName ?? "None",
-                    valueBright: selectedCameraId != nil,
-                    showsDivider: false
-                ) {
-                    Button("None") { selectedCameraId = nil }
-                    ForEach(store.cameras) { camera in
-                        Button(camera.name) { selectedCameraId = camera.id }
-                    }
-                }
-            }
-        }
-
-        if status == .shotUndeveloped {
-            sectionDivider
-            DetailSection(title: "Storage") {
-                InstrumentEditableRow(label: "Location", showsDivider: false) {
-                    TextField("Fridge", text: $storageLocation)
-                        .focused($focusedField, equals: .storage)
-                }
-            }
-        }
-
-        if status == .atLab {
-            sectionDivider
-            DetailSection(title: "Lab") {
-                InstrumentEditableRow(label: "Lab name", showsDivider: false) {
-                    TextField("Lab", text: $labName)
-                        .focused($focusedField, equals: .lab)
-                }
-            }
-        }
-    }
-
-    private func stockPickerRow(showsDivider: Bool) -> some View {
+    private var stockPickerRow: some View {
         Button {
             showingStockPicker = true
         } label: {
-            InstrumentRow(label: "Stock", showsDivider: showsDivider) {
+            DetailFieldRow(label: "Stock") {
                 HStack(spacing: AppTheme.Spacing.xs) {
                     if selectedStock != nil {
                         RollPlate(stock: selectedStock, size: 22)
                     }
-                    Text(selectedStock?.name ?? "Choose film")
-                        .font(InstrumentFont.mono(12))
-                        .foregroundStyle(
-                            selectedStock == nil ? AppTheme.textSecondary : AppTheme.textPrimary
-                        )
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
-                    Image(systemName: "chevron.down")
-                        .font(InstrumentFont.mono(9, weight: .bold))
-                        .foregroundStyle(AppTheme.textTertiary)
-                    Spacer(minLength: 0)
+                    DetailFieldValue(
+                        text: selectedStock?.name ?? "Choose film",
+                        isPlaceholder: selectedStock == nil
+                    )
+                    .lineLimit(2)
+                    LucideIcon(.chevronsUpDown)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Stock")
+    }
+
+    // MARK: - Row builders
+
+    private func valueRow(_ label: String, value: String, isPlaceholder: Bool = false) -> some View {
+        DetailFieldRow(label: label) {
+            DetailFieldValue(text: value, isPlaceholder: isPlaceholder)
+        }
+    }
+
+    private func menuRow<Content: View>(
+        _ label: String,
+        value: String,
+        isPlaceholder: Bool = false,
+        @ViewBuilder menu: @escaping () -> Content
+    ) -> some View {
+        DetailFieldRow(label: label) {
+            Menu {
+                menu()
+            } label: {
+                HStack(spacing: AppTheme.Spacing.xs) {
+                    DetailFieldValue(text: value, isPlaceholder: isPlaceholder)
+                    LucideIcon(.chevronsUpDown)
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(label)
+        }
+    }
+
+    private func fieldRow<Content: View>(
+        _ label: String,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        DetailFieldRow(label: label) {
+            content()
+                .font(AppType.body)
+                .foregroundStyle(AppTheme.textPrimary)
+                .multilineTextAlignment(.trailing)
+        }
     }
 
     private func save() {
@@ -498,6 +444,6 @@ struct AddRollView: View {
 }
 
 #Preview {
-    AddRollView()
+    AddRollView(entry: .manual)
         .environment(AppStore())
 }

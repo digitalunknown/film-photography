@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct RollDetailView: View {
     @Environment(AppStore.self) private var store
@@ -7,10 +6,7 @@ struct RollDetailView: View {
     let rollId: UUID
 
     @State private var showingDeleteConfirm = false
-    @State private var showingExportSheet = false
-    @State private var loadCameraId: UUID?
     @State private var showingCameraPicker = false
-    @State private var exportText = ""
     @State private var showingAddDatePicker = false
     @State private var addDateDraft = Date()
     @FocusState private var isNotesFocused: Bool
@@ -21,7 +17,7 @@ struct RollDetailView: View {
 
     private var rollTitle: String {
         guard let roll else { return "Roll" }
-        return store.stock(for: roll.stockId)?.name ?? roll.shortId
+        return store.label(for: roll)
     }
 
     var body: some View {
@@ -31,29 +27,15 @@ struct RollDetailView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         if let stock = store.stock(for: roll.stockId), stock.rollImageName != nil {
                             DetailHeroBlock {
-                                StockPlate(stock: stock, square: false, height: 220)
+                                RollCanister3D(stock: stock)
+                                    .frame(width: 250, height: 250)
+                                    .frame(maxWidth: .infinity)
                             }
                         }
 
-                        let showLoad = roll.status.isInventory
-                        let showDevelopment = roll.status == .atLab
-                            || roll.status == .developed
-                            || roll.development != nil
-
                         // Inventory uses the load slider; every other status uses the frame carousel.
                         loadOrExposureStage(roll)
-                        if !showLoad {
-                            sectionDivider
-                            pipelineSection(roll)
-                        }
-                        sectionDivider
-                        notesSection(roll)
-                        sectionDivider
-                        metadataSection(roll)
-                        if showDevelopment {
-                            sectionDivider
-                            developmentSection(roll)
-                        }
+                        rollFields(roll)
                     }
                     .instrumentDetailContent()
                 }
@@ -61,7 +43,7 @@ struct RollDetailView: View {
             } else {
                 VStack(alignment: .leading) {
                     Text("Roll not found")
-                        .font(InstrumentFont.mono(13))
+                        .font(AppType.body)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
                 .padding(.horizontal, AppTheme.horizontalPadding)
@@ -73,7 +55,7 @@ struct RollDetailView: View {
             ToolbarItem(placement: .principal) {
                 HStack(spacing: AppTheme.Spacing.sm) {
                     Text(rollTitle)
-                        .font(InstrumentFont.mono(17, weight: .semibold))
+                        .font(AppType.title)
                         .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
                     if roll?.isExpired == true {
@@ -83,16 +65,11 @@ struct RollDetailView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button("Printable Summary Sheet", systemImage: "doc.text") {
-                        exportText = store.rollDataSheetText(for: rollId) ?? "Roll summary unavailable."
-                        showingExportSheet = true
-                    }
-                    Divider()
-                    Button("Delete Roll", systemImage: "trash", role: .destructive) {
+                    Button("Delete Roll", lucide: .trash, role: .destructive) {
                         showingDeleteConfirm = true
                     }
                 } label: {
-                    Image(systemName: "ellipsis")
+                    LucideIcon(.ellipsis)
                 }
                 .accessibilityLabel("More")
             }
@@ -103,9 +80,6 @@ struct RollDetailView: View {
                     isNotesFocused = false
                 }
             }
-        }
-        .sheet(isPresented: $showingExportSheet) {
-            exportSheet
         }
         .sheet(isPresented: $showingCameraPicker) {
             cameraPickerSheet(for: rollId)
@@ -135,43 +109,16 @@ struct RollDetailView: View {
         return "You can undo for 5 seconds after deleting."
     }
 
-    private var sectionDivider: some View {
-        SectionRule()
-            .padding(.bottom, AppTheme.Spacing.md)
-    }
-
-    @ViewBuilder
     private func loadOrExposureStage(_ roll: Roll) -> some View {
-        let selectedCamera = loadCameraId.flatMap { store.camera(for: $0) }
-            ?? roll.cameraId.flatMap { store.camera(for: $0) }
-        let startMode: LoadExposureStage.StartMode = {
-            roll.status.isInventory ? .slide : .carousel
-        }()
-
         LoadExposureStage(
             roll: roll,
             stock: store.stock(for: roll.stockId),
-            cameraName: selectedCamera?.name ?? "camera",
-            canSlide: selectedCamera != nil && roll.status.isInventory,
-            startMode: startMode,
-            onChoose: {
-                showingCameraPicker = true
-            },
-            onChangeSelection: {
-                showingCameraPicker = true
-            },
-            onCommitLoad: {
-                if let cameraId = loadCameraId ?? selectedCamera?.id {
-                    store.assignRoll(roll.id, to: cameraId)
-                }
-            },
+            onChoose: { showingCameraPicker = true },
             onAdvance: { store.advanceExposure(on: roll.id) },
             onUndo: { store.removeLastFrame(from: roll.id) },
-            onSetCount: { store.setFrameCount($0, for: roll.id) }
+            onSetCount: { store.setFrameCount($0, for: roll.id) },
+            onFinishRoll: { store.setRollStatus(roll.id, to: .shotUndeveloped) }
         )
-        // Keep identity stable across load so the slide→carousel transition isn't remounted away.
-        // Remount when the chosen camera changes so the entrance animation can replay.
-        .id("load-stage-\(roll.id)-\(loadCameraId?.uuidString ?? roll.cameraId?.uuidString ?? "pick")")
     }
 
     private func cameraPickerSheet(for rollId: UUID) -> some View {
@@ -180,18 +127,19 @@ struct RollDetailView: View {
                 if let roll = store.roll(for: rollId) {
                     ForEach(availableCameras(for: roll)) { camera in
                         Button {
-                            loadCameraId = camera.id
+                            // Picking the camera is the load — there's no second confirm step.
+                            store.assignRoll(rollId, to: camera.id)
                             showingCameraPicker = false
                         } label: {
                             Text(camera.name)
-                                .font(InstrumentFont.mono(13))
+                                .font(AppType.body)
                                 .foregroundStyle(AppTheme.textPrimary)
                         }
                     }
 
                     if availableCameras(for: roll).isEmpty {
                         Text("No empty cameras available.")
-                            .font(InstrumentFont.mono(12))
+                            .font(AppType.body)
                             .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
@@ -202,7 +150,7 @@ struct RollDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { showingCameraPicker = false }
-                        .font(InstrumentFont.mono(13))
+                        .font(AppType.body)
                 }
             }
         }
@@ -210,20 +158,162 @@ struct RollDetailView: View {
         .presentationDragIndicator(.hidden)
     }
 
-    private func pipelineSection(_ roll: Roll) -> some View {
-        DetailSection(title: "Pipeline") {
-            InstrumentMenuRow(
-                label: "Status",
-                value: roll.status.displayName,
-                valueBright: true,
-                showsDivider: false
-            ) {
+    /// Everything below the scan button: the camera, then what is on the roll, then the
+    /// status override, development, and finally notes. One 16pt stack with explicit
+    /// rules, mirroring the Figma auto-layout.
+    private func rollFields(_ roll: Roll) -> some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
+            cameraRow(roll)
+            techSpecsRows(roll)
+            statusOverrideRow(roll)
+            developmentRows(roll)
+            notesRows(roll)
+        }
+        .padding(.bottom, AppTheme.Spacing.lg)
+    }
+
+    @ViewBuilder
+    private func cameraRow(_ roll: Roll) -> some View {
+        if !roll.status.isInventory {
+            HairlineRule()
+            menuRow("Camera", value: cameraDisplayValue(for: roll)) {
+                Button("Not set") {
+                    store.assignRoll(rollId, to: nil)
+                }
+                ForEach(store.cameras) { camera in
+                    Button(camera.name) {
+                        store.assignRoll(rollId, to: camera.id)
+                    }
+                }
+            }
+        }
+    }
+
+    /// The pipeline normally moves the roll along on its own, so this is an escape hatch
+    /// rather than the usual way to change status — hence its place at the bottom.
+    @ViewBuilder
+    private func statusOverrideRow(_ roll: Roll) -> some View {
+        if !roll.status.isInventory {
+            HairlineRule()
+            menuRow("Status override", value: roll.status.displayName) {
                 ForEach(Self.postLoadStatuses, id: \.self) { status in
                     Button(status.displayName) {
                         selectPipelineStatus(status, for: roll)
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func notesRows(_ roll: Roll) -> some View {
+        HairlineRule()
+        SectionLabel(title: "Notes", style: .detail)
+        TextField(
+            placeholder: "Add a note",
+            text: notesBinding(for: roll),
+            axis: .vertical
+        )
+        .font(AppType.body)
+        .foregroundStyle(AppTheme.textPrimary)
+        .lineLimit(2...8)
+        .submitLabel(.return)
+        .focused($isNotesFocused)
+    }
+
+    @ViewBuilder
+    private func techSpecsRows(_ roll: Roll) -> some View {
+        HairlineRule()
+        stockRows(roll)
+        formatAndFrameRows(roll)
+        pushPullAndExpiryRows(roll)
+    }
+
+    @ViewBuilder
+    private func stockRows(_ roll: Roll) -> some View {
+        if let stock = store.stock(for: roll.stockId) {
+            valueRow("Stock", value: stock.name)
+            HairlineRule()
+            valueRow("ISO", value: "\(roll.shootingISO ?? stock.iso)")
+            HairlineRule()
+        }
+    }
+
+    @ViewBuilder
+    private func formatAndFrameRows(_ roll: Roll) -> some View {
+        valueRow("Format", value: roll.format.displayName)
+        HairlineRule()
+        DetailFieldRow(label: "Expected frames") {
+            TextField(
+                "36",
+                value: exposuresBinding(for: roll),
+                format: .number,
+                prompt: .fieldPrompt("36")
+            )
+                .font(AppType.body)
+                .foregroundStyle(AppTheme.textPrimary)
+                .multilineTextAlignment(.trailing)
+                .keyboardType(.numberPad)
+        }
+        HairlineRule()
+    }
+
+    @ViewBuilder
+    private func pushPullAndExpiryRows(_ roll: Roll) -> some View {
+        // The Figma keeps every tech-spec value in the primary colour, including the
+        // "Box speed" and "Not set" defaults, so these rows don't dim when unset.
+        menuRow("Push/pull", value: roll.pushPullDisplayValue) {
+            ForEach(Self.pushPullOptions, id: \.value) { option in
+                Button(option.label) {
+                    guard var updated = store.roll(for: rollId) else { return }
+                    updated.pushPull = option.value == 0 ? nil : option.value
+                    store.updateRoll(updated)
+                }
+            }
+        }
+        HairlineRule()
+        expirationRow(roll)
+    }
+
+    private func expirationRow(_ roll: Roll) -> some View {
+        Button {
+            addDateDraft = roll.expiryDate ?? Date()
+            showingAddDatePicker = true
+        } label: {
+            DetailFieldRow(label: "Expiration date") {
+                DetailFieldValue(text: addDateDisplayValue(for: roll))
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Row builders
+
+    private func valueRow(_ label: String, value: String, isPlaceholder: Bool = false) -> some View {
+        DetailFieldRow(label: label) {
+            DetailFieldValue(text: value, isPlaceholder: isPlaceholder)
+        }
+    }
+
+    private func menuRow<Content: View>(
+        _ label: String,
+        value: String,
+        isPlaceholder: Bool = false,
+        @ViewBuilder menu: @escaping () -> Content
+    ) -> some View {
+        DetailFieldRow(label: label) {
+            Menu {
+                menu()
+            } label: {
+                HStack(spacing: AppTheme.Spacing.xs) {
+                    DetailFieldValue(text: value, isPlaceholder: isPlaceholder)
+                    LucideIcon(.chevronsUpDown)
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(label)
         }
     }
 
@@ -238,46 +328,7 @@ struct RollDetailView: View {
     ]
 
     private func selectPipelineStatus(_ status: RollStatus, for roll: Roll) {
-        if status.isInventory {
-            loadCameraId = nil
-        }
-        store.setRollStatus(roll.id, to: status, cameraId: roll.cameraId ?? loadCameraId)
-    }
-
-    private func metadataSection(_ roll: Roll) -> some View {
-        DetailSection(title: "Technical Specifications") {
-            VStack(spacing: 0) {
-                if let stock = store.stock(for: roll.stockId) {
-                    DataRow(label: "Stock", value: stock.name, showsDivider: false)
-                    DataRow(label: "ISO", value: "\(roll.shootingISO ?? stock.iso)")
-                    DataRow(label: "Format", value: roll.format.displayName)
-                } else {
-                    DataRow(label: "Format", value: roll.format.displayName, showsDivider: false)
-                }
-                if !roll.status.isInventory {
-                    cameraRow(roll)
-                }
-                editableExposuresRow(roll)
-                pushPullRow(roll)
-                addDateRow(roll)
-            }
-        }
-    }
-
-    private func pushPullRow(_ roll: Roll) -> some View {
-        InstrumentMenuRow(
-            label: "Push / pull",
-            value: roll.pushPullDisplayValue,
-            valueBright: roll.pushPull != nil && roll.pushPull != 0
-        ) {
-            ForEach(Self.pushPullOptions, id: \.value) { option in
-                Button(option.label) {
-                    guard var updated = store.roll(for: rollId) else { return }
-                    updated.pushPull = option.value == 0 ? nil : option.value
-                    store.updateRoll(updated)
-                }
-            }
-        }
+        store.setRollStatus(roll.id, to: status, cameraId: roll.cameraId)
     }
 
     private static let pushPullOptions: [(label: String, value: Int)] = [
@@ -287,183 +338,116 @@ struct RollDetailView: View {
         ("Push +2", 2),
     ]
 
-    private func cameraRow(_ roll: Roll) -> some View {
-        InstrumentMenuRow(
-            label: "Camera",
-            value: cameraDisplayValue(for: roll),
-            valueBright: roll.cameraId != nil
-        ) {
-            Button("Not Set") {
-                store.assignRoll(rollId, to: nil)
-            }
-            ForEach(store.cameras) { camera in
-                Button(camera.name) {
-                    store.assignRoll(rollId, to: camera.id)
-                }
-            }
-        }
-    }
-
     private func cameraDisplayValue(for roll: Roll) -> String {
         guard let cameraId = roll.cameraId,
               let camera = store.camera(for: cameraId) else {
-            return "Not Set"
+            return "Not set"
         }
         return camera.name
     }
 
-    private func developmentSection(_ roll: Roll) -> some View {
-        DetailSection(title: "Development") {
-            VStack(alignment: .leading, spacing: 0) {
-                InstrumentMenuRow(
-                    label: "Path",
-                    value: (store.roll(for: rollId)?.development?.path ?? .lab).displayName,
-                    valueBright: true,
-                    showsDivider: false
-                ) {
-                    ForEach(DevelopmentPath.allCases, id: \.self) { path in
-                        Button(path.displayName) {
-                            developmentPathBinding(for: roll).wrappedValue = path
-                        }
-                    }
-                }
+    @ViewBuilder
+    private func developmentRows(_ roll: Roll) -> some View {
+        let showDevelopment = roll.status == .atLab
+            || roll.status == .developed
+            || roll.development != nil
 
-                if store.roll(for: rollId)?.development?.path == .lab {
-                    InstrumentEditableRow(label: "Lab") {
-                        TextField("Lab name", text: labNameBinding(for: roll))
+        if showDevelopment {
+            HairlineRule()
+            SectionLabel(title: "Development", style: .detail)
+            menuRow(
+                "Path",
+                value: (store.roll(for: rollId)?.development?.path ?? .lab).displayName
+            ) {
+                ForEach(DevelopmentPath.allCases, id: \.self) { path in
+                    Button(path.displayName) {
+                        developmentPathBinding(for: roll).wrappedValue = path
                     }
-                } else if store.roll(for: rollId)?.development?.path == .diy {
-                    InstrumentEditableRow(label: "Developer") {
-                        TextField("Developer", text: devFieldBinding(for: roll, keyPath: \.developer))
-                    }
-                    InstrumentEditableRow(label: "Dilution") {
-                        TextField("Dilution", text: devFieldBinding(for: roll, keyPath: \.dilution))
-                    }
-                    InstrumentEditableRow(label: "Time") {
-                        TextField("Minutes", text: devTimeBinding(for: roll))
-                            .keyboardType(.decimalPad)
-                    }
-                    InstrumentEditableRow(label: "Temp") {
-                        TextField("°C", text: devTempBinding(for: roll))
-                            .keyboardType(.decimalPad)
-                    }
-                    InstrumentEditableRow(label: "Agitation") {
-                        TextField("Notes", text: devFieldBinding(for: roll, keyPath: \.agitationNotes), axis: .vertical)
-                            .lineLimit(2...4)
-                    }
-
-                    if !store.devRecipePresets.isEmpty {
-                        VStack(spacing: 0) {
-                            HairlineRule()
-                            Menu("Apply preset") {
-                                ForEach(store.devRecipePresets) { preset in
-                                    Button(preset.summary) {
-                                        store.applyDevPreset(preset.id, to: roll.id)
-                                    }
-                                }
-                            }
-                            .font(InstrumentFont.mono(12))
-                            .padding(.vertical, AppTheme.Spacing.md)
-                        }
-                    }
-                }
-
-                if let summary = store.roll(for: rollId)?.development?.summary {
-                    DataRow(label: "Summary", value: summary, valueBright: false)
                 }
             }
+            developmentPathRows(roll)
+            developmentSummaryRow()
         }
     }
 
-    private func notesSection(_ roll: Roll) -> some View {
-        DetailSection(title: "Notes") {
-            TextField(
-                "Add a note",
-                text: notesBinding(for: roll),
-                axis: .vertical
-            )
-            .font(InstrumentFont.mono(12))
-            .foregroundStyle(AppTheme.textPrimary)
-            .lineLimit(3...8)
-            .submitLabel(.return)
-            .focused($isNotesFocused)
-            .padding(.vertical, AppTheme.Spacing.sm)
+    @ViewBuilder
+    private func developmentPathRows(_ roll: Roll) -> some View {
+        let path = store.roll(for: rollId)?.development?.path
+        if path == .lab {
+            HairlineRule()
+            fieldRow("Lab") {
+                TextField(placeholder: "Lab name", text: labNameBinding(for: roll))
+            }
+        } else if path == .diy {
+            HairlineRule()
+            fieldRow("Developer") {
+                TextField(placeholder: "Developer", text: devFieldBinding(for: roll, keyPath: \.developer))
+            }
+            HairlineRule()
+            fieldRow("Dilution") {
+                TextField(placeholder: "Dilution", text: devFieldBinding(for: roll, keyPath: \.dilution))
+            }
+            diyTimingRows(roll)
         }
     }
 
-    private var exportSheet: some View {
-        NavigationStack {
-            ScrollView {
-                Text(exportText.isEmpty ? "Roll summary unavailable." : exportText)
-                    .font(InstrumentFont.mono(11))
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(AppTheme.horizontalPadding)
-                    .padding(.vertical, AppTheme.Spacing.md)
-            }
-            .instrumentScreen()
-            .navigationTitle("Summary")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        showingExportSheet = false
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(AppTheme.textPrimary)
+    @ViewBuilder
+    private func diyTimingRows(_ roll: Roll) -> some View {
+        HairlineRule()
+        fieldRow("Time") {
+            TextField(placeholder: "Minutes", text: devTimeBinding(for: roll))
+                .keyboardType(.decimalPad)
+        }
+        HairlineRule()
+        fieldRow("Temp") {
+            TextField(placeholder: "°C", text: devTempBinding(for: roll))
+                .keyboardType(.decimalPad)
+        }
+        HairlineRule()
+        fieldRow("Agitation") {
+            TextField(placeholder: "Notes", text: devFieldBinding(for: roll, keyPath: \.agitationNotes), axis: .vertical)
+                .lineLimit(1...4)
+        }
+        developmentPresetRow(roll)
+    }
+
+    @ViewBuilder
+    private func developmentPresetRow(_ roll: Roll) -> some View {
+        if !store.devRecipePresets.isEmpty {
+            HairlineRule()
+            Menu("Apply preset") {
+                ForEach(store.devRecipePresets) { preset in
+                    Button(preset.summary) {
+                        store.applyDevPreset(preset.id, to: roll.id)
                     }
-                    .accessibilityLabel("Close")
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Print") {
-                        printSummary()
-                    }
-                    .font(InstrumentFont.mono(13))
-                    .disabled(exportText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
-            .onAppear {
-                if exportText.isEmpty {
-                    exportText = store.rollDataSheetText(for: rollId) ?? "Roll summary unavailable."
-                }
-            }
+            .font(AppType.body)
         }
     }
 
-    private func printSummary() {
-        let text = exportText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+    @ViewBuilder
+    private func developmentSummaryRow() -> some View {
+        if let summary = store.roll(for: rollId)?.development?.summary {
+            HairlineRule()
+            valueRow("Summary", value: summary, isPlaceholder: true)
+        }
+    }
 
-        let formatter = UISimpleTextPrintFormatter(text: text)
-        formatter.font = UIFont.monospacedSystemFont(ofSize: 10, weight: .regular)
-        formatter.color = .black
-        formatter.perPageContentInsets = UIEdgeInsets(top: 36, left: 36, bottom: 36, right: 36)
-
-        let info = UIPrintInfo.printInfo()
-        info.outputType = .general
-        info.jobName = store.roll(for: rollId).map { "\($0.shortId) Summary" } ?? "Roll Summary"
-        info.orientation = .portrait
-
-        let controller = UIPrintInteractionController.shared
-        controller.printInfo = info
-        controller.printFormatter = formatter
-        controller.present(animated: true)
+    /// Editable variant of `valueRow` — the field right-aligns into the value column.
+    private func fieldRow<Content: View>(
+        _ label: String,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        DetailFieldRow(label: label) {
+            content()
+                .font(AppType.body)
+                .foregroundStyle(AppTheme.textPrimary)
+                .multilineTextAlignment(.trailing)
+        }
     }
 
     // MARK: - Bindings
-
-    private func editableExposuresRow(_ roll: Roll) -> some View {
-        InstrumentRow(label: "Expected frames") {
-            TextField("36", value: exposuresBinding(for: roll), format: .number)
-                .font(InstrumentFont.mono(12))
-                .foregroundStyle(AppTheme.textPrimary)
-                .multilineTextAlignment(.leading)
-                .keyboardType(.numberPad)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
 
     private func exposuresBinding(for roll: Roll) -> Binding<Int> {
         Binding(
@@ -551,27 +535,6 @@ struct RollDetailView: View {
         )
     }
 
-    private func addDateRow(_ roll: Roll) -> some View {
-        Button {
-            addDateDraft = roll.expiryDate ?? Date()
-            showingAddDatePicker = true
-        } label: {
-            InstrumentRow(label: "Expiration date") {
-                HStack(spacing: AppTheme.Spacing.xs) {
-                    Text(addDateDisplayValue(for: roll))
-                        .font(InstrumentFont.mono(12))
-                        .foregroundStyle(roll.expiryDate != nil ? AppTheme.textPrimary : AppTheme.textSecondary)
-                        .multilineTextAlignment(.leading)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(InstrumentFont.mono(9, weight: .bold))
-                        .foregroundStyle(AppTheme.textTertiary)
-                    Spacer(minLength: 0)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
     private var addDatePickerSheet: some View {
         NavigationStack {
             VStack {
@@ -594,7 +557,7 @@ struct RollDetailView: View {
                         store.updateRoll(updated)
                         showingAddDatePicker = false
                     }
-                    .font(InstrumentFont.mono(13))
+                    .font(AppType.body)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
@@ -603,7 +566,7 @@ struct RollDetailView: View {
                         store.updateRoll(updated)
                         showingAddDatePicker = false
                     }
-                    .font(InstrumentFont.mono(13))
+                    .font(AppType.body)
                 }
             }
         }
@@ -612,7 +575,7 @@ struct RollDetailView: View {
     }
 
     private func addDateDisplayValue(for roll: Roll) -> String {
-        guard let date = roll.expiryDate else { return "Not Set" }
+        guard let date = roll.expiryDate else { return "Not set" }
         return DateFormatters.monthYear.string(from: date)
     }
 
@@ -629,9 +592,7 @@ struct RollDetailView: View {
     }
 
     private func availableCameras(for roll: Roll) -> [Camera] {
-        store.cameras.filter {
-            store.loadedRoll(for: $0.id) == nil || $0.id == loadCameraId
-        }
+        store.cameras.filter { store.loadedRoll(for: $0.id) == nil }
     }
 }
 

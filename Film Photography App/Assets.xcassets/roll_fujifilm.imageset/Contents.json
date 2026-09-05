@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "Fujifilm.png",
+      "filename" : "roll_fujifilm.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "Fujifilm 1.png",
+      "filename" : "roll_fujifilm 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "Fujifilm 2.png",
+      "filename" : "roll_fujifilm 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

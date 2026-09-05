@@ -12,7 +12,7 @@ struct CamerasTabView: View {
                     if store.cameras.isEmpty {
                         InstrumentEmptyState(
                             message: "No cameras in your collection. Add a body to start tracking what's loaded.",
-                            primaryAction: "Add camera →",
+                            primaryAction: "Add camera",
                             primaryHandler: { store.showingAddCamera = true }
                         )
                         .padding(.horizontal, AppTheme.horizontalPadding)
@@ -20,9 +20,9 @@ struct CamerasTabView: View {
                     } else {
                         ForEach(Array(visibleSections.enumerated()), id: \.element.title) { index, section in
                             if index > 0 {
-                                SectionRule()
+                                HairlineRule()
                                     .padding(.horizontal, AppTheme.horizontalPadding)
-                                    .padding(.vertical, AppTheme.Spacing.md)
+                                    .padding(.vertical, AppTheme.Spacing.lg)
                             }
 
                             cameraSection(
@@ -101,7 +101,7 @@ struct CamerasTabView: View {
                         Button(role: .destructive) {
                             cameraToDelete = camera
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label("Delete", lucide: .trash)
                         }
                     }
                     .padding(.horizontal, AppTheme.horizontalPadding)
@@ -121,42 +121,50 @@ private struct CameraLedgerRow: View {
     let camera: Camera
 
     var body: some View {
-        HStack(alignment: .center, spacing: AppTheme.Spacing.md) {
-            CameraPhotoPlate(photoData: camera.photoData, size: 64)
+        HStack(alignment: .center, spacing: AppTheme.Spacing.sm) {
+            CameraPhotoPlate(photoData: camera.photoData, size: 100)
 
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                Text(camera.name)
-                    .font(InstrumentFont.mono(13))
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .lineLimit(2)
+                HStack(alignment: .top, spacing: AppTheme.Spacing.sm) {
+                    Text(camera.name)
+                        .font(AppType.title)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .lineLimit(1)
+
+                    Spacer(minLength: AppTheme.Spacing.xs)
+
+                    if let roll = loadedRoll {
+                        Text("\(roll.frameCount)/\(roll.totalExposures)")
+                            .font(AppType.title)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .monospacedDigit()
+                            .layoutPriority(1)
+                    } else {
+                        Text("Empty")
+                            .font(AppType.title)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .layoutPriority(1)
+                    }
+                }
+
                 if let subtitle = camera.listSubtitle {
                     Text(subtitle)
-                        .font(InstrumentFont.mono(11))
-                        .foregroundStyle(AppTheme.textSecondary)
+                        .font(AppType.callout)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
+                        .truncationMode(.tail)
                 }
+
                 if let stockName = loadedStock?.name {
                     Text(stockName)
-                        .font(InstrumentFont.mono(11))
+                        .font(AppType.callout)
                         .foregroundStyle(AppTheme.textSecondary)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .multilineTextAlignment(.leading)
                 }
             }
-
-            Spacer(minLength: 8)
-
-            VStack(alignment: .trailing, spacing: AppTheme.Spacing.xs) {
-                if let roll = loadedRoll {
-                    Text("\(roll.frameCount)/\(roll.totalExposures)")
-                        .font(InstrumentFont.mono(13))
-                        .foregroundStyle(AppTheme.textPrimary)
-                        .monospacedDigit()
-                } else {
-                    Text("Empty")
-                        .font(InstrumentFont.mono(13))
-                        .foregroundStyle(AppTheme.textSecondary)
-                }
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

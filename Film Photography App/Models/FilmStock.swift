@@ -247,7 +247,7 @@ struct FilmStock: Identifiable, Codable, Hashable {
     }
 
     var stripEdgeLabel: String {
-        name.uppercased() + " →"
+        name.uppercased()
     }
 
     static let allBrandsLabel = "All"
@@ -255,19 +255,26 @@ struct FilmStock: Identifiable, Codable, Hashable {
     /// Manufacturer brand for filters and plate art.
     var brand: String { manufacturer }
 
-    /// Brand accent for library filter chips. `nil` uses the same neutral style as type chips.
-    static func brandFilterTint(for brand: String) -> Color? {
+    /// Brand accent for library filter chips, so a manufacturer is recognisable at a
+    /// glance. Sits outside the five-colour palette on purpose — these are the brands'
+    /// own colours. `nil` falls back to the neutral chip style used by type filters.
+    /// Each sits close to the manufacturer's own identity colour, kept bright enough to
+    /// hold its chroma once it is washed over the dark chip surface.
+    nonisolated static func brandFilterTint(for brand: String) -> Color? {
         switch brand {
         case "Kodak":
-            return Color(red: 0.95, green: 0.72, blue: 0.12)
+            // Kodak yellow, #FFB81C.
+            return Color(red: 1.00, green: 0.72, blue: 0.11)
         case "Fujifilm":
-            return Color(red: 0.18, green: 0.72, blue: 0.42)
+            // Fujifilm green, #009A44, lifted for a dark ground.
+            return Color(red: 0.04, green: 0.80, blue: 0.42)
         case "Ilford":
-            return Color(red: 0.78, green: 0.78, blue: 0.80)
+            return Color(red: 0.88, green: 0.89, blue: 0.92)
         case "Lomography":
-            return Color(red: 0.88, green: 0.28, blue: 0.28)
+            // Lomography red, #E30613, lifted for a dark ground.
+            return Color(red: 0.95, green: 0.20, blue: 0.18)
         case "CineStill":
-            return Color(red: 0.72, green: 0.38, blue: 0.88)
+            return Color(red: 0.68, green: 0.28, blue: 0.96)
         default:
             return nil
         }

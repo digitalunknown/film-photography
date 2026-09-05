@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "Cinestill 50D.png",
+      "filename" : "roll_cinestill_50d.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "Cinestill 50D 1.png",
+      "filename" : "roll_cinestill_50d 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "Cinestill 50D 2.png",
+      "filename" : "roll_cinestill_50d 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

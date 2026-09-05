@@ -16,8 +16,8 @@ struct AddFridgeItemView: View {
     }
 
     private var sectionDivider: some View {
-        SectionRule()
-            .padding(.bottom, AppTheme.Spacing.md)
+        HairlineRule()
+            .padding(.bottom, AppTheme.Spacing.lg)
     }
 
     var body: some View {
@@ -32,15 +32,14 @@ struct AddFridgeItemView: View {
                                 InstrumentRow(label: "Film", showsDivider: false) {
                                     HStack(spacing: AppTheme.Spacing.sm) {
                                         Text(selectedStock?.name ?? "Choose film")
-                                            .font(InstrumentFont.mono(12))
+                                            .font(AppType.body)
                                             .foregroundStyle(
                                                 selectedStock == nil
                                                     ? AppTheme.textSecondary
                                                     : AppTheme.textPrimary
                                             )
                                         Spacer(minLength: 0)
-                                        Image(systemName: "chevron.up.chevron.down")
-                                            .font(InstrumentFont.mono(9, weight: .bold))
+                                        LucideIcon(.chevronsUpDown)
                                             .foregroundStyle(AppTheme.textTertiary)
                                     }
                                 }
@@ -58,19 +57,19 @@ struct AddFridgeItemView: View {
                             }
 
                             InstrumentRow(label: "Quantity") {
-                                HStack(spacing: AppTheme.Spacing.md) {
+                                HStack(spacing: AppTheme.Spacing.lg) {
                                     Button {
                                         quantity = max(quantity - 1, 1)
                                     } label: {
                                         Text("−")
-                                            .font(InstrumentFont.mono(16))
+                                            .font(AppType.title)
                                             .foregroundStyle(quantity > 1 ? AppTheme.textPrimary : AppTheme.textTertiary)
                                     }
                                     .buttonStyle(.plain)
                                     .disabled(quantity <= 1)
 
                                     Text("\(quantity)")
-                                        .font(InstrumentFont.mono(12))
+                                        .font(AppType.body)
                                         .foregroundStyle(AppTheme.textPrimary)
                                         .monospacedDigit()
 
@@ -78,7 +77,7 @@ struct AddFridgeItemView: View {
                                         quantity = min(quantity + 1, 99)
                                     } label: {
                                         Text("+")
-                                            .font(InstrumentFont.mono(16))
+                                            .font(AppType.title)
                                             .foregroundStyle(AppTheme.textPrimary)
                                     }
                                     .buttonStyle(.plain)
@@ -111,17 +110,17 @@ struct AddFridgeItemView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .font(InstrumentFont.mono(13))
+                        .font(AppType.body)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") { save() }
-                        .font(InstrumentFont.mono(13))
+                        .font(AppType.body)
                         .disabled(selectedStockId == nil)
                 }
             }
             .sheet(isPresented: $showingStockPicker) {
                 StockPickerSheet(
-                    title: "Choose film",
+                    title: "Choose Film",
                     selectedStockId: selectedStockId
                 ) { stock in
                     selectedStockId = stock.id

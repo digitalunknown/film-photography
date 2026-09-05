@@ -52,7 +52,7 @@ struct LoadFlowView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .font(InstrumentFont.mono(13))
+                        .font(AppType.body)
                 }
             }
             .instrumentScreen()
@@ -95,32 +95,32 @@ struct LoadFlowView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 Text("How are you loading?")
-                    .font(InstrumentFont.mono(13))
+                    .font(AppType.body)
                     .foregroundStyle(AppTheme.textSecondary)
-                    .padding(.bottom, AppTheme.Spacing.lg)
+                    .padding(.bottom, AppTheme.Spacing.xl)
 
                 if !store.availableFridgeItems.isEmpty {
-                    TextAction(label: "From stock →") {
+                    TextAction(label: "From stock") {
                         step = .confirm
                         if let first = store.availableFridgeItems.first {
                             applyFridgeItem(first)
                         }
                     }
-                    .padding(.bottom, AppTheme.Spacing.lg)
+                    .padding(.bottom, AppTheme.Spacing.xl)
                 }
 
-                TextAction(label: "Scan camera + canister →") {
+                TextAction(label: "Scan camera + canister") {
                     step = .capture
                     presentDeviceCameraIfAvailable()
                 }
-                .padding(.bottom, AppTheme.Spacing.lg)
+                .padding(.bottom, AppTheme.Spacing.xl)
 
-                TextAction(label: "Enter manually →") {
+                TextAction(label: "Enter manually") {
                     startManualEntry()
                 }
             }
             .padding(.horizontal, AppTheme.horizontalPadding)
-            .padding(.vertical, 20)
+            .padding(.vertical, AppTheme.Spacing.xl)
         }
     }
 
@@ -129,25 +129,25 @@ struct LoadFlowView: View {
     private var captureView: some View {
         VStack(spacing: 0) {
             ZStack {
-                Color.black
+                AppTheme.bg
 
-                VStack(spacing: AppTheme.Spacing.lg) {
+                VStack(spacing: AppTheme.Spacing.xl) {
                     Spacer()
 
-                    HStack(spacing: AppTheme.Spacing.md) {
-                        framingGuide(label: "Camera", icon: "camera.fill")
-                        framingGuide(label: "Film canister", icon: "film")
+                    HStack(spacing: AppTheme.Spacing.lg) {
+                        framingGuide(label: "Camera", icon: .camera)
+                        framingGuide(label: "Film canister", icon: .film)
                     }
 
                     Spacer()
 
                     if isRecognizing {
                         ProgressView()
-                            .tint(.white)
+                            .tint(AppTheme.textPrimary)
                             .scaleEffect(1.2)
                         Text("Recognizing…")
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.8))
+                            .foregroundStyle(AppTheme.textSecondary)
                     } else {
                         Button {
                             if UIImagePickerController.isSourceTypeAvailable(.camera) {
@@ -157,8 +157,8 @@ struct LoadFlowView: View {
                             }
                         } label: {
                             Circle()
-                                .strokeBorder(.white, lineWidth: 4)
-                                .background(Circle().fill(.white.opacity(0.2)))
+                                .strokeBorder(AppTheme.textPrimary, lineWidth: 4)
+                                .background(Circle().fill(AppTheme.textPrimary.opacity(0.2)))
                                 .frame(width: 72, height: 72)
                         }
                         .buttonStyle(.plain)
@@ -167,29 +167,31 @@ struct LoadFlowView: View {
                     Button("Or add manually") {
                         startManualEntry()
                     }
-                    .font(InstrumentFont.mono(13))
+                    .font(AppType.body)
                     .foregroundStyle(AppTheme.textSecondary)
                     .padding(.bottom, AppTheme.Spacing.xl)
                 }
             }
             .frame(maxHeight: .infinity)
         }
-        .background(.black)
+        .background(AppTheme.bg)
     }
 
-    private func framingGuide(label: String, icon: String) -> some View {
+    private func framingGuide(label: String, icon: Lucide) -> some View {
         VStack(spacing: AppTheme.Spacing.sm) {
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(.white.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
+                .strokeBorder(
+                    AppTheme.textSecondary,
+                    style: StrokeStyle(lineWidth: 1.5, dash: [8])
+                )
                 .frame(width: 140, height: 100)
                 .overlay {
-                    Image(systemName: icon)
-                        .font(.title)
-                        .foregroundStyle(.white.opacity(0.3))
+                    LucideIcon(icon)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             Text(label)
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.6))
+                .font(AppType.callout)
+                .foregroundStyle(AppTheme.textSecondary)
         }
     }
 
@@ -200,8 +202,8 @@ struct LoadFlowView: View {
             VStack(spacing: 0) {
                 if capturedImage != nil {
                     capturedPhotoPreview
-                        .padding(.bottom, AppTheme.Spacing.lg)
-                    HairlineRule().padding(.bottom, AppTheme.Spacing.lg)
+                        .padding(.bottom, AppTheme.Spacing.xl)
+                    HairlineRule().padding(.bottom, AppTheme.Spacing.xl)
                 }
 
                 if !store.availableFridgeItems.isEmpty {
@@ -212,16 +214,16 @@ struct LoadFlowView: View {
                             Text("\(name) · \(item.format.displayName) ×\(item.quantity)").tag(item.id as UUID?)
                         }
                     }
-                    .font(InstrumentFont.mono(12))
+                    .font(AppType.body)
                     .onChange(of: selectedFridgeItemId) { _, newId in
                         if let newId, let item = store.fridgeItems.first(where: { $0.id == newId }) {
                             applyFridgeItem(item)
                         }
                     }
-                    .padding(.bottom, AppTheme.Spacing.lg)
+                    .padding(.bottom, AppTheme.Spacing.xl)
                 }
 
-                VStack(spacing: AppTheme.Spacing.md) {
+                VStack(spacing: AppTheme.Spacing.lg) {
                     confirmField(
                         label: "Camera",
                         value: selectedCamera?.name ?? "Select",
@@ -239,7 +241,7 @@ struct LoadFlowView: View {
                             Text(fmt.displayName).tag(fmt)
                         }
                     }
-                    .font(InstrumentFont.mono(12))
+                    .font(AppType.body)
                     .onChange(of: format) { _, newFormat in
                         if selectedFridgeItemId == nil {
                             exposuresText = String(newFormat.defaultExposures)
@@ -250,25 +252,25 @@ struct LoadFlowView: View {
 
                     HStack {
                         Text("Expected frames")
-                            .font(InstrumentFont.mono(11))
+                            .font(AppType.callout)
                             .foregroundStyle(AppTheme.textSecondary)
                         Spacer()
-                        TextField("36", text: $exposuresText)
-                            .font(InstrumentFont.mono(13))
+                        TextField(placeholder: "36", text: $exposuresText)
+                            .font(AppType.body)
                             .foregroundStyle(AppTheme.textPrimary)
                             .multilineTextAlignment(.trailing)
                             .keyboardType(.numberPad)
                             .frame(width: 64)
                     }
                 }
-                .padding(.bottom, AppTheme.Spacing.lg)
+                .padding(.bottom, AppTheme.Spacing.xl)
 
-                TextAction(label: "Load roll →") { confirmLoad() }
+                TextAction(label: "Load roll") { confirmLoad() }
                     .opacity(selectedCameraId == nil || selectedStockId == nil ? 0.35 : 1)
                     .disabled(selectedCameraId == nil || selectedStockId == nil)
             }
             .padding(.horizontal, AppTheme.horizontalPadding)
-            .padding(.vertical, 20)
+            .padding(.vertical, AppTheme.Spacing.xl)
         }
         .sheet(isPresented: $showingCameraPicker) {
             pickerSheet(title: "Camera", items: store.cameras.map { ($0.id, $0.name) }) { id in
@@ -320,7 +322,7 @@ struct LoadFlowView: View {
                 ZStack {
                     Rectangle().strokeBorder(AppTheme.rule, lineWidth: 0.5)
                     Text("Load photo captured")
-                        .font(InstrumentFont.mono(11))
+                        .font(AppType.callout)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
             }
@@ -334,22 +336,22 @@ struct LoadFlowView: View {
             HStack {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                     Text("Shooting ISO")
-                        .font(InstrumentFont.mono(11))
+                        .font(AppType.callout)
                         .foregroundStyle(AppTheme.textSecondary)
                     HStack(spacing: AppTheme.Spacing.sm) {
                         Text(isoDisplayText)
-                            .font(InstrumentFont.mono(13))
+                            .font(AppType.body)
                             .foregroundStyle(AppTheme.textPrimary)
                         if pushPull == 0 && recognitionResult?.isoFromDX == true {
                             Text("DX read")
-                                .font(InstrumentFont.mono(10))
+                                .font(AppType.footnote)
                                 .foregroundStyle(AppTheme.textSecondary)
                         }
                     }
                 }
                 Spacer()
-                Text("Tap to push →")
-                    .font(InstrumentFont.mono(11))
+                Text("Tap to push")
+                    .font(AppType.callout)
                     .foregroundStyle(AppTheme.textSecondary)
             }
         }
@@ -375,21 +377,20 @@ struct LoadFlowView: View {
         Button(action: action) {
             HStack {
                 Text(label)
-                    .font(InstrumentFont.mono(11))
+                    .font(AppType.callout)
                     .foregroundStyle(AppTheme.textSecondary)
                 Spacer()
                 HStack(spacing: 8) {
                     if let badge {
                         Text(badge)
-                            .font(InstrumentFont.mono(10))
+                            .font(AppType.footnote)
                             .foregroundStyle(AppTheme.textSecondary)
                     }
                     Text(value)
-                        .font(InstrumentFont.mono(13))
+                        .font(AppType.body)
                         .foregroundStyle(AppTheme.textPrimary)
-                    Text("→")
-                        .font(InstrumentFont.mono(11))
-                        .foregroundStyle(AppTheme.textTertiary)
+                    LucideIcon(.chevronsUpDown)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
         }
@@ -408,7 +409,7 @@ struct LoadFlowView: View {
                     showingCameraPicker = false
                     showingStockPicker = false
                 }
-                .font(InstrumentFont.mono(13))
+                .font(AppType.body)
             }
             .instrumentFormStyle()
             .navigationTitle(title)
@@ -419,7 +420,7 @@ struct LoadFlowView: View {
                         showingCameraPicker = false
                         showingStockPicker = false
                     }
-                    .font(InstrumentFont.mono(13))
+                    .font(AppType.body)
                 }
             }
         }
