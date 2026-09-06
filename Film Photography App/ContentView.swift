@@ -44,6 +44,16 @@ struct ContentView: View {
             LoadFlowView(startWithCamera: store.loadFlowStartWithCamera)
                 .instrumentSheetChrome()
         }
+        .sheet(isPresented: $store.showingSettings) {
+            SettingsView()
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if let problem = store.persistProblem {
+                PersistFailureBanner(problem: problem) {
+                    store.retryPersist()
+                }
+            }
+        }
     }
 }
 

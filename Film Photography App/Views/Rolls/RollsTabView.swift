@@ -48,14 +48,24 @@ struct RollsTabView: View {
             .instrumentScreen()
             .instrumentTabNavigation(title: "My Film")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        store.showingSettings = true
+                    } label: {
+                        LucideIcon(.fileText)
+                    }
+                    .accessibilityLabel("Settings")
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
                         Button("Choose from library", lucide: .library) {
                             store.addRollEntry = .library
                         }
+                        .font(AppType.body)
                         Button("Add manually", lucide: .fileText) {
                             store.addRollEntry = .manual
                         }
+                        .font(AppType.body)
                     } label: {
                         LucideIcon(.plus)
                     }
@@ -157,11 +167,10 @@ struct RollsTabView: View {
                     .contentShape(Rectangle())
                     .onTapGesture { selectedRoll = roll }
                     .contextMenu {
-                        Button(role: .destructive) {
+                        Button(destructive: "Delete", lucide: .trash) {
                             rollToDelete = roll
-                        } label: {
-                            Label("Delete", lucide: .trash)
                         }
+                        .font(AppType.body)
                     }
                     .padding(.horizontal, AppTheme.horizontalPadding)
                     .padding(.vertical, AppTheme.Spacing.sm)

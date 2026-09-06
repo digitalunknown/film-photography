@@ -109,8 +109,7 @@ struct AddFridgeItemView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .font(AppType.body)
+                    InstrumentCloseButton { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") { save() }

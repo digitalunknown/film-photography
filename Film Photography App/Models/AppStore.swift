@@ -34,6 +34,20 @@ struct PendingRollDeletion {
     let deletedAt: Date
 }
 
+struct PersistProblem: Equatable {
+    enum Kind {
+        case save
+        case load
+    }
+
+    let kind: Kind
+    let message: String
+
+    var retryTitle: String {
+        kind == .load ? "Retry load" : "Retry"
+    }
+}
+
 /// What a frame is being given when a roll's scans are laid out: a scan already written
 /// to the roll, or one picked from the library and still only in memory.
 enum ScanAssignment {
@@ -54,12 +68,19 @@ final class AppStore {
     /// How the user chose to add a roll. Set to open the add-roll sheet on that path.
     var addRollEntry: AddRollEntry?
     var showingLoadFlow = false
+    var showingSettings = false
     var showingArchive = false
     /// Opens Load Flow past the source chooser (camera already taken or about to open).
     var loadFlowStartWithCamera = false
     var pendingLoadCapture: UIImage?
 
+    /// Set when a disk read or write fails. The in-memory rolls stay as they are; the
+    /// last good file on disk is left untouched until a retry succeeds.
+    var persistProblem: PersistProblem?
+
     private var deletionTask: Task<Void, Never>?
+    /// After a failed load we must not write a new store over the unreadable file.
+    private var didFailToLoadStore = false
 
     /// How long a location fix stays good enough to reuse for the next frame.
     private static let fixLifetime: TimeInterval = 90
@@ -68,43 +89,121 @@ final class AppStore {
     @ObservationIgnored private var pendingFix: Task<ResolvedPlace?, Never>?
 
     init() {
-        let catalog = StockCatalog.loadStocks()
+        cameras = []
+        rolls = []
+        fridgeItems = []
+        devRecipePresets = []
+        customStocks = []
+        stocks = StockCatalog.loadStocks()
+        pendingDeletion = nil
+        deletionTask = nil
+        loadFromDisk(createEmptyStoreIfNeeded: true)
+    }
 
-        if let saved = DataPersistence.load() {
-            cameras = saved.cameras
-            rolls = saved.rolls.map(Roll.migrate)
-            fridgeItems = saved.fridgeItems
-            devRecipePresets = saved.devRecipePresets
-            let loadedCustom = saved.customStocks
-            customStocks = loadedCustom
-            stocks = catalog + loadedCustom
-            pendingDeletion = nil
-            deletionTask = nil
-            if saved.version < PersistedAppData.currentVersion {
+    /// Retries a failed save, or reloads from disk after a failed read.
+    func retryPersist() {
+        if persistProblem?.kind == .load {
+            loadFromDisk(createEmptyStoreIfNeeded: false)
+            return
+        }
+        persist()
+    }
+
+    private func loadFromDisk(createEmptyStoreIfNeeded: Bool) {
+        switch DataPersistence.load() {
+        case .loaded(let saved, let source):
+            apply(saved)
+            didFailToLoadStore = false
+            persistProblem = nil
+            if saved.version < PersistedAppData.currentVersion || source == .backup {
                 persist()
             }
-        } else {
-            cameras = []
-            rolls = []
-            fridgeItems = []
-            devRecipePresets = []
-            customStocks = []
-            stocks = catalog
-            pendingDeletion = nil
-            deletionTask = nil
-            persist()
+        case .empty:
+            didFailToLoadStore = false
+            persistProblem = nil
+            if createEmptyStoreIfNeeded {
+                persist()
+            }
+        case .unreadable(let message):
+            didFailToLoadStore = true
+            persistProblem = PersistProblem(
+                kind: .load,
+                message: "\(message) Your last save is still on disk — nothing new has been written over it."
+            )
         }
     }
 
+    private func apply(_ saved: PersistedAppData) {
+        cameras = saved.cameras
+        rolls = saved.rolls.map(Roll.migrate)
+        fridgeItems = saved.fridgeItems
+        devRecipePresets = saved.devRecipePresets
+        customStocks = saved.customStocks
+        stocks = StockCatalog.loadStocks() + saved.customStocks
+        pendingDeletion = nil
+    }
+
     private func persist() {
-        DataPersistence.save(
+        do {
+            if didFailToLoadStore {
+                try DataPersistence.quarantineUnreadablePrimary()
+            }
+            try DataPersistence.save(
+                cameras: cameras,
+                rolls: rolls.map { var r = $0; r.status = $0.status.normalized; return r },
+                fridgeItems: fridgeItems,
+                devRecipePresets: devRecipePresets,
+                customStocks: customStocks
+            )
+            didFailToLoadStore = false
+            persistProblem = nil
+            WidgetCenter.shared.reloadTimelines(ofKind: AppGroupStorage.widgetKind)
+        } catch {
+            persistProblem = PersistProblem(
+                kind: didFailToLoadStore ? .load : .save,
+                message: didFailToLoadStore
+                    ? "Couldn't replace the unreadable save. Your last file is still on disk."
+                    : "Couldn't save your rolls. They're still in this session — tap Retry so they aren't lost."
+            )
+        }
+    }
+
+    /// Writes cameras, rolls, fridge, recipes, custom stocks, and scan files to a zip.
+    /// The zip is built off the main thread so the settings button can keep spinning.
+    func exportLibraryBackup() async throws -> URL {
+        let payload = PersistedAppData(
             cameras: cameras,
             rolls: rolls.map { var r = $0; r.status = $0.status.normalized; return r },
             fridgeItems: fridgeItems,
             devRecipePresets: devRecipePresets,
             customStocks: customStocks
         )
-        WidgetCenter.shared.reloadTimelines(ofKind: AppGroupStorage.widgetKind)
+        let libraryJSON = try DataPersistence.encode(payload)
+        let scans = ScanStorage.allScanFiles()
+        let fileName = LibraryBackup.suggestedFileName
+
+        return try await Task.detached(priority: .userInitiated) {
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent(fileName)
+            if FileManager.default.fileExists(atPath: url.path) {
+                try FileManager.default.removeItem(at: url)
+            }
+            try LibraryBackup.write(libraryJSON: libraryJSON, scans: scans, to: url)
+            return url
+        }.value
+    }
+
+    /// Replaces the on-device library. `persist()` copies the current JSON to `.bak`
+    /// before writing, so a failed import can still be recovered from that file.
+    func restoreLibrary(from url: URL) throws {
+        let access = url.startAccessingSecurityScopedResource()
+        defer { if access { url.stopAccessingSecurityScopedResource() } }
+
+        let backup = try LibraryBackup.read(from: url)
+        apply(backup.payload)
+        didFailToLoadStore = false
+        persist()
+        try ScanStorage.replaceAll(with: backup.scansDirectory)
     }
 
     /// Creates a user-entered stock and keeps it across launches.
@@ -283,7 +382,21 @@ final class AppStore {
             hasAttentionNeeded: quirks.isEmpty == false,
             defaultFormat: defaultFormat,
             lensMinAperture: nil,
-            lensMaxAperture: nil
+            lensMaxAperture: nil,
+            lenses: {
+                let name = lensSubtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !name.isEmpty else { return [] }
+                return [
+                    CameraLens(
+                        id: UUID(),
+                        name: name,
+                        focalLength: "",
+                        maxAperture: "",
+                        notes: "",
+                        isPrimary: true
+                    )
+                ]
+            }()
         )
         cameras.append(camera)
         persist()
@@ -297,10 +410,65 @@ final class AppStore {
         persist()
     }
 
+    func addLens(
+        to cameraId: UUID,
+        name: String,
+        focalLength: String,
+        maxAperture: String,
+        notes: String
+    ) {
+        guard var camera = camera(for: cameraId) else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        camera.lenses.append(
+            CameraLens(
+                id: UUID(),
+                name: trimmed,
+                focalLength: focalLength.trimmingCharacters(in: .whitespacesAndNewlines),
+                maxAperture: maxAperture.trimmingCharacters(in: .whitespacesAndNewlines),
+                notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
+                isPrimary: camera.lenses.isEmpty
+            )
+        )
+        camera.syncPrimaryLensSubtitle()
+        updateCamera(camera)
+    }
+
+    func updateLens(_ lens: CameraLens, on cameraId: UUID) {
+        guard var camera = camera(for: cameraId),
+              let index = camera.lenses.firstIndex(where: { $0.id == lens.id }) else { return }
+        camera.lenses[index] = lens
+        camera.syncPrimaryLensSubtitle()
+        updateCamera(camera)
+        refreshFrameLensName(lensId: lens.id, to: lens.exifModel)
+    }
+
+    func deleteLens(_ lensId: UUID, from cameraId: UUID) {
+        guard var camera = camera(for: cameraId) else { return }
+        let wasPrimary = camera.lenses.first(where: { $0.id == lensId })?.isPrimary == true
+        camera.lenses.removeAll { $0.id == lensId }
+        if wasPrimary, let first = camera.lenses.indices.first {
+            camera.lenses[first].isPrimary = true
+        }
+        camera.syncPrimaryLensSubtitle()
+        updateCamera(camera)
+        dropFrameLensId(lensId)
+    }
+
+    func setPrimaryLens(_ lensId: UUID, on cameraId: UUID) {
+        guard var camera = camera(for: cameraId) else { return }
+        for index in camera.lenses.indices {
+            camera.lenses[index].isPrimary = camera.lenses[index].id == lensId
+        }
+        camera.syncPrimaryLensSubtitle()
+        updateCamera(camera)
+    }
+
     func deleteCamera(_ cameraId: UUID) {
         rolls.removeAll { $0.cameraId == cameraId && $0.status == .inCamera }
         for index in rolls.indices where rolls[index].cameraId == cameraId {
             rolls[index].cameraId = nil
+            revalidateFrameLenses(on: &rolls[index], cameraId: nil)
         }
         cameras.removeAll { $0.id == cameraId }
         persist()
@@ -365,6 +533,7 @@ final class AppStore {
         shootingISO: Int? = nil,
         frameCount: Int = 0,
         storageLocation: String? = nil,
+        frozenDate: Date? = nil,
         labName: String? = nil,
         expiryDate: Date? = nil,
         tags: [String] = []
@@ -386,6 +555,7 @@ final class AppStore {
             loadedDate: normalizedStatus == .inCamera ? now : nil,
             finishedDate: normalizedStatus.countsAsShot ? now : nil,
             storageLocation: storageLocation?.isEmpty == true ? nil : storageLocation,
+            frozenDate: StorageMethod.resolved(from: storageLocation) == .freezer ? frozenDate : nil,
             expiryDate: expiryDate,
             dropOffDate: normalizedStatus == .atLab ? now : nil,
             labName: labName?.isEmpty == true ? nil : labName,
@@ -505,7 +675,45 @@ final class AppStore {
         }
 
         rolls[index].cameraId = cameraId
+        revalidateFrameLenses(on: &rolls[index], cameraId: cameraId)
         persist()
+    }
+
+    /// Frames keep a lens only when it still belongs to the roll's body.
+    private func revalidateFrameLenses(on roll: inout Roll, cameraId: UUID?) {
+        let allowed = Set(camera(for: cameraId)?.lenses.map(\.id) ?? [])
+        for index in roll.frameMarkers.indices {
+            guard let lensId = roll.frameMarkers[index].lensId else { continue }
+            if !allowed.contains(lensId) {
+                roll.frameMarkers[index].lensId = nil
+                roll.frameMarkers[index].lensName = nil
+            }
+        }
+    }
+
+    private func refreshFrameLensName(lensId: UUID, to name: String) {
+        var changed = false
+        for rollIndex in rolls.indices {
+            for markerIndex in rolls[rollIndex].frameMarkers.indices
+            where rolls[rollIndex].frameMarkers[markerIndex].lensId == lensId {
+                rolls[rollIndex].frameMarkers[markerIndex].lensName = name
+                changed = true
+            }
+        }
+        if changed { persist() }
+    }
+
+    /// Keep the printed name so EXIF still has something after the glass is deleted.
+    private func dropFrameLensId(_ lensId: UUID) {
+        var changed = false
+        for rollIndex in rolls.indices {
+            for markerIndex in rolls[rollIndex].frameMarkers.indices
+            where rolls[rollIndex].frameMarkers[markerIndex].lensId == lensId {
+                rolls[rollIndex].frameMarkers[markerIndex].lensId = nil
+                changed = true
+            }
+        }
+        if changed { persist() }
     }
 
     func setRollStatus(_ rollId: UUID, to newStatus: RollStatus, cameraId: UUID? = nil) {
@@ -681,6 +889,8 @@ final class AppStore {
             marker.location = last.location
             marker.notes = last.notes
             marker.tags = last.tags
+            marker.lensId = last.lensId
+            marker.lensName = last.lensName
         }
 
         if marker.iso == nil {

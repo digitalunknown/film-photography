@@ -8,11 +8,70 @@ nonisolated enum ScanStorage {
     /// cached rather than re-read and re-rendered from disk each time.
     private static let thumbnailCache = NSCache<NSString, UIImage>()
 
-    private static var scansDirectory: URL {
+    /// Tests point this at an isolated folder so they never touch live scans.
+    nonisolated(unsafe) static var directoryOverride: URL?
+
+    static var scansDirectory: URL {
+        if let directoryOverride { return directoryOverride }
         let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             .appendingPathComponent("FilmPhotographyApp/Scans", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
+    }
+
+    /// Every scan file as `(rollId, fileName)` plus the file URL, for backup.
+    static func allScanFiles() -> [(rollId: UUID, fileName: String, url: URL)] {
+        let fm = FileManager.default
+        guard let rollDirs = try? fm.contentsOfDirectory(
+            at: scansDirectory,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else { return [] }
+
+        return rollDirs.flatMap { rollDir -> [(UUID, String, URL)] in
+            guard let rollId = UUID(uuidString: rollDir.lastPathComponent),
+                  let files = try? fm.contentsOfDirectory(
+                    at: rollDir,
+                    includingPropertiesForKeys: [.isRegularFileKey],
+                    options: [.skipsHiddenFiles]
+                  )
+            else { return [] }
+            return files.compactMap { file in
+                guard (try? file.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
+                else { return nil }
+                return (rollId, file.lastPathComponent, file)
+            }
+        }
+    }
+
+    /// Swap the scan tree for one unpacked from a backup. The previous tree is moved
+    /// aside first so a failed copy can be put back.
+    static func replaceAll(with source: URL?) throws {
+        let fm = FileManager.default
+        let dest = scansDirectory
+        let aside = dest.deletingLastPathComponent()
+            .appendingPathComponent("Scans.replaced-\(UUID().uuidString)", isDirectory: true)
+
+        let hadDest = fm.fileExists(atPath: dest.path)
+        if hadDest {
+            try fm.moveItem(at: dest, to: aside)
+        }
+
+        do {
+            if let source, fm.fileExists(atPath: source.path) {
+                try fm.copyItem(at: source, to: dest)
+            } else {
+                try fm.createDirectory(at: dest, withIntermediateDirectories: true)
+            }
+            thumbnailCache.removeAllObjects()
+            if hadDest { try? fm.removeItem(at: aside) }
+        } catch {
+            if hadDest {
+                try? fm.removeItem(at: dest)
+                try? fm.moveItem(at: aside, to: dest)
+            }
+            throw error
+        }
     }
 
     static func saveScan(data: Data, rollId: UUID, fileName: String) -> String? {

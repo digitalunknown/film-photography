@@ -31,6 +31,7 @@ enum Lucide: String {
     case calendarMinus = "calendar-minus"
     case circleCheckBig = "circle-check-big"
     case squareCheck = "square-check"
+    case squareX = "square-x"
     case gripVertical = "grip-vertical"
     case arrowUpDown = "arrow-up-down"
 
@@ -83,6 +84,36 @@ extension Button where Label == SwiftUI.Label<Text, Image> {
     init(_ title: String, lucide icon: Lucide, role: ButtonRole?, action: @escaping () -> Void) {
         self.init(role: role, action: action) {
             SwiftUI.Label(title, lucide: icon)
+        }
+    }
+}
+
+/// Menu row for a destructive action. A menu applies its own tint to a `Label`, which
+/// can leave the Lucide icon white while the title goes red. Colouring each half
+/// separately keeps them on the same accent.
+struct DestructiveMenuLabel: View {
+    let title: String
+    let icon: Lucide
+
+    var body: some View {
+        // An HStack, not a Label — menus retint Label icons to primary (white) while
+        // the title takes the destructive colour. A custom row keeps both on accent.
+        HStack {
+            Image(lucide: icon)
+                .renderingMode(.template)
+                .foregroundStyle(AppTheme.accent)
+            Text(title)
+                .font(AppType.body)
+                .foregroundStyle(AppTheme.accent)
+        }
+    }
+}
+
+extension Button where Label == DestructiveMenuLabel {
+    /// Destructive menu row with Lucide art, red across both the title and the icon.
+    init(destructive title: String, lucide icon: Lucide, action: @escaping () -> Void) {
+        self.init(role: .destructive, action: action) {
+            DestructiveMenuLabel(title: title, icon: icon)
         }
     }
 }

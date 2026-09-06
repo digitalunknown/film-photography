@@ -2,11 +2,11 @@
   "stocks": [
     {
       "id": "A1000001-0000-4000-8000-000000000001",
-      "name": "Kodak Ektacolor Pro 400 (Portra 400)",
+      "name": "Kodak Portra 400",
       "iso": 400,
       "category": "Color neg",
       "process": "C-41",
-      "notes": "the modern gold standard; huge latitude, flattering skin tones",
+      "notes": "Same emulsion as Eastman Kodak Ektacolor Pro 400 (2026 rebrand / dual distribution with Alaris Portra). Huge latitude, flattering skin tones.",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Professional",
@@ -23,21 +23,27 @@
       ],
       "grainRMS": null,
       "grainCharacter": "Fine",
-      "yearsActive": "1998–present",
+      "yearsActive": "1998–present (Ektacolor Pro branding 2026–)",
       "bestFor": [
         "Portraits",
         "Weddings",
         "Available light"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "Ektacolor Pro 400",
+        "Kodak Ektacolor Pro 400",
+        "Portra 400"
+      ],
+      "description": "The modern gold-standard color neg. Huge latitude, flattering skin, works from daylight to available light. Same emulsion as Ektacolor Pro 400."
     },
     {
       "id": "cf670589-1954-59a5-8a5f-271df628c615",
-      "name": "Kodak Ektacolor Pro 160 (Portra 160)",
+      "name": "Kodak Portra 160",
       "iso": 160,
       "category": "Color neg",
       "process": "C-41",
-      "notes": "finer grain, softer palette for controlled light",
+      "notes": "Same emulsion as Eastman Kodak Ektacolor Pro 160 (2026 rebrand). Finer grain, softer palette for controlled light.",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Professional",
@@ -53,21 +59,27 @@
       ],
       "grainRMS": null,
       "grainCharacter": "Fine",
-      "yearsActive": "1998–present",
+      "yearsActive": "1998–present (Ektacolor Pro branding 2026–)",
       "bestFor": [
         "Studio portraiture",
         "Controlled daylight",
         "Fashion"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "Ektacolor Pro 160",
+        "Kodak Ektacolor Pro 160",
+        "Portra 160"
+      ],
+      "description": "Fine-grain portrait color for controlled light. Soft contrast, natural skin — same emulsion as Ektacolor Pro 160."
     },
     {
       "id": "ce6b4f95-303a-56ff-ac25-e7bbfbf37c7d",
-      "name": "Kodak Ektacolor Pro 800 (Portra 800)",
+      "name": "Kodak Portra 800",
       "iso": 800,
       "category": "Color neg",
       "process": "C-41",
-      "notes": "best high-speed color negative made today",
+      "notes": "Same emulsion as Eastman Kodak Ektacolor Pro 800 (2026 rebrand). Best high-speed color negative for available light.",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Professional",
@@ -81,13 +93,19 @@
       ],
       "grainRMS": null,
       "grainCharacter": "Moderate",
-      "yearsActive": "1998–present",
+      "yearsActive": "2000s–present (Ektacolor Pro branding 2026–)",
       "bestFor": [
         "Low light",
         "Concerts",
         "Night street"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "Ektacolor Pro 800",
+        "Kodak Ektacolor Pro 800",
+        "Portra 800"
+      ],
+      "description": "Fast portrait/available-light color that still keeps skin honest. Same emulsion as Ektacolor Pro 800."
     },
     {
       "id": "6187c280-92e6-57da-9bcc-e0419d30da77",
@@ -116,7 +134,11 @@
         "Product",
         "Saturated color"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "Ektar 100"
+      ],
+      "description": "Punchy, ultra-fine-grain color for landscapes and product. Prefer box speed; less forgiving than Portra."
     },
     {
       "id": "103b0eef-9449-5963-847d-ca0c72a7796b",
@@ -144,7 +166,11 @@
         "Travel",
         "Warm skin tones"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": [
+        "Gold 200"
+      ],
+      "description": "Warm, nostalgic everyday color. Cheap(ish), forgiving, and great for travel and casual people pictures."
     },
     {
       "id": "67586504-1162-597e-b1ca-9db1a7884284",
@@ -172,7 +198,12 @@
         "Travel",
         "Flash photography"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": [
+        "UltraMax 400",
+        "Ultramax 400"
+      ],
+      "description": "The all-purpose consumer color neg. Handles mixed light and flash well; a bit more grit than Gold."
     },
     {
       "id": "956cee9a-7968-5206-8610-d3da64e21fee",
@@ -180,7 +211,7 @@
       "iso": 200,
       "category": "Color neg",
       "process": "C-41",
-      "notes": "budget classic with vintage rendering",
+      "notes": "Alaris-distributed consumer C-41; closely related to Eastman Kodacolor 200. Keep both rows for dual packaging.",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Consumer",
@@ -199,7 +230,12 @@
         "Casual shooting",
         "Nostalgic look"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": [
+        "ColorPlus 200",
+        "Kodacolor 200 (cassette stamp)"
+      ],
+      "description": "Soft, budget-friendly color with a muted, slightly vintage feel. Easy C-41 staple."
     },
     {
       "id": "16b96f1f-e630-579e-8922-d4a5d6ea6226",
@@ -207,7 +243,7 @@
       "iso": 100,
       "category": "Color neg",
       "process": "C-41",
-      "notes": "skin-tone-friendly, heat-tolerant pro consumer stock",
+      "notes": "Consumer/prosumer C-41, strong in select markets (Asia/LatAm historically). Related to but catalog-separate from Kodacolor 100.",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Consumer",
@@ -226,7 +262,11 @@
         "Warm climates",
         "Prosumer work"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": [
+        "Pro Image 100"
+      ],
+      "description": "Sharp, saturated consumer/prosumer color popular in many markets. Strong everyday daylight stock."
     },
     {
       "id": "7b6b5aed-1ae6-5d98-b52f-0e452bb73bed",
@@ -253,7 +293,8 @@
         "Travel",
         "Cool green foliage"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "cdec5879-3ecd-40eb-ba19-23ed9b815dce",
@@ -261,7 +302,7 @@
       "iso": 400,
       "category": "Color neg",
       "process": "C-41",
-      "notes": "current consumer Fuji color; cool greens, forgiving latitude",
+      "notes": "Current consumer ISO 400 C-41 (often USA contract-made). Distinct from discontinued Superia X-TRA 400 and from Japan-only Superia Premium 400.",
       "isDiscontinued": false,
       "manufacturer": "Fujifilm",
       "brandLine": "Consumer",
@@ -280,7 +321,42 @@
         "Travel",
         "Available light"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": [
+        "Fujicolor 400",
+        "Fuji 400"
+      ]
+    },
+    {
+      "id": "37467953-cfa0-5cfb-94cd-b0bcd4b5e412",
+      "name": "Fujifilm Superia Premium 400",
+      "iso": 400,
+      "category": "Color neg",
+      "process": "C-41",
+      "notes": "Japan-made Superia. Still in production but scarce outside Japan. Distinct from USA-contract Fujifilm 400 and from discontinued Superia X-TRA 400.",
+      "isDiscontinued": false,
+      "manufacturer": "Fujifilm",
+      "brandLine": "Consumer",
+      "filmType": "Color negative",
+      "usableRange": "200–800",
+      "pushPullTolerance": "Classic Superia latitude; ±1 stop",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "Everyday color",
+        "Travel",
+        "Japan-market finds"
+      ],
+      "priceTier": "$$",
+      "aliases": [
+        "Superia Premium 400",
+        "Premium 400"
+      ]
     },
     {
       "id": "67decd68-81cf-5d31-8a88-c639432dfe61",
@@ -288,26 +364,30 @@
       "iso": 400,
       "category": "Color neg",
       "process": "C-41",
-      "notes": "the everyday Fuji workhorse",
-      "isDiscontinued": false,
+      "notes": "Discontinued ~2024 in remaining markets; replaced in many stores by Fujifilm 400 (contract-made). Keep for archive/logging old rolls.",
+      "isDiscontinued": true,
       "manufacturer": "Fujifilm",
       "brandLine": "Consumer",
       "filmType": "Color negative",
       "usableRange": "200–800",
       "pushPullTolerance": "Classic consumer latitude; pushes to 800–1600 with grit",
-      "productionStatus": "In production",
+      "productionStatus": "Discontinued",
       "formatsAvailable": [
         "35mm"
       ],
       "grainRMS": null,
       "grainCharacter": "Moderate",
-      "yearsActive": "2003–present",
+      "yearsActive": "2003–2024",
       "bestFor": [
         "Everyday color",
         "Street",
         "Flash"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": [
+        "Superia X-TRA 400",
+        "Superia Xtra 400"
+      ]
     },
     {
       "id": "59534da9-61b1-5017-8a76-0af947bc27a7",
@@ -315,7 +395,7 @@
       "iso": 800,
       "category": "Color neg",
       "process": "C-41",
-      "notes": "tungsten cine film with the famous halation glow",
+      "notes": "Tungsten (~3200K) remjet-removed motion-picture-derived C-41. Rated 800 for C-41; derived from Vision3 500T. Famous red halation.",
       "isDiscontinued": false,
       "manufacturer": "CineStill",
       "brandLine": "Cinema (remjet-removed)",
@@ -335,7 +415,12 @@
         "Tungsten interiors",
         "Halation aesthetics"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "800T",
+        "800Tungsten",
+        "Cinestill 800T"
+      ]
     },
     {
       "id": "af1c9381-e28f-53c8-a514-8e06329f240b",
@@ -343,7 +428,7 @@
       "iso": 400,
       "category": "Color neg",
       "process": "C-41",
-      "notes": "daylight all-rounder with a cinematic feel",
+      "notes": "Daylight C-41 cine-look still film (not remjet-removed Vision3). Wide latitude. Formats: 35mm, 120, 4×5.",
       "isDiscontinued": false,
       "manufacturer": "CineStill",
       "brandLine": "Cinema (remjet-removed)",
@@ -353,7 +438,8 @@
       "productionStatus": "In production",
       "formatsAvailable": [
         "35mm",
-        "120"
+        "120",
+        "4×5"
       ],
       "grainRMS": null,
       "grainCharacter": "Fine",
@@ -363,7 +449,12 @@
         "Travel",
         "Hybrid still/motion feel"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "400D",
+        "400Dynamic",
+        "Cinestill 400D"
+      ]
     },
     {
       "id": "9c9af71d-8a67-5f16-be91-e69afdb5c9f6",
@@ -371,7 +462,7 @@
       "iso": 50,
       "category": "Color neg",
       "process": "C-41",
-      "notes": "ultra-fine grain daylight cine stock",
+      "notes": "Daylight fine-grain remjet-removed motion-picture-derived C-41. Formats: 35mm, 120.",
       "isDiscontinued": false,
       "manufacturer": "CineStill",
       "brandLine": "Cinema (remjet-removed)",
@@ -391,7 +482,46 @@
         "Ultra-fine detail",
         "Landscapes"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "50D",
+        "50Daylight",
+        "Cinestill 50D"
+      ]
+    },
+    {
+      "id": "3278eee8-8553-5719-ad31-7ef1d7566ed4",
+      "name": "CineStill BwXX",
+      "iso": 250,
+      "category": "B&W",
+      "process": "B&W",
+      "notes": "CineStill's stills packaging of Kodak Double-X. Daylight ~250 / tungsten ~200. Process in B&W chemistry (not C-41). Separate from bulk/cine 5222.",
+      "isDiscontinued": false,
+      "manufacturer": "CineStill",
+      "brandLine": "Cinema (stills)",
+      "filmType": "B&W negative",
+      "usableRange": "200–800",
+      "pushPullTolerance": "Classically EI 200–500; pushes with classic grain",
+      "productionStatus": "In production",
+      "formatsAvailable": [
+        "35mm",
+        "120"
+      ],
+      "grainRMS": null,
+      "grainCharacter": "Moderate",
+      "yearsActive": "2010s–present",
+      "bestFor": [
+        "Documentary mono",
+        "Classic grain",
+        "Available light B&W"
+      ],
+      "priceTier": "$$",
+      "aliases": [
+        "BwXX",
+        "BWXX",
+        "CineStill Double-X",
+        "Cinestill BwXX"
+      ]
     },
     {
       "id": "f8a889f7-a3b5-5834-ab88-9932c6461c73",
@@ -399,7 +529,7 @@
       "iso": 500,
       "category": "Color neg",
       "process": "ECN-2",
-      "notes": "Hollywood's low-light standard",
+      "notes": "Cinema tungsten color negative. Remjet — ECN-2 (or remjet removal + C-41).",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Motion Picture",
@@ -420,7 +550,12 @@
         "Night exteriors",
         "Stills from short ends"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": [
+        "Vision3 500T",
+        "5219/7219"
+      ],
+      "description": "Fast tungsten cinema color for low light. Remjet / ECN-2 workflow."
     },
     {
       "id": "a9b58f22-1e75-58db-a44a-6701811b150e",
@@ -428,7 +563,7 @@
       "iso": 250,
       "category": "Color neg",
       "process": "ECN-2",
-      "notes": "balanced daylight motion picture stock",
+      "notes": "Cinema color negative. Remjet — ECN-2 (or remjet removal + C-41).",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Motion Picture",
@@ -449,7 +584,12 @@
         "Exteriors",
         "Stills respools"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": [
+        "Vision3 250D",
+        "5207/7207"
+      ],
+      "description": "Daylight cinema color with wide latitude. Remjet / ECN-2 workflow."
     },
     {
       "id": "c5f119b4-01eb-508d-96e5-71a20175c31c",
@@ -457,7 +597,7 @@
       "iso": 200,
       "category": "Color neg",
       "process": "ECN-2",
-      "notes": "tungsten mid-speed cine film",
+      "notes": "Cinema tungsten color negative. Remjet — ECN-2 (or remjet removal + C-41).",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Motion Picture",
@@ -478,7 +618,12 @@
         "Mixed lighting cine",
         "Stills short ends"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": [
+        "Vision3 200T",
+        "5213/7213"
+      ],
+      "description": "Tungsten cinema color for interior / night work. Remjet / ECN-2 workflow."
     },
     {
       "id": "1d2ba1c2-079a-55d6-b667-114c0e98cf50",
@@ -486,7 +631,7 @@
       "iso": 50,
       "category": "Color neg",
       "process": "ECN-2",
-      "notes": "arguably the finest-grained color film in production",
+      "notes": "Cinema color negative. Remjet backing — needs ECN-2 (or remjet removal + C-41 cross-process). Not a drop-in still C-41 stock.",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Motion Picture",
@@ -507,7 +652,12 @@
         "Fine detail",
         "Daylight stills from bulk"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": [
+        "Vision3 50D",
+        "5203/7203"
+      ],
+      "description": "Ultra-fine daylight cinema color. Needs ECN-2 (or remjet removal + C-41) — not a normal lab drop-off. --- ## Discontinued (archive / old rolls)"
     },
     {
       "id": "207bd6c8-8ddb-5980-8f7a-d15584e2241c",
@@ -515,17 +665,17 @@
       "iso": 100,
       "category": "Color neg",
       "process": "C-41",
-      "notes": "aerial film respooled as SantaColor 100 / Elektra 100",
+      "notes": "Aerial surveillance C-41 emulsion (Kodak 2460). Not a normal Kodak retail still-film SKU — sold via third-party respools (35mm; some 120 respools). Meter ~ISO 80–100.",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
-      "brandLine": "Aerial / Specialty",
+      "brandLine": "Aerial / respooled",
       "filmType": "Color negative",
       "usableRange": "50–200",
       "pushPullTolerance": "Designed for aerial; ±1 stop for stills use",
       "productionStatus": "In production",
       "formatsAvailable": [
-        "35mm (respool)",
-        "Aerial long rolls"
+        "35mm (respooled)",
+        "120 (respooled, limited)"
       ],
       "grainRMS": null,
       "grainCharacter": "Fine",
@@ -535,7 +685,13 @@
         "Landscape stills",
         "Scanning punch"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": [
+        "Aerocolor IV 2460",
+        "SantaColor 100",
+        "Luminar 100"
+      ],
+      "description": "Fine-grain aerial surveillance color, usually sold as third-party respools. Neutral, sharp, meter around ISO 80–100."
     },
     {
       "id": "def19929-637a-54b9-8655-8af09af4923f",
@@ -563,7 +719,8 @@
         "Surreal palettes",
         "Creative projects"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "0cc34bb6-86e6-5b5c-9828-ba89ddf78f9e",
@@ -591,7 +748,8 @@
         "Experimental color",
         "High-contrast scenes"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "c409e006-68ad-56e6-915c-f2c666cc32e6",
@@ -619,7 +777,8 @@
         "Parties",
         "Experimentation"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "221f2902-1564-57d9-a9d7-5390c41b70fb",
@@ -647,7 +806,8 @@
         "Travel",
         "Analog experiments"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "76fdcffc-914f-56a1-80b6-cff3d51ba9c2",
@@ -675,7 +835,8 @@
         "Budget fine grain",
         "Travel"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "1132ec30-ca7f-407e-9226-264c9497b10d",
@@ -703,7 +864,8 @@
         "Everyday mono",
         "Learning development"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "5a82477b-4ce4-5b8c-aa71-85605f78ffd4",
@@ -731,7 +893,8 @@
         "Creative fashion",
         "Experimental travel"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "65935396-00b4-5f6e-84ab-825ce4c2c085",
@@ -759,7 +922,8 @@
         "Muted palettes",
         "Cinematic stills"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "defff4a1-d0e7-56a9-9038-ec802177f895",
@@ -787,7 +951,8 @@
         "Creative color",
         "Statement frames"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "5a1a4857-77ac-5074-8e13-832fcf55c6b9",
@@ -795,7 +960,7 @@
       "iso": 400,
       "category": "Color neg",
       "process": "C-41",
-      "notes": "pastel wedding-photographer favorite, mourned since 2021",
+      "notes": "Discontinued legendary portrait color neg. Keep for archive.",
       "isDiscontinued": true,
       "manufacturer": "Fujifilm",
       "brandLine": "Professional",
@@ -816,7 +981,11 @@
         "Pastel skin",
         "Soft fashion"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "Pro 400H",
+        "NPH"
+      ]
     },
     {
       "id": "dc888b33-7d31-5cdb-9dce-7b1f80b0f52b",
@@ -844,7 +1013,8 @@
         "Portraits",
         "Daylight landscapes"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "be00a89b-a206-51b7-94fa-54a5a669add7",
@@ -871,7 +1041,8 @@
         "Compact cameras",
         "Gritty night"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "da5b9449-f86f-538a-87bd-ccbe34eba25c",
@@ -898,7 +1069,8 @@
         "Point-and-shoot",
         "Available-light snapshots"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "a49bcb33-97d5-507f-9a19-f315105ebea9",
@@ -925,7 +1097,8 @@
         "Indoor color",
         "Travel"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "b8b0ab40-f190-5b9d-a063-d2949d4eece6",
@@ -954,7 +1127,11 @@
         "Weddings",
         "Skin tones"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "Portra 400NC"
+      ],
+      "description": "Discontinued “natural color” Portra. Softer, more neutral than the later unified Portra 400."
     },
     {
       "id": "6a3095a3-f7ba-5da2-8058-511542f5cd86",
@@ -983,7 +1160,11 @@
         "Fashion",
         "Strong color"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "Portra 400VC"
+      ],
+      "description": "Discontinued “vivid color” Portra. Punchier palette than 400NC; archived wedding favorite."
     },
     {
       "id": "01fe290b-9368-5a82-835b-19fc6120a61b",
@@ -1011,7 +1192,9 @@
         "Ultra-fine color",
         "Bright daylight"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [],
+      "description": "Discontinued ultra-fine, ultra-saturated slow color. Demanding exposure; legendary sharpness."
     },
     {
       "id": "660d926b-4247-5b01-91b2-f5e876896c05",
@@ -1038,7 +1221,8 @@
         "Everyday snaps",
         "Vintage finds"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "b8e07be3-1375-5565-a263-c59e2c8787ff",
@@ -1065,7 +1249,8 @@
         "Mixed light",
         "Expired-film hunting"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "0221f4fa-619b-5ad3-91b9-04b7ff87d22a",
@@ -1092,7 +1277,8 @@
         "Casual color",
         "Expired experimentation"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "d7880157-9674-5d16-a289-b743346e8a99",
@@ -1119,7 +1305,9 @@
         "Snapshots",
         "Vintage canister finds"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": [],
+      "description": "Discontinued consumer color, warm and snapshot-friendly."
     },
     {
       "id": "5eb01ca8-145b-52a0-bcac-2a0069ffe391",
@@ -1127,7 +1315,7 @@
       "iso": 50,
       "category": "Slide",
       "process": "E-6",
-      "notes": "the landscape saturation king",
+      "notes": "Still manufactured but supply is intermittent. Large-format (4×5 / 8×10) is largely gone — catalog lists 35mm and 120 only.",
       "isDiscontinued": false,
       "manufacturer": "Fujifilm",
       "brandLine": "Professional",
@@ -1137,9 +1325,7 @@
       "productionStatus": "In production",
       "formatsAvailable": [
         "35mm",
-        "120",
-        "4×5",
-        "8×10"
+        "120"
       ],
       "grainRMS": "9",
       "grainCharacter": "Fine",
@@ -1149,15 +1335,19 @@
         "Nature",
         "Projection/scanning punch"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "Velvia 50",
+        "RVP"
+      ]
     },
     {
       "id": "46d470d7-a389-5114-9f2c-21afe1670646",
-      "name": "Kodak Ektachrome 100",
+      "name": "Kodak Ektachrome E100",
       "iso": 100,
       "category": "Slide",
       "process": "E-6",
-      "notes": "clean, neutral, gloriously revived in 2018",
+      "notes": "Current E-6 chrome. Prefer display name E100.",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Professional",
@@ -1178,7 +1368,13 @@
         "Travel color",
         "Accurate daylight"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "Ektachrome 100",
+        "E100",
+        "Kodak Ektachrome 100"
+      ],
+      "description": "Clean, vivid E-6 slide film (E100). Precise exposure; gorgeous when scanned or projected."
     },
     {
       "id": "f911496b-8f5c-585f-8ed0-d52686214f84",
@@ -1186,7 +1382,7 @@
       "iso": 100,
       "category": "Slide",
       "process": "E-6",
-      "notes": "the balanced professional chrome",
+      "notes": "Still in production; supply intermittent. Sheet (4×5 / 8×10) availability is unreliable — don't count on it.",
       "isDiscontinued": false,
       "manufacturer": "Fujifilm",
       "brandLine": "Professional",
@@ -1196,9 +1392,7 @@
       "productionStatus": "In production",
       "formatsAvailable": [
         "35mm",
-        "120",
-        "4×5",
-        "8×10"
+        "120"
       ],
       "grainRMS": "8",
       "grainCharacter": "Fine",
@@ -1208,7 +1402,11 @@
         "Studio/scan work",
         "Portraits on slide"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "Provia 100F",
+        "RDP III"
+      ]
     },
     {
       "id": "a721b042-0556-505a-85a5-ebc0e52e021e",
@@ -1216,7 +1414,7 @@
       "iso": 100,
       "category": "Slide",
       "process": "E-6",
-      "notes": "vivid professional slide film",
+      "notes": "Still produced internationally; US distribution restricted historically (PIP 3:1). Availability intermittent.",
       "isDiscontinued": false,
       "manufacturer": "Fujifilm",
       "brandLine": "Professional",
@@ -1237,7 +1435,11 @@
         "Product color",
         "Fine detail"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "Velvia 100",
+        "RVP100"
+      ]
     },
     {
       "id": "cd8bd23e-671e-50ff-9815-5b52018fbc72",
@@ -1265,7 +1467,9 @@
         "Documentary legacy",
         "Collector shooting (unprocessable)"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [],
+      "description": "Discontinued Kodachrome workhorse speed. Same archival dye-cloud look; K-14 no longer available."
     },
     {
       "id": "dda78710-cf49-5d2b-b90a-acd33a4d4db0",
@@ -1292,7 +1496,9 @@
         "Bright daylight archives",
         "Collectors"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [],
+      "description": "Discontinued Kodachrome — archival color, unique look. K-14 process is gone; log for history / scanned rolls."
     },
     {
       "id": "0c2442db-c54e-5d4c-9f98-97124442c458",
@@ -1320,7 +1526,8 @@
         "Muted fashion",
         "Gentle slide color"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": []
     },
     {
       "id": "4b4e6f30-fccd-518d-9c6d-6893e87911e6",
@@ -1347,7 +1554,8 @@
         "Travel chrome",
         "Expired finds"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "df96db40-a7d2-56d4-9f04-99bcddbacf8b",
@@ -1375,7 +1583,9 @@
         "Punchy travel",
         "Projection"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [],
+      "description": "Discontinued saturated Ektachrome variant. Vivid landscape chrome from the VS era."
     },
     {
       "id": "e690ffc3-6b84-537d-ae1a-adc6f63b08e0",
@@ -1402,7 +1612,8 @@
         "Collectors",
         "Distinctive slide palette"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": []
     },
     {
       "id": "8c60775c-02fc-5c27-a335-4f8259a6c965",
@@ -1429,7 +1640,8 @@
         "Travel",
         "Learning E-6"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "3c54a257-682a-5a9e-99fa-4e38d5a944f1",
@@ -1456,7 +1668,9 @@
         "Travel chrome",
         "Expired hunting"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": [],
+      "description": "Discontinued consumer E-6. Friendly slide film from the drugstore era."
     },
     {
       "id": "11dea2b3-0fd3-5ea8-8b77-59922fcd9349",
@@ -1487,7 +1701,13 @@
         "Photojournalism",
         "Push processing"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": [
+        "Tri-X 400",
+        "TX",
+        "400TX"
+      ],
+      "description": "The classic B&W workhorse. Beautiful grit, legendary for push processing and street / documentary work."
     },
     {
       "id": "cf9afb11-26d1-5040-aedf-9145d6934da6",
@@ -1519,7 +1739,8 @@
         "Available light",
         "Push/pull versatility"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "6491466e-e87e-5e94-9aa8-622426957eb0",
@@ -1550,15 +1771,16 @@
         "Landscapes",
         "Large format"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "f021c2c2-1352-541a-95c0-d9fd40fb6d19",
-      "name": "Kodak Ektapan 400 (T-Max 400)",
+      "name": "Kodak T-Max 400",
       "iso": 400,
       "category": "B&W",
       "process": "B&W",
-      "notes": "modern tabular grain, extremely sharp",
+      "notes": "Same emulsion as Eastman Kodak Ektapan 400 (2026 rebrand). Modern tabular grain, extremely sharp.",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Professional",
@@ -1574,21 +1796,28 @@
       ],
       "grainRMS": "10",
       "grainCharacter": "Fine",
-      "yearsActive": "1986–present",
+      "yearsActive": "1986–present (Ektapan branding 2026–)",
       "bestFor": [
         "Fine-grain fast B&W",
         "Scanning",
         "General purpose"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": [
+        "Ektapan 400",
+        "Kodak Ektapan 400",
+        "T-Max 400",
+        "TMY"
+      ],
+      "description": "Fast tabular-grain B&W with tight grain for the speed. Same emulsion as Ektapan 400."
     },
     {
       "id": "72826435-2a23-5c5e-a091-874d1ae05192",
-      "name": "Kodak Ektapan 100 (T-Max 100)",
+      "name": "Kodak T-Max 100",
       "iso": 100,
       "category": "B&W",
       "process": "B&W",
-      "notes": "near-medium-format resolution",
+      "notes": "Same emulsion as Eastman Kodak Ektapan 100 (2026 rebrand / dual distribution with Alaris T-Max). Tabular grain, very fine.",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Professional",
@@ -1605,13 +1834,20 @@
       ],
       "grainRMS": "8",
       "grainCharacter": "Fine",
-      "yearsActive": "1986–present",
+      "yearsActive": "1986–present (Ektapan branding 2026–)",
       "bestFor": [
         "Ultra-fine detail",
         "Studio",
         "Large format"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": [
+        "Ektapan 100",
+        "Kodak Ektapan 100",
+        "T-Max 100",
+        "TMX"
+      ],
+      "description": "Very fine-grain tabular B&W. Sharp and smooth — same emulsion as Ektapan 100."
     },
     {
       "id": "efb76dba-9c5a-598e-9935-6da2f614b5e6",
@@ -1640,7 +1876,8 @@
         "Portraits",
         "Scanning"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "25f2bd4a-8713-57f5-8473-f38574aa29db",
@@ -1669,7 +1906,8 @@
         "Hybrid street/portrait",
         "Scanning"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "ed45ecf6-0e2a-5421-a572-80404cd485ef",
@@ -1697,15 +1935,16 @@
         "Still life",
         "Bright daylight"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "707b612a-51e1-58b5-aaf1-c36a979ff581",
-      "name": "Kodak Ektapan P3200 (T-Max P3200)",
+      "name": "Kodak T-Max P3200",
       "iso": 3200,
       "category": "B&W",
       "process": "B&W",
-      "notes": "low-light specialist",
+      "notes": "Same emulsion as Eastman Kodak Ektapan P3200 (2026 rebrand). Nominal EI 800–3200 multi-speed; commonly rated 1600–3200.",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Professional",
@@ -1718,13 +1957,20 @@
       ],
       "grainRMS": null,
       "grainCharacter": "Pronounced",
-      "yearsActive": "1988–2012; revived 2018–present",
+      "yearsActive": "1980s–present (Ektapan branding 2026–)",
       "bestFor": [
         "Extreme low light",
         "Night street",
         "Documentary push"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "Ektapan P3200",
+        "Kodak Ektapan P3200",
+        "T-Max P3200",
+        "TMZ"
+      ],
+      "description": "Multi-speed ultra-fast B&W for low light. Commonly rated 1600–3200; expect pronounced grain. Same emulsion as Ektapan P3200."
     },
     {
       "id": "d60875b7-abf7-5d0d-a75c-1c1232b5845c",
@@ -1752,7 +1998,8 @@
         "Atmospheric night",
         "Grain aesthetics"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": []
     },
     {
       "id": "cd32732a-8ba0-5d17-8109-a3dd15fc5963",
@@ -1760,7 +2007,7 @@
       "iso": 100,
       "category": "B&W",
       "process": "B&W",
-      "notes": "incredible reciprocity characteristics",
+      "notes": "Current fine-grain B&W; excellent reciprocity. Made in UK (Harman) for Fujifilm branding.",
       "isDiscontinued": false,
       "manufacturer": "Fujifilm",
       "brandLine": "Professional",
@@ -1781,7 +2028,12 @@
         "Landscapes",
         "Ultra-smooth tonality"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [
+        "Acros II",
+        "Neopan Acros 100 II",
+        "ACROS II"
+      ]
     },
     {
       "id": "a5957776-6a0b-5782-aa6b-14eb7e5b114b",
@@ -1789,7 +2041,7 @@
       "iso": 250,
       "category": "B&W",
       "process": "B&W",
-      "notes": "cine B&W used in Schindler's List",
+      "notes": "Cinema B&W negative. Daylight ~250 / tungsten ~200. Remjet-free versions sold for stills; process in B&W chemistry (not C-41).",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Motion Picture",
@@ -1810,7 +2062,13 @@
         "Documentary mono",
         "Classic grain look"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": [
+        "Eastman Double-X",
+        "5222",
+        "Double-X"
+      ],
+      "description": "Cinema B&W with rich midtones. Roughly EI 250 daylight / 200 tungsten; a classic motion-picture look."
     },
     {
       "id": "03c07ef3-e191-5d39-b95a-886c0fccdb01",
@@ -1838,7 +2096,8 @@
         "Wide exposure latitude",
         "Hybrid B&W workflow"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "eaac02e6-1d7f-52b1-96cc-0ea3ab77373c",
@@ -1866,7 +2125,8 @@
         "Woodland scenes",
         "Creative filters"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "c5ae4850-8c30-577d-8e79-416a787abc3f",
@@ -1895,7 +2155,8 @@
         "Blue-sensitive look",
         "Technical photography"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "92b823b3-7c8c-59ad-b846-00e79619f715",
@@ -1923,7 +2184,8 @@
         "Everyday B&W",
         "High volume shooting"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "33449ae1-8192-5542-a00d-282ec08ee035",
@@ -1951,7 +2213,8 @@
         "Learning B&W",
         "Daylight mono"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "aeb009ff-25e1-5564-ba47-215a480f6576",
@@ -1981,7 +2244,8 @@
         "Push practice",
         "DIY development"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "ae4bfaf2-2d83-5e8b-8aa2-62b1292964bc",
@@ -2011,7 +2275,8 @@
         "Large format practice",
         "Classic tonality"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "4e821623-2131-5779-a2a6-6d1989fbe230",
@@ -2040,7 +2305,8 @@
         "Budget general use",
         "Creative tonality"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "37e1a28d-f54c-5510-943e-9103984c7458",
@@ -2068,7 +2334,8 @@
         "General B&W",
         "Push work"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "1740864e-af90-5c4c-9600-abbaf97663b2",
@@ -2096,7 +2363,8 @@
         "Landscapes",
         "Smooth tonality"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "e5bbe5f1-a379-434a-983f-cbde739dcfc7",
@@ -2123,7 +2391,8 @@
         "Landscape / nature",
         "Scanning & darkroom"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "2511ccf2-ad26-56fa-9ce4-596f787f647f",
@@ -2151,7 +2420,8 @@
         "Clear skies",
         "Fine detail"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "fe8bb79f-79c3-52f5-833c-f0cc10756aec",
@@ -2179,7 +2449,8 @@
         "Specialty B&W",
         "Clear-base scanning"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "01a8547e-2510-5c1d-b189-c6ae4e4966b0",
@@ -2207,7 +2478,8 @@
         "Woodland IR",
         "Experimental mono"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "dce027f4-74b7-5b56-bbb3-ba63dfe65535",
@@ -2236,7 +2508,8 @@
         "Street",
         "Budget volume"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "6b48847c-4726-5044-8a53-b4819f612a4a",
@@ -2265,7 +2538,8 @@
         "Landscapes",
         "Learning B&W"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "e4958708-2740-5e08-a7ad-b9e746682b1c",
@@ -2293,7 +2567,8 @@
         "Bright sun",
         "Technical work"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "882dcd37-263f-50d6-ba4e-638904315017",
@@ -2321,7 +2596,8 @@
         "Blue-sky look",
         "Technical ortho"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "fc8b7c64-c7b8-5a4c-93f2-65c531e5ac98",
@@ -2348,7 +2624,8 @@
         "Gritty mono",
         "Urban documentary"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "818523e5-f0c4-5f51-b3df-886119379aa7",
@@ -2378,7 +2655,8 @@
         "Pictorial B&W",
         "Tonal range"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "7d86aac5-bfe4-5260-87a5-0d6d6723ed8d",
@@ -2407,7 +2685,8 @@
         "Technical/copy",
         "Maximum resolution"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": []
     },
     {
       "id": "dd5282eb-01a8-5734-803e-fdb01aa2ab3e",
@@ -2436,7 +2715,8 @@
         "Pictorial B&W",
         "LF practice"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "43b07c38-6f9c-5305-a419-49451ec73c94",
@@ -2464,7 +2744,8 @@
         "Landscapes",
         "Fine detail"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "2d6c2a09-44dd-5b90-8e7d-e8a760d3349a",
@@ -2491,7 +2772,8 @@
         "Projection",
         "Positive mono"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": []
     },
     {
       "id": "d013fbe4-5617-5334-8f87-f9143b5d908f",
@@ -2518,7 +2800,8 @@
         "Fine grain street",
         "Cine look stills"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": []
     },
     {
       "id": "3836c6c0-ac6a-5cba-8161-d05bc85cb36a",
@@ -2545,7 +2828,8 @@
         "Everyday mono",
         "Analog revival"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": []
     },
     {
       "id": "cb9f80d5-c50f-597d-9284-23a3a365657f",
@@ -2574,7 +2858,8 @@
         "Documentary mono",
         "Clear scanning base"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "9f7f5235-0f35-58bf-a7c7-06c5a802c3fd",
@@ -2602,7 +2887,8 @@
         "Street",
         "Available light"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "95a37724-c101-5a16-b2e3-fc540c589ec6",
@@ -2629,7 +2915,8 @@
         "Travel mono",
         "Small-batch aesthetic"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "2c3049c1-a666-5abd-ba36-78d2070fd64e",
@@ -2656,7 +2943,8 @@
         "Experimental mono",
         "Unique base character"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": []
     },
     {
       "id": "55bdf778-27bc-514f-99bc-b828c8f45f02",
@@ -2685,7 +2973,8 @@
         "Learning B&W",
         "High volume"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "0d4b8afc-d5b1-5b0e-b2c8-b08fbfb72cdb",
@@ -2715,7 +3004,8 @@
         "Budget street",
         "Bulk loading"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "ac03b98b-3549-5cc4-b137-d32f96c73bb0",
@@ -2744,7 +3034,8 @@
         "Practice rolls",
         "Street grit"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": []
     },
     {
       "id": "dc971c63-e364-5ef7-ab56-13be2da66ac9",
@@ -2771,7 +3062,8 @@
         "Available-light street",
         "Grit aesthetics"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "f19cf927-8b39-5db8-ab77-893d72152c01",
@@ -2799,7 +3091,8 @@
         "Street",
         "Scanning legacy rolls"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "8806ec2a-810e-5653-9419-d811f204a0c9",
@@ -2829,7 +3122,9 @@
         "Portraits",
         "Documentary mid-century look"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": [],
+      "description": "Discontinued classic fine-grain B&W. Clean tonality; a mid-century standard."
     },
     {
       "id": "e8b7ef02-ed3c-544d-9a99-43f233cce266",
@@ -2857,7 +3152,9 @@
         "Still life",
         "Bright sun"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": [],
+      "description": "Discontinued ultra-fine slow B&W. Extreme detail for bright light and big enlargements."
     },
     {
       "id": "5b27ff19-fee2-5224-8a3c-9bbdaf357783",
@@ -2886,7 +3183,9 @@
         "Extreme resolution",
         "Microfilming stills"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": [],
+      "description": "Discontinued ultra-high-resolution B&W. Special contrast behavior; niche technical / pictorial use. ---"
     },
     {
       "id": "b74f8700-efb5-5ee0-8f36-adeffa9efc60",
@@ -2914,7 +3213,8 @@
         "Bright daylight",
         "Expired treasures"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "c9f57093-2a61-5e42-af24-db255bdb92fb",
@@ -2942,7 +3242,8 @@
         "Fine detail",
         "Collectors"
       ],
-      "priceTier": "$$"
+      "priceTier": "$$",
+      "aliases": []
     },
     {
       "id": "6a63ee1a-d7d5-52aa-868d-23c5e5b848b7",
@@ -2950,7 +3251,7 @@
       "iso": 100,
       "category": "Color neg",
       "process": "C-41",
-      "notes": "Consumer Kodacolor color negative",
+      "notes": "Eastman Kodak consumer C-41 (2025+). Widely believed related to Pro Image 100; keep as its own SKU. Often 35mm only.",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Consumer",
@@ -2959,8 +3260,7 @@
       "pushPullTolerance": "Typical consumer ±1 stop; best in good daylight",
       "productionStatus": "In production",
       "formatsAvailable": [
-        "35mm",
-        "Single-use cameras"
+        "35mm"
       ],
       "grainRMS": null,
       "grainCharacter": "Fine",
@@ -2970,7 +3270,11 @@
         "Travel",
         "Budget fine-grain color"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": [
+        "Kodacolor 100"
+      ],
+      "description": "Eastman’s current slow consumer color. Fine grain and natural color for bright daylight."
     },
     {
       "id": "c5f233f6-a010-57c1-ade1-0234f46dde6a",
@@ -2978,7 +3282,7 @@
       "iso": 200,
       "category": "Color neg",
       "process": "C-41",
-      "notes": "Consumer Kodacolor color negative",
+      "notes": "Eastman Kodak consumer C-41 (2025+). Edge codes / community tests align closely with ColorPlus 200; keep as its own SKU.",
       "isDiscontinued": false,
       "manufacturer": "Kodak",
       "brandLine": "Consumer",
@@ -2987,8 +3291,7 @@
       "pushPullTolerance": "Everyday consumer latitude ±1 stop",
       "productionStatus": "In production",
       "formatsAvailable": [
-        "35mm",
-        "Single-use cameras"
+        "35mm"
       ],
       "grainRMS": null,
       "grainCharacter": "Moderate",
@@ -2998,7 +3301,11 @@
         "Family snapshots",
         "Travel"
       ],
-      "priceTier": "$"
+      "priceTier": "$",
+      "aliases": [
+        "Kodacolor 200"
+      ],
+      "description": "Eastman’s current ISO 200 consumer color — closely related to ColorPlus, often in fresher Eastman boxes."
     },
     {
       "id": "0146bc7e-348d-55d8-ae37-149829fa0c9e",
@@ -3025,7 +3332,8 @@
         "Leica lenses / wide aperture",
         "Near-IR with filters"
       ],
-      "priceTier": "$$$"
+      "priceTier": "$$$",
+      "aliases": []
     }
   ]
 }

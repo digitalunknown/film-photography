@@ -8,7 +8,9 @@ struct RollDetailView: View {
     @State private var showingDeleteConfirm = false
     @State private var showingCameraPicker = false
     @State private var showingAddDatePicker = false
+    @State private var showingFrozenDatePicker = false
     @State private var addDateDraft = Date()
+    @State private var frozenDateDraft = Date()
     @FocusState private var isNotesFocused: Bool
 
     private var roll: Roll? {
@@ -65,9 +67,10 @@ struct RollDetailView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button("Delete Roll", lucide: .trash, role: .destructive) {
+                    Button(destructive: "Delete Roll", lucide: .trash) {
                         showingDeleteConfirm = true
                     }
+                    .font(AppType.body)
                 } label: {
                     LucideIcon(.ellipsis)
                 }
@@ -82,10 +85,19 @@ struct RollDetailView: View {
             }
         }
         .sheet(isPresented: $showingCameraPicker) {
-            cameraPickerSheet(for: rollId)
+            ChooseCameraSheet(
+                onSelect: { camera in
+                    store.assignRoll(rollId, to: camera.id)
+                    showingCameraPicker = false
+                },
+                onDismiss: { showingCameraPicker = false }
+            )
         }
         .sheet(isPresented: $showingAddDatePicker) {
             addDatePickerSheet
+        }
+        .sheet(isPresented: $showingFrozenDatePicker) {
+            frozenDatePickerSheet
         }
         .alert(deleteAlertTitle, isPresented: $showingDeleteConfirm) {
             Button("Delete", role: .destructive) {
@@ -121,43 +133,6 @@ struct RollDetailView: View {
         )
     }
 
-    private func cameraPickerSheet(for rollId: UUID) -> some View {
-        NavigationStack {
-            List {
-                if let roll = store.roll(for: rollId) {
-                    ForEach(availableCameras(for: roll)) { camera in
-                        Button {
-                            // Picking the camera is the load — there's no second confirm step.
-                            store.assignRoll(rollId, to: camera.id)
-                            showingCameraPicker = false
-                        } label: {
-                            Text(camera.name)
-                                .font(AppType.body)
-                                .foregroundStyle(AppTheme.textPrimary)
-                        }
-                    }
-
-                    if availableCameras(for: roll).isEmpty {
-                        Text("No empty cameras available.")
-                            .font(AppType.body)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-                }
-            }
-            .instrumentFormStyle()
-            .navigationTitle("Choose camera")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { showingCameraPicker = false }
-                        .font(AppType.body)
-                }
-            }
-        }
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.hidden)
-    }
-
     /// Everything below the scan button: the camera, then what is on the roll, then the
     /// status override, development, and finally notes. One 16pt stack with explicit
     /// rules, mirroring the Figma auto-layout.
@@ -169,6 +144,7 @@ struct RollDetailView: View {
             developmentRows(roll)
             notesRows(roll)
         }
+        .padding(.top, AppTheme.tableGap)
         .padding(.bottom, AppTheme.Spacing.lg)
     }
 
@@ -232,9 +208,21 @@ struct RollDetailView: View {
     @ViewBuilder
     private func stockRows(_ roll: Roll) -> some View {
         if let stock = store.stock(for: roll.stockId) {
-            valueRow("Stock", value: stock.name)
+            NavigationLink {
+                StockDetailView(stockId: stock.id)
+            } label: {
+                DetailFieldRow(label: "Stock") {
+                    HStack(spacing: AppTheme.Spacing.xs) {
+                        DetailFieldValue(text: stock.name)
+                        LucideIcon(.chevronRight)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
             HairlineRule()
-            valueRow("ISO", value: "\(roll.shootingISO ?? stock.iso)")
+            valueRow("ISO/ASA", value: "\(roll.shootingISO ?? stock.iso)")
             HairlineRule()
         }
     }
@@ -273,6 +261,97 @@ struct RollDetailView: View {
         }
         HairlineRule()
         expirationRow(roll)
+        HairlineRule()
+        storageRows(roll)
+    }
+
+    @ViewBuilder
+    private func storageRows(_ roll: Roll) -> some View {
+        menuRow("Storage method", value: roll.storageMethod.displayName) {
+            ForEach(StorageMethod.allCases) { method in
+                Button(method.displayName) {
+                    setStorageMethod(method, on: roll)
+                }
+            }
+        }
+        if roll.storageMethod == .freezer {
+            HairlineRule()
+            frozenDateRow(roll)
+        }
+    }
+
+    private func setStorageMethod(_ method: StorageMethod, on roll: Roll) {
+        guard var updated = store.roll(for: rollId) else { return }
+        updated.storageLocation = method.rawValue
+        if method != .freezer {
+            updated.frozenDate = nil
+        } else if updated.frozenDate == nil {
+            updated.frozenDate = Date()
+        }
+        store.updateRoll(updated)
+    }
+
+    private func frozenDateRow(_ roll: Roll) -> some View {
+        Button {
+            frozenDateDraft = roll.frozenDate ?? Date()
+            showingFrozenDatePicker = true
+        } label: {
+            DetailFieldRow(label: "Frozen date") {
+                DetailFieldValue(text: frozenDateDisplay(for: roll))
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func frozenDateDisplay(for roll: Roll) -> String {
+        guard let date = roll.frozenDate else { return "Not set" }
+        return DateFormatters.medium.string(from: date)
+    }
+
+    private var frozenDatePickerSheet: some View {
+        NavigationStack {
+            VStack(spacing: AppTheme.Spacing.xl) {
+                DatePicker(
+                    "Frozen date",
+                    selection: $frozenDateDraft,
+                    displayedComponents: .date
+                )
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                .tint(AppTheme.textPrimary)
+                .padding(.horizontal, AppTheme.horizontalPadding)
+
+                Spacer(minLength: 0)
+            }
+            .instrumentScreen()
+            .navigationTitle("Frozen date")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Clear") {
+                        if var updated = store.roll(for: rollId) {
+                            updated.frozenDate = nil
+                            store.updateRoll(updated)
+                        }
+                        showingFrozenDatePicker = false
+                    }
+                    .font(AppType.body)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        if var updated = store.roll(for: rollId) {
+                            updated.frozenDate = Calendar.current.startOfDay(for: frozenDateDraft)
+                            store.updateRoll(updated)
+                        }
+                        showingFrozenDatePicker = false
+                    }
+                    .font(AppType.body)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.hidden)
     }
 
     private func expirationRow(_ roll: Roll) -> some View {
@@ -591,9 +670,6 @@ struct RollDetailView: View {
         )
     }
 
-    private func availableCameras(for roll: Roll) -> [Camera] {
-        store.cameras.filter { store.loadedRoll(for: $0.id) == nil }
-    }
 }
 
 #Preview {

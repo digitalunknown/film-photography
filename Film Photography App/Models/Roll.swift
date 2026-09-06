@@ -1,5 +1,31 @@
 import Foundation
 
+enum StorageMethod: String, CaseIterable, Identifiable, Codable {
+    case roomTemperature = "Room temperature"
+    case fridge = "Fridge"
+    case freezer = "Freezer"
+
+    var id: String { rawValue }
+
+    var displayName: String { rawValue }
+
+    /// Maps free-text leftovers (`Fridge`, `freezer`, custom notes) onto the three options.
+    static func resolved(from stored: String?) -> StorageMethod {
+        guard let stored, !stored.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .fridge
+        }
+        if let match = allCases.first(where: {
+            $0.rawValue.compare(stored, options: .caseInsensitive) == .orderedSame
+        }) {
+            return match
+        }
+        let lower = stored.lowercased()
+        if lower.contains("freez") { return .freezer }
+        if lower.contains("room") { return .roomTemperature }
+        return .fridge
+    }
+}
+
 enum RollStatus: String, CaseIterable, Codable, Comparable {
     case acquired // legacy — migrated to inFridge on load
     case inFridge
@@ -169,6 +195,10 @@ struct FrameMarker: Identifiable, Codable, Hashable {
     var location: String?
     var notes: String?
     var tags: [String]
+    /// Glass on this frame. `lensId` points at a `CameraLens` on the roll's body;
+    /// `lensName` is the EXIF string so a deleted lens still exports.
+    var lensId: UUID?
+    var lensName: String?
 
     init(
         id: UUID = UUID(),
@@ -182,7 +212,9 @@ struct FrameMarker: Identifiable, Codable, Hashable {
         iso: Int? = nil,
         location: String? = nil,
         notes: String? = nil,
-        tags: [String] = []
+        tags: [String] = [],
+        lensId: UUID? = nil,
+        lensName: String? = nil
     ) {
         self.id = id
         self.frameIndex = frameIndex
@@ -196,6 +228,8 @@ struct FrameMarker: Identifiable, Codable, Hashable {
         self.location = location
         self.notes = notes
         self.tags = tags
+        self.lensId = lensId
+        self.lensName = lensName
     }
 
     init(from decoder: Decoder) throws {
@@ -212,6 +246,8 @@ struct FrameMarker: Identifiable, Codable, Hashable {
         location = try container.decodeIfPresent(String.self, forKey: .location)
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
         tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
+        lensId = try container.decodeIfPresent(UUID.self, forKey: .lensId)
+        lensName = try container.decodeIfPresent(String.self, forKey: .lensName)
     }
 }
 
@@ -229,6 +265,7 @@ struct Roll: Identifiable, Codable, Hashable {
     var loadedDate: Date?
     var finishedDate: Date?
     var storageLocation: String?
+    var frozenDate: Date?
     var expiryDate: Date?
     var dropOffDate: Date?
     var labName: String?
@@ -254,6 +291,10 @@ struct Roll: Identifiable, Codable, Hashable {
 
     var pushPullDisplayValue: String {
         pushPullLabel ?? "Box speed"
+    }
+
+    var storageMethod: StorageMethod {
+        StorageMethod.resolved(from: storageLocation)
     }
 
     var isExpired: Bool {
@@ -305,6 +346,7 @@ struct Roll: Identifiable, Codable, Hashable {
         loadedDate: Date?,
         finishedDate: Date?,
         storageLocation: String?,
+        frozenDate: Date? = nil,
         expiryDate: Date?,
         dropOffDate: Date?,
         labName: String?,
@@ -332,6 +374,7 @@ struct Roll: Identifiable, Codable, Hashable {
         self.loadedDate = loadedDate
         self.finishedDate = finishedDate
         self.storageLocation = storageLocation
+        self.frozenDate = frozenDate
         self.expiryDate = expiryDate
         self.dropOffDate = dropOffDate
         self.labName = labName
@@ -363,6 +406,7 @@ struct Roll: Identifiable, Codable, Hashable {
         loadedDate = try container.decodeIfPresent(Date.self, forKey: .loadedDate)
         finishedDate = try container.decodeIfPresent(Date.self, forKey: .finishedDate)
         storageLocation = try container.decodeIfPresent(String.self, forKey: .storageLocation)
+        frozenDate = try container.decodeIfPresent(Date.self, forKey: .frozenDate)
         expiryDate = try container.decodeIfPresent(Date.self, forKey: .expiryDate)
         dropOffDate = try container.decodeIfPresent(Date.self, forKey: .dropOffDate)
         labName = try container.decodeIfPresent(String.self, forKey: .labName)

@@ -14,6 +14,11 @@ enum AppTheme {
     /// Hairline: `textPrimary` at 10% — every divider and hairline border in the app.
     static let rule = AppPalette.rule
 
+    /// The one stroke weight. Every border in the app draws at this width, so panels,
+    /// plates, and fields read as one family. Only the film-frame corner brackets and the
+    /// circular exposure meters draw heavier, because they are marks rather than borders.
+    static let strokeWidth: CGFloat = 1.25
+
     static let horizontalPadding: CGFloat = 20
     static let iconSize: CGFloat = 24
 
@@ -27,6 +32,11 @@ enum AppTheme {
 
     static let rowSpacing = Spacing.lg
     static let sectionSpacing = Spacing.xl
+
+    /// Extra air above a screen's table of fields, on top of whatever bottom padding the
+    /// block above it carries. Without it the table's first rule lands on the same 16pt
+    /// rhythm as the rows inside it, so the boundary between hero and table disappears.
+    static let tableGap = Spacing.lg
 
     /// Apply Figtree to navigation titles and other UIKit chrome once at launch.
     static func applyTypography() {
@@ -53,6 +63,10 @@ enum AppTheme {
         let tabItem = UITabBarItem.appearance()
         tabItem.setTitleTextAttributes(tabAttrs, for: .normal)
         tabItem.setTitleTextAttributes(tabSelected, for: .selected)
+
+        // The system search field's default fill is a light grey that reads as a bright
+        // slab against this palette.
+        UISearchTextField.appearance().backgroundColor = UIColor(AppPalette.surface)
 
         UIBarButtonItem.appearance().setTitleTextAttributes([.font: inlineTitle], for: .normal)
         UIBarButtonItem.appearance().setTitleTextAttributes([.font: inlineTitle], for: .highlighted)
@@ -82,6 +96,8 @@ enum AppType {
     static let microRegular = InstrumentFont.display(11, weight: .regular)
     /// 10/SemiBold — EXPIRED tag.
     static let badge = InstrumentFont.display(10, weight: .semibold)
+    /// 8/Medium — film-strip edge print (manufacturer and frame number).
+    static let strip = InstrumentFont.display(8, weight: .medium)
     /// 50/Bold, 35pt line box — exposure counter.
     static let counter = InstrumentFont.display(50, weight: .bold)
     static let counterDigitHeight: CGFloat = 35

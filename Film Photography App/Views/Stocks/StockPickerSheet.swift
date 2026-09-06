@@ -21,7 +21,7 @@ struct StockPickerSheet: View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return store.stocks }
         return store.stocks.filter { stock in
-            stock.name.localizedCaseInsensitiveContains(query)
+            stock.matchesSearch(query)
                 || stock.brand.localizedCaseInsensitiveContains(query)
                 || stock.shortCode.localizedCaseInsensitiveContains(query)
                 || "\(stock.iso)".contains(query)
@@ -60,8 +60,7 @@ struct StockPickerSheet: View {
             .searchable(text: $searchText, prompt: "Search library")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .font(AppType.body)
+                    InstrumentCloseButton { dismiss() }
                 }
             }
         }
@@ -76,7 +75,7 @@ struct StockPickerSheet: View {
                     Rectangle()
                         .strokeBorder(
                             isSelected ? AppTheme.textPrimary : Color.clear,
-                            lineWidth: 1.5
+                            lineWidth: AppTheme.strokeWidth
                         )
                 }
 
@@ -87,8 +86,16 @@ struct StockPickerSheet: View {
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .frame(minHeight: 28, alignment: .top)
+
+            if let alsoSoldAs = stock.alsoSoldAsLine {
+                Text(alsoSoldAs)
+                    .font(AppType.microRegular)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
         }
-        .accessibilityLabel(stock.name)
+        .accessibilityLabel(stock.alsoSoldAsLine.map { "\(stock.name). \($0)" } ?? stock.name)
         .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
     }
 }

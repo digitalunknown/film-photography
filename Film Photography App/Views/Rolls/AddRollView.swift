@@ -24,7 +24,9 @@ struct AddRollView: View {
     @State private var exposuresText = "36"
     @State private var pushPull = 0
     @State private var frameCountText = "0"
-    @State private var storageLocation = "Fridge"
+    @State private var storageLocation = StorageMethod.fridge.rawValue
+    @State private var frozenDate = Date()
+    @State private var showingFrozenDatePicker = false
     @State private var labName = "The Darkroom"
     @State private var includeExpiryDate = false
     @State private var expiryDate = Date()
@@ -99,13 +101,7 @@ struct AddRollView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        LucideIcon(.x)
-                            .foregroundStyle(AppTheme.textPrimary)
-                    }
-                    .accessibilityLabel("Close")
+                    InstrumentCloseButton { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") { save() }
@@ -138,6 +134,9 @@ struct AddRollView: View {
             }
             .sheet(isPresented: $showingExpiryPicker) {
                 expirationPickerSheet
+            }
+            .sheet(isPresented: $showingFrozenDatePicker) {
+                frozenDatePickerSheet
             }
             .onAppear {
                 guard !hasAppeared else { return }
@@ -194,6 +193,34 @@ struct AddRollView: View {
         .presentationDragIndicator(.hidden)
     }
 
+    private var frozenDatePickerSheet: some View {
+        NavigationStack {
+            VStack(spacing: AppTheme.Spacing.xl) {
+                DatePicker(
+                    "Frozen date",
+                    selection: $frozenDate,
+                    displayedComponents: .date
+                )
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                .tint(AppTheme.textPrimary)
+                .padding(.horizontal, AppTheme.horizontalPadding)
+                Spacer(minLength: 0)
+            }
+            .instrumentScreen()
+            .navigationTitle("Frozen date")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { showingFrozenDatePicker = false }
+                        .font(AppType.body)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.hidden)
+    }
+
     private var detailsForm: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
             filmRows
@@ -207,11 +234,10 @@ struct AddRollView: View {
 
     @ViewBuilder
     private var filmRows: some View {
-        SectionLabel(title: "Film", style: .detail)
-
+        HairlineRule()
         if isManual {
             fieldRow("Stock") {
-                TextField(placeholder: "Film name", text: $manualStockName)
+                TextField(placeholder: "Name", text: $manualStockName)
                     .focused($focusedField, equals: .stock)
             }
             HairlineRule()
@@ -225,7 +251,7 @@ struct AddRollView: View {
             HairlineRule()
             valueRow(
                 "Box speed",
-                value: selectedStock.map { "ISO \($0.iso)" } ?? "—",
+                value: selectedStock.map { "ISO/ASA \($0.iso)" } ?? "—",
                 isPlaceholder: selectedStock == nil
             )
         }
@@ -265,8 +291,7 @@ struct AddRollView: View {
     @ViewBuilder
     private var pipelineRows: some View {
         HairlineRule()
-        SectionLabel(title: "Pipeline", style: .detail)
-        menuRow("Status", value: status.displayName) {
+        menuRow("Current status", value: status.displayName) {
             ForEach(RollStatus.pipelineCases, id: \.self) { stage in
                 Button(stage.displayName) { status = stage }
             }
@@ -307,12 +332,27 @@ struct AddRollView: View {
 
     @ViewBuilder
     private var storageRows: some View {
-        if status == .shotUndeveloped {
+        if status == .shotUndeveloped || status == .inFridge {
             HairlineRule()
             SectionLabel(title: "Storage", style: .detail)
-            fieldRow("Location") {
-                TextField(placeholder: "Fridge", text: $storageLocation)
-                    .focused($focusedField, equals: .storage)
+            menuRow("Storage method", value: StorageMethod.resolved(from: storageLocation).displayName) {
+                ForEach(StorageMethod.allCases) { method in
+                    Button(method.displayName) {
+                        storageLocation = method.rawValue
+                    }
+                }
+            }
+            if StorageMethod.resolved(from: storageLocation) == .freezer {
+                HairlineRule()
+                Button {
+                    showingFrozenDatePicker = true
+                } label: {
+                    DetailFieldRow(label: "Frozen date") {
+                        DetailFieldValue(text: DateFormatters.medium.string(from: frozenDate))
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -436,6 +476,7 @@ struct AddRollView: View {
             shootingISO: shootingISO,
             frameCount: frameCount,
             storageLocation: storageLocation,
+            frozenDate: StorageMethod.resolved(from: storageLocation) == .freezer ? frozenDate : nil,
             labName: labName,
             expiryDate: includeExpiryDate ? ExpirationDate.normalize(expiryDate) : nil
         )

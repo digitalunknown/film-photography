@@ -17,6 +17,16 @@ struct StocksTabView: View {
             )
             .instrumentScreen()
             .instrumentTabNavigation(title: "Library")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        store.showingSettings = true
+                    } label: {
+                        LucideIcon(.fileText)
+                    }
+                    .accessibilityLabel("Settings")
+                }
+            }
             .searchable(text: $searchText, prompt: "Search")
             .navigationDestination(item: $selectedStockId) { stockId in
                 StockDetailView(stockId: stockId)
@@ -126,8 +136,7 @@ private struct StocksLibraryContent: View {
     private var filteredStocks: [FilmStock] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         return store.stocks.filter { stock in
-            let matchesSearch = query.isEmpty ||
-                stock.name.localizedCaseInsensitiveContains(query)
+            let matchesSearch = stock.matchesSearch(query)
             let matchesBrand = selectedBrand == FilmStock.allBrandsLabel || stock.brand == selectedBrand
             let matchesType = selectedFilmType == FilmStockType.allTypesLabel
                 || stock.filmType.label == selectedFilmType
@@ -150,11 +159,26 @@ private struct StockPlateRow: View {
                 .frame(maxWidth: .infinity)
 
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                Text(stock.name)
-                    .font(AppType.body)
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .lineLimit(2)
-                    .frame(height: 34, alignment: .topLeading)
+                HStack(alignment: .top, spacing: AppTheme.Spacing.xs) {
+                    Text(stock.name)
+                        .font(AppType.body)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                    if stock.isDiscontinued {
+                        DiscontinuedLabel(style: .compact)
+                            .layoutPriority(1)
+                    }
+                }
+                .frame(height: 34, alignment: .topLeading)
+
+                if let alsoSoldAs = stock.alsoSoldAsLine {
+                    Text(alsoSoldAs)
+                        .font(AppType.callout)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .lineLimit(2)
+                }
 
                 Text(stock.filmType.label)
                     .font(AppType.callout)
@@ -188,23 +212,29 @@ struct StockDetailView: View {
         }
     }
 
-    private var sectionDivider: some View {
-        HairlineRule()
-            .padding(.bottom, AppTheme.Spacing.lg)
-    }
-
     var body: some View {
         Group {
             if let stock {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         DetailHeroBlock {
-                            StockPlate(stock: stock, square: false, height: 220)
+                            if stock.rollImageName != nil {
+                                RollCanister3D(stock: stock)
+                                    .frame(width: 250, height: 250)
+                                    .frame(maxWidth: .infinity)
+                            } else {
+                                StockPlate(stock: stock)
+                                    .frame(width: 250, height: 250)
+                                    .frame(maxWidth: .infinity)
+                            }
                         }
 
-                        specificationsSection(stock)
+                        if !stock.libraryDescription.isEmpty {
+                            descriptionBlock(stock.libraryDescription)
+                        }
+
+                        specRows(stock)
                         if !historyRolls.isEmpty {
-                            sectionDivider
                             historySection
                         }
                     }
@@ -221,46 +251,85 @@ struct StockDetailView: View {
             }
         }
         .instrumentDetailChrome()
-        .instrumentDetailNavigation(title: stock?.name ?? "Stock")
-    }
-
-    private func specificationsSection(_ stock: FilmStock) -> some View {
-        DetailSection(title: "Technical Specifications") {
-            VStack(spacing: 0) {
-                specRow("Manufacturer", stock.manufacturer, showsDivider: false)
-                specRow("Type", stock.filmType.label)
-                specRow("Process", stock.process.label)
-                specRow("Box speed", "ISO \(stock.iso)")
-                specRow("Usable range", stock.usableRange.isEmpty ? "" : "ISO \(stock.usableRange)")
-                specRow("Push / pull", stock.pushPullTolerance)
-                specRow("Status", stock.productionStatus.label)
-                specRow("Formats", stock.formatsSummary)
-                specRow("Grain", stock.grainSummary)
-                specRow("Years active", stock.yearsActive)
-                if !stock.bestFor.isEmpty {
-                    specRow("Best for", stock.bestForSummary)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: AppTheme.Spacing.sm) {
+                    Text(stock?.name ?? "Stock")
+                        .font(AppType.title)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .lineLimit(1)
+                    if stock?.isDiscontinued == true {
+                        DiscontinuedLabel()
+                    }
                 }
-                specRow("Price tier", stock.priceTier.label)
             }
         }
     }
 
-    private func specRow(_ label: String, _ value: String, showsDivider: Bool = true) -> some View {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        let isPlaceholder = trimmed.isEmpty
-            || trimmed.caseInsensitiveCompare("Not Set") == .orderedSame
-            || trimmed == "—"
-            || trimmed == "-"
-        return DataRow(
-            label: label,
-            value: isPlaceholder ? (trimmed.isEmpty ? "Not Set" : trimmed) : trimmed,
-            valueBright: !isPlaceholder,
-            showsDivider: showsDivider
-        )
+    private func descriptionBlock(_ text: String) -> some View {
+        Text(text)
+            .font(AppType.body)
+            .foregroundStyle(AppTheme.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// Same unlabeled table as roll detail: rule, label left, value trailing.
+    @ViewBuilder
+    private func specRows(_ stock: FilmStock) -> some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
+            HairlineRule()
+            valueRow("Manufacturer", stock.manufacturer)
+            if let alsoSoldAs = stock.alsoSoldAs {
+                HairlineRule()
+                valueRow("Also sold as", alsoSoldAs)
+            }
+            HairlineRule()
+            valueRow("Type", stock.filmType.label)
+            HairlineRule()
+            valueRow("Process", stock.process.label)
+            HairlineRule()
+            valueRow("Box speed", "ISO/ASA \(stock.iso)")
+            if !stock.usableRange.isEmpty {
+                HairlineRule()
+                valueRow("Usable range", stock.usableRangeDisplay)
+            }
+            if !stock.pushPullTolerance.isEmpty {
+                HairlineRule()
+                valueRow("Push / pull", stock.pushPullTolerance)
+            }
+            HairlineRule()
+            valueRow("Status", stock.productionStatus.label)
+            if !stock.formatsSummary.isEmpty {
+                HairlineRule()
+                valueRow("Formats", stock.formatsSummary)
+            }
+            HairlineRule()
+            valueRow("Grain", stock.grainSummary)
+            if !stock.yearsActive.isEmpty {
+                HairlineRule()
+                valueRow("Years active", stock.yearsActive)
+            }
+            if !stock.bestFor.isEmpty {
+                HairlineRule()
+                valueRow("Best for", stock.bestForSummary)
+            }
+            HairlineRule()
+            valueRow("Price tier", stock.priceTier.label)
+        }
+        .padding(.top, AppTheme.tableGap)
+        .padding(.bottom, AppTheme.Spacing.lg)
+    }
+
+    private func valueRow(_ label: String, _ value: String) -> some View {
+        DetailFieldRow(label: label) {
+            DetailFieldValue(text: value)
+        }
     }
 
     private var historySection: some View {
-        DetailSection(title: "History") {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
+            HairlineRule()
+            SectionLabel(title: "History", style: .detail)
             VStack(spacing: 0) {
                 ForEach(Array(historyRolls.enumerated()), id: \.element.id) { index, roll in
                     InstrumentRow(
@@ -283,6 +352,7 @@ struct StockDetailView: View {
                 }
             }
         }
+        .padding(.bottom, AppTheme.Spacing.lg)
     }
 
     private func historyDateText(for roll: Roll) -> String {

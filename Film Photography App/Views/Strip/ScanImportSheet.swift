@@ -426,13 +426,14 @@ struct ScanImportSheet: View {
                 .overlay {
                     if isTargeted(index) {
                         RoundedRectangle(cornerRadius: Self.slotCorner)
-                            .strokeBorder(AppTheme.textPrimary, lineWidth: 2)
+                            .strokeBorder(AppTheme.textPrimary, lineWidth: AppTheme.strokeWidth)
                     }
                 }
                 .contextMenu {
-                    Button("Remove scan", lucide: .trash, role: .destructive) {
+                    Button(destructive: "Remove scan", lucide: .trash) {
                         slots[index] = nil
                     }
+                    .font(AppType.body)
                 }
         } else {
             emptySlot(isTargeted: isTargeted(index))
@@ -497,7 +498,7 @@ struct ScanImportSheet: View {
 
     private func emptySlot(isTargeted: Bool) -> some View {
         RoundedRectangle(cornerRadius: Self.slotCorner)
-            .strokeBorder(isTargeted ? AppTheme.textPrimary : AppTheme.rule, lineWidth: 1)
+            .strokeBorder(isTargeted ? AppTheme.textPrimary : AppTheme.rule, lineWidth: AppTheme.strokeWidth)
             .frame(width: Self.thumbWidth, height: Self.thumbHeight)
             .overlay {
                 LucideIcon(.scan)

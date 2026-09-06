@@ -84,6 +84,18 @@ struct FilmStock: Identifiable, Codable, Hashable {
     var yearsActive: String
     var bestFor: [String]
     var priceTier: FilmPriceTier
+    /// Other box names and short codes. Search matches `name` or any alias.
+    var aliases: [String]
+    /// Human library blurb. Empty means the detail page hides the block entirely.
+    var libraryDescription: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, iso, process, category, notes, isDiscontinued
+        case manufacturer, brandLine, filmType, usableRange, pushPullTolerance
+        case productionStatus, formatsAvailable, grainRMS, grainCharacter
+        case yearsActive, bestFor, priceTier, aliases
+        case libraryDescription = "description"
+    }
 
     /// Minimal stock created when the user enters film manually (not from the catalog).
     static func custom(name: String, iso: Int, id: UUID = UUID()) -> FilmStock {
@@ -98,7 +110,7 @@ struct FilmStock: Identifiable, Codable, Hashable {
             manufacturer: "Custom",
             brandLine: "",
             filmType: .colorNegative,
-            usableRange: "ISO \(iso)",
+            usableRange: "ISO/ASA \(iso)",
             pushPullTolerance: "",
             productionStatus: .inProduction,
             formatsAvailable: [],
@@ -106,12 +118,24 @@ struct FilmStock: Identifiable, Codable, Hashable {
             grainCharacter: .moderate,
             yearsActive: "",
             bestFor: [],
-            priceTier: .mid
+            priceTier: .mid,
+            aliases: [],
+            libraryDescription: ""
         )
     }
 
     var processISOText: String {
-        "\(process.label) · ISO \(iso)"
+        "\(process.label) · ISO/ASA \(iso)"
+    }
+
+    /// Catalog ranges are often bare (`100–1600`); older copy already says `ISO`.
+    var usableRangeDisplay: String {
+        let trimmed = usableRange.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return trimmed }
+        if trimmed.localizedCaseInsensitiveContains("ISO") {
+            return trimmed.replacingOccurrences(of: "ISO ", with: "ISO/ASA ")
+        }
+        return "ISO/ASA \(trimmed)"
     }
 
     var manufacturerLine: String {
@@ -313,6 +337,7 @@ struct FilmStock: Identifiable, Codable, Hashable {
         if upper.contains("HARMAN") || manufacturer == "Harman" { return "roll_harman" }
 
         if manufacturer == "CineStill" || upper.contains("CINESTILL") {
+            if upper.contains("BWXX") || upper.contains("BW XX") { return nil }
             if upper.contains("800T") || upper.contains("800 T") { return "roll_cinestill_800t" }
             if upper.contains("400D") || upper.contains("400 D") { return "roll_cinestill_400d" }
             if upper.contains("50D") || upper.contains("50 D") { return "roll_cinestill_50d" }
@@ -330,6 +355,58 @@ struct FilmStock: Identifiable, Codable, Hashable {
         case "Leica": return "roll_leica"
         default: return nil
         }
+    }
+}
+
+extension FilmStock {
+    /// Older persisted custom stocks omit `aliases`; treat a missing key as none.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        iso = try container.decode(Int.self, forKey: .iso)
+        process = try container.decode(StockProcess.self, forKey: .process)
+        category = try container.decode(StockCategory.self, forKey: .category)
+        notes = try container.decode(String.self, forKey: .notes)
+        isDiscontinued = try container.decode(Bool.self, forKey: .isDiscontinued)
+        manufacturer = try container.decode(String.self, forKey: .manufacturer)
+        brandLine = try container.decode(String.self, forKey: .brandLine)
+        filmType = try container.decode(FilmStockType.self, forKey: .filmType)
+        usableRange = try container.decode(String.self, forKey: .usableRange)
+        pushPullTolerance = try container.decode(String.self, forKey: .pushPullTolerance)
+        productionStatus = try container.decode(FilmProductionStatus.self, forKey: .productionStatus)
+        formatsAvailable = try container.decode([String].self, forKey: .formatsAvailable)
+        grainRMS = try container.decodeIfPresent(String.self, forKey: .grainRMS)
+        grainCharacter = try container.decode(FilmGrainCharacter.self, forKey: .grainCharacter)
+        yearsActive = try container.decode(String.self, forKey: .yearsActive)
+        bestFor = try container.decode([String].self, forKey: .bestFor)
+        priceTier = try container.decode(FilmPriceTier.self, forKey: .priceTier)
+        aliases = try container.decodeIfPresent([String].self, forKey: .aliases) ?? []
+        libraryDescription = try container.decodeIfPresent(String.self, forKey: .libraryDescription) ?? ""
+    }
+
+    /// Case-insensitive match against the picker name or any box-name alias.
+    func matchesSearch(_ query: String) -> Bool {
+        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return true }
+        if name.localizedCaseInsensitiveContains(query) { return true }
+        return aliases.contains { $0.localizedCaseInsensitiveContains(query) }
+    }
+
+    /// Other box name for a dual-packaged emulsion (Portra ↔ Ektacolor Pro, T-Max ↔ Ektapan).
+    /// Short codes and names already inside `name` stay searchable but do not get a subtitle.
+    var alsoSoldAs: String? {
+        let needles = ["EKTACOLOR PRO", "EKTAPAN"]
+        let matches = aliases.filter { alias in
+            let upper = alias.uppercased()
+            return needles.contains { upper.contains($0) }
+                && !name.localizedCaseInsensitiveContains(alias)
+        }
+        return matches.min(by: { $0.count < $1.count })
+    }
+
+    var alsoSoldAsLine: String? {
+        alsoSoldAs.map { "Also sold as \($0)" }
     }
 }
 
@@ -354,6 +431,8 @@ private struct FilmStockCatalog: Codable {
         let yearsActive: String
         let bestFor: [String]
         let priceTier: String
+        let aliases: [String]?
+        let description: String?
     }
 
     let stocks: [Entry]
@@ -398,7 +477,9 @@ enum StockCatalog {
                 grainCharacter: grainCharacter,
                 yearsActive: entry.yearsActive,
                 bestFor: Array(entry.bestFor.prefix(3)),
-                priceTier: priceTier
+                priceTier: priceTier,
+                aliases: entry.aliases ?? [],
+                libraryDescription: entry.description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             )
         }
     }

@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 struct FilmStripView: View {
+    @Environment(AppStore.self) private var store
     let roll: Roll
     let stock: FilmStock?
     @Binding var selectedFrameIndex: Int?
@@ -51,6 +52,9 @@ struct FilmStripView: View {
                     roll: roll,
                     stock: stock,
                     selectedFrameIndex: $selectedFrameIndex,
+                    onSaveScan: { frame in
+                        Task { await saveScan(frame) }
+                    },
                     onRemoveScan: onRemoveScan
                 )
             } else {
@@ -83,10 +87,10 @@ struct FilmStripView: View {
     }
 
     private var stripScrollView: some View {
-        VStack(spacing: FilmStripFrameMetrics.railGap) {
-            sprocketRail
+        VStack(spacing: FilmStripFrameMetrics.labelGutter) {
+            if layout.showsSprockets { sprocketRail }
             gateScrollView
-            sprocketRail
+            if layout.showsSprockets { sprocketRail }
         }
         .padding(.vertical, FilmStripFrameMetrics.stripPadding)
         .background(Self.filmBase)
@@ -129,7 +133,7 @@ struct FilmStripView: View {
                 scrollPosition = newValue
             }
         }
-        .frame(height: layout.frameSize.height)
+        .frame(height: layout.frameSize.height + FilmStripFrameMetrics.gateCaptionHeight)
         .contentMargins(.horizontal, FilmStripFrameMetrics.stripPadding, for: .scrollContent)
     }
 
@@ -142,7 +146,7 @@ struct FilmStripView: View {
             roll: roll,
             stock: stock,
             layout: layout,
-            isCurrent: frame.index == currentExposureFrame
+            isCurrent: roll.status == .inCamera && frame.index == currentExposureFrame
         )
         .onTapGesture {
             selectedFrameIndex = frame.index
@@ -151,15 +155,42 @@ struct FilmStripView: View {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
 
-        if frame.state == .scanned, let onRemoveScan {
+        if frame.state == .scanned {
             cell.contextMenu {
-                Button("Remove scan", lucide: .trash, role: .destructive) {
-                    onRemoveScan(frame)
+                Button("Save to Photos", lucide: .imageDown) {
+                    Task { await saveScan(frame) }
+                }
+                .font(AppType.body)
+                if let onRemoveScan {
+                    Button(destructive: "Remove scan", lucide: .trash) {
+                        onRemoveScan(frame)
+                    }
+                    .font(AppType.body)
                 }
             }
         } else {
             cell
         }
+    }
+
+    private func saveScan(_ frame: StripFrame) async {
+        guard let fileName = frame.scanFileName else { return }
+        let scan = ExportedScan(
+            rollId: roll.id,
+            fileName: fileName,
+            exportName: ScanExport.exportName(
+                rollLabel: stock?.name ?? "scan",
+                frameIndex: frame.index
+            ),
+            metadata: ScanMetadata(
+                roll: roll,
+                frameIndex: frame.index,
+                marker: frame.marker,
+                camera: roll.cameraId.flatMap { store.camera(for: $0) },
+                stock: stock
+            )
+        )
+        try? await PhotoLibraryExport.save([scan])
     }
 
     private func scrollToCurrentExposure(animated: Bool) {
@@ -206,19 +237,21 @@ struct FilmStripView: View {
     }
 }
 
-/// Film-strip chrome from the Figma spec: a 132pt strip built from an 84pt gate,
-/// 8pt perforation bands, and 8pt padding/gutters above and below.
+/// Film-strip chrome from the spec: 8pt outer inset, 8pt perforation bands, 8pt
+/// edge-print labels, and 4pt gutters between sprocket, label, and gate.
 enum FilmStripFrameMetrics {
     /// Inset between the strip edge and the perforation bands.
     static let stripPadding: CGFloat = AppTheme.Spacing.sm
     /// Perforation band height.
     static let railHeight: CGFloat = 8
-    /// Gutter between a perforation band and the gate.
-    static let railGap: CGFloat = AppTheme.Spacing.sm
-    /// Perforations are 12×8 on a fixed 20pt pitch, clipped at the strip edge.
-    static let sprocketWidth: CGFloat = 12
+    /// 4pt air between sprocket, edge print, and gate.
+    static let labelGutter: CGFloat = AppTheme.Spacing.xs
+    /// Manufacturer / frame-number row. Matches the 8pt face so the gutters stay exact.
+    static let labelHeight: CGFloat = 8
+    /// Perforations are 6×8 on a 12pt pitch (6pt hole, 6pt gap), clipped at the edge.
+    static let sprocketWidth: CGFloat = 6
     static let sprocketHeight: CGFloat = 8
-    static let sprocketPitch: CGFloat = 20
+    static let sprocketPitch: CGFloat = 12
     static let sprocketCorner: CGFloat = 1
     /// Gate interior: 4pt corners, 8pt gutter between exposures.
     static let gateHeight: CGFloat = 84
@@ -233,7 +266,12 @@ enum FilmStripFrameMetrics {
     /// Cut-out perforation color — matches the page behind the strip.
     static let sprocketCutout = AppTheme.bg
 
-    static var chromeHeight: CGFloat { (stripPadding + railHeight + railGap) * 2 }
+    /// Brand above the gate plus the frame number below, including their gutters.
+    static var gateCaptionHeight: CGFloat { labelHeight * 2 + labelGutter * 2 }
+
+    static var chromeHeight: CGFloat {
+        (stripPadding + railHeight + labelGutter + labelHeight + labelGutter) * 2
+    }
 }
 
 /// Continuous perforation band. Holes keep a fixed pitch regardless of gate width so
@@ -345,7 +383,21 @@ private struct FilmStripFrameCell: View {
     var isCurrent: Bool = false
 
     var body: some View {
-        gateArea
+        VStack(spacing: FilmStripFrameMetrics.labelGutter) {
+            edgePrint(stock?.manufacturer.uppercased() ?? "")
+            gateArea
+            edgePrint(String(format: "%02d", frame.index))
+        }
+    }
+
+    /// Edge print sits in a fixed 8pt row so the 4pt gutters don't grow with the font.
+    private func edgePrint(_ text: String) -> some View {
+        Text(text)
+            .font(AppType.strip)
+            .foregroundStyle(AppTheme.textSecondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .frame(width: layout.frameSize.width, height: FilmStripFrameMetrics.labelHeight)
     }
 
     @ViewBuilder
@@ -423,6 +475,7 @@ struct FilmStripContactSheet: View {
     let roll: Roll
     let stock: FilmStock?
     @Binding var selectedFrameIndex: Int?
+    var onSaveScan: ((StripFrame) -> Void)?
     var onRemoveScan: ((StripFrame) -> Void)?
 
     private var frames: [StripFrame] {
@@ -446,10 +499,19 @@ struct FilmStripContactSheet: View {
         let mark = MiniFrameTick(frame: frame, roll: roll, stock: stock, size: 72)
             .onTapGesture { selectedFrameIndex = frame.index }
 
-        if frame.state == .scanned, let onRemoveScan {
+        if frame.state == .scanned, onSaveScan != nil || onRemoveScan != nil {
             mark.contextMenu {
-                Button("Remove scan", lucide: .trash, role: .destructive) {
-                    onRemoveScan(frame)
+                if let onSaveScan {
+                    Button("Save to Photos", lucide: .imageDown) {
+                        onSaveScan(frame)
+                    }
+                    .font(AppType.body)
+                }
+                if let onRemoveScan {
+                    Button(destructive: "Remove scan", lucide: .trash) {
+                        onRemoveScan(frame)
+                    }
+                    .font(AppType.body)
                 }
             }
         } else {

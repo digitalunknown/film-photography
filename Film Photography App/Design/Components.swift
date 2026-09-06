@@ -29,6 +29,79 @@ extension TextField where Label == Text {
 
 /// The one divider style — `#F0F1F5` at 10%, one point thick. Used between rows, between
 /// detail sections, and to split card columns; nothing else should draw its own separator.
+extension View {
+    /// The one border style — `AppTheme.strokeWidth` of `AppTheme.rule`, inset inside the
+    /// given shape. Anything needing a neutral outline uses this instead of picking its
+    /// own width and colour.
+    func instrumentStroke<S: InsettableShape>(_ shape: S) -> some View {
+        overlay(shape.strokeBorder(AppTheme.rule, lineWidth: AppTheme.strokeWidth))
+    }
+}
+
+/// Leading-edge dismiss for add sheets — always the X, never a worded Cancel.
+struct InstrumentCloseButton: View {
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            LucideIcon(.x)
+                .foregroundStyle(AppTheme.textPrimary)
+        }
+        .accessibilityLabel("Close")
+    }
+}
+
+/// Full-width page tabs. A hairline runs the width of the device; the active tab
+/// sits on a thicker primary rule so the selection reads as a mark, not a pill.
+struct InstrumentSegmentedControl<Value: Hashable>: View {
+    let options: [(value: Value, title: String, icon: Lucide)]
+    @Binding var selection: Value
+
+    private var indicatorHeight: CGFloat { 2.5 }
+    static var paneAnimation: Animation {
+        .spring(response: 0.36, dampingFraction: 0.88)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                ForEach(Array(options.enumerated()), id: \.offset) { _, option in
+                    Button {
+                        withAnimation(Self.paneAnimation) {
+                            selection = option.value
+                        }
+                    } label: {
+                        HStack(spacing: AppTheme.Spacing.sm) {
+                            LucideIcon(option.icon)
+                            Text(option.title)
+                                .font(AppType.body)
+                        }
+                        .foregroundStyle(selection == option.value ? AppTheme.textPrimary : AppTheme.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, AppTheme.Spacing.md)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selection == option.value ? .isSelected : [])
+                }
+            }
+
+            ZStack(alignment: .bottomLeading) {
+                HairlineRule()
+                GeometryReader { geo in
+                    let count = max(options.count, 1)
+                    let width = geo.size.width / CGFloat(count)
+                    let index = options.firstIndex { $0.value == selection } ?? 0
+                    Rectangle()
+                        .fill(AppTheme.textPrimary)
+                        .frame(width: width, height: indicatorHeight)
+                        .offset(x: width * CGFloat(index))
+                }
+                .frame(height: indicatorHeight)
+            }
+        }
+    }
+}
+
 struct HairlineRule: View {
     var axis: Axis = .horizontal
 
@@ -125,7 +198,9 @@ struct DetailFieldRow<Value: View>: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             value()
+                .frame(minHeight: AppTheme.iconSize, alignment: .center)
         }
+        .frame(minHeight: AppTheme.iconSize, alignment: .center)
     }
 }
 
@@ -291,7 +366,7 @@ struct CircleIconButton: View {
             LucideIcon(icon)
                 .foregroundStyle(AppTheme.textPrimary)
                 .frame(width: 35, height: 35)
-                .background(Circle().strokeBorder(AppTheme.textPrimary, lineWidth: 1.25))
+                .background(Circle().strokeBorder(AppTheme.textPrimary, lineWidth: AppTheme.strokeWidth))
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -330,10 +405,16 @@ struct PillButtonLabel: View {
     let title: String
     var icon: Lucide?
     var isProminent: Bool = false
+    var isBusy: Bool = false
 
     var body: some View {
         HStack(spacing: AppTheme.Spacing.sm) {
-            if let icon {
+            if isBusy {
+                ProgressView()
+                    .controlSize(.regular)
+                    .tint(isProminent ? AppTheme.bg : AppTheme.textPrimary)
+                    .frame(width: AppTheme.iconSize, height: AppTheme.iconSize)
+            } else if let icon {
                 LucideIcon(icon)
             }
             Text(title.uppercased())
@@ -346,7 +427,7 @@ struct PillButtonLabel: View {
             if isProminent {
                 Capsule().fill(AppTheme.textPrimary)
             } else {
-                Capsule().strokeBorder(AppTheme.textPrimary, lineWidth: 1.25)
+                Capsule().strokeBorder(AppTheme.textPrimary, lineWidth: AppTheme.strokeWidth)
             }
         }
         .contentShape(Capsule())
@@ -482,7 +563,7 @@ struct FilterChipRow: View {
             .background(AppTheme.surface, in: Capsule())
             .overlay(
                 Capsule()
-                    .strokeBorder(border(tint: tint, isSelected: isSelected), lineWidth: 1)
+                    .strokeBorder(border(tint: tint, isSelected: isSelected), lineWidth: AppTheme.strokeWidth)
             )
     }
 
@@ -615,7 +696,7 @@ struct FrameExposureCounter: View {
                 .frame(width: 35, height: 35)
                 .overlay {
                     Circle()
-                        .strokeBorder(AppTheme.textSecondary, lineWidth: 1)
+                        .strokeBorder(AppTheme.textSecondary, lineWidth: AppTheme.strokeWidth)
                 }
         }
         .buttonStyle(.plain)
@@ -640,7 +721,7 @@ struct FrameExposureCounter: View {
         } label: {
             ZStack {
                 Circle()
-                    .stroke(AppTheme.textSecondary, lineWidth: ringLine)
+                    .stroke(AppTheme.well, lineWidth: ringLine)
                     .frame(width: ringSize, height: ringSize)
 
                 Circle()
@@ -753,6 +834,49 @@ struct FrameExposureCounter: View {
     }
 }
 
+/// Spring used by the exposure counter and the dial readouts so both reels move as one.
+enum VerticalSpinnerMotion {
+    static let animation: Animation = .spring(response: 0.42, dampingFraction: 0.78)
+}
+
+/// Vertical reel of discrete labels — same motion as `VerticalSpinnerNumber`, for
+/// values that are not a single decimal digit (aperture and shutter readouts).
+struct VerticalSpinnerText: View {
+    let labels: [String]
+    let index: Int
+    var font: Font
+    var color: Color
+    var height: CGFloat
+
+    private var clampedIndex: Int {
+        guard !labels.isEmpty else { return 0 }
+        return min(max(index, 0), labels.count - 1)
+    }
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
+                Text(label)
+                    .font(font)
+                    .hidden()
+            }
+
+            VStack(spacing: 0) {
+                ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
+                    Text(label)
+                        .font(font)
+                        .foregroundStyle(color)
+                        .frame(height: height)
+                }
+            }
+            .offset(y: -CGFloat(clampedIndex) * height)
+        }
+        .frame(height: height, alignment: .top)
+        .clipped()
+        .animation(VerticalSpinnerMotion.animation, value: clampedIndex)
+    }
+}
+
 /// Vertical reel-style digits that spin when the value changes.
 struct VerticalSpinnerNumber: View {
     let value: Int
@@ -788,7 +912,7 @@ struct VerticalSpinnerNumber: View {
         }
         .frame(height: digitHeight)
         .clipped()
-        .animation(.spring(response: 0.42, dampingFraction: 0.78), value: value)
+        .animation(VerticalSpinnerMotion.animation, value: value)
         .accessibilityLabel("\(value)")
     }
 }
@@ -965,23 +1089,19 @@ struct InstrumentKeyboardDoneButton: View {
     var action: () -> Void = {}
 
     var body: some View {
-        VStack(spacing: 0) {
-            Button("Done") {
-                action()
-                UIApplication.shared.sendAction(
-                    #selector(UIResponder.resignFirstResponder),
-                    to: nil,
-                    from: nil,
-                    for: nil
-                )
-            }
-            .font(AppType.body)
-
-            // Gap between the accessory and the keyboard — not inside the button.
-            Color.clear
-                .frame(height: 8)
-                .allowsHitTesting(false)
+        Button("Done") {
+            action()
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil,
+                from: nil,
+                for: nil
+            )
         }
+        .font(AppType.body)
+        // Air between the accessory and the keys. A `Color.clear` spacer used to provide
+        // this, but it is greedy horizontally and stretched the button across the bar.
+        .padding(.bottom, AppTheme.Spacing.sm)
     }
 }
 
@@ -1014,7 +1134,7 @@ struct StockPlate: View {
                     .font(AppType.title)
                     .foregroundStyle(AppTheme.textSecondary)
                 Rectangle()
-                    .strokeBorder(AppTheme.rule, lineWidth: 1)
+                    .strokeBorder(AppTheme.rule, lineWidth: AppTheme.strokeWidth)
             }
         }
         .frame(maxWidth: .infinity)
@@ -1056,8 +1176,9 @@ struct RollPlate: View {
     }
 
     var body: some View {
+        let hasImage = imageName.flatMap { UIImage(named: $0) } != nil
         ZStack {
-            if let imageName, UIImage(named: imageName) != nil {
+            if hasImage, let imageName {
                 Image(imageName)
                     .resizable()
                     .scaledToFill()
@@ -1066,48 +1187,80 @@ struct RollPlate: View {
                     .fill(AppTheme.surface)
                 LucideIcon(.film)
                     .foregroundStyle(AppTheme.textSecondary)
-                Rectangle()
-                    .strokeBorder(AppTheme.rule, lineWidth: 1)
             }
         }
         .frame(width: size, height: size)
-        .clipped()
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.Spacing.sm))
+        .overlay {
+            if !hasImage {
+                RoundedRectangle(cornerRadius: AppTheme.Spacing.sm)
+                    .strokeBorder(AppTheme.rule, lineWidth: AppTheme.strokeWidth)
+            }
+        }
+    }
+}
+
+/// Shared accent chip used for expired rolls and discontinued stocks.
+struct AccentBadge: View {
+    enum Style {
+        case full
+        case compact
+    }
+
+    let text: String
+    var style: Style = .full
+    var accessibilityName: String
+
+    var body: some View {
+        Group {
+            switch style {
+            case .full:
+                Text(text)
+                    .padding(.horizontal, AppTheme.Spacing.xs)
+                    .padding(.vertical, 2)
+                    .background {
+                        Capsule()
+                            .strokeBorder(AppTheme.accent, lineWidth: AppTheme.strokeWidth)
+                    }
+            case .compact:
+                Text(text)
+                    .frame(width: 18, height: 18)
+                    .background {
+                        Circle()
+                            .strokeBorder(AppTheme.accent, lineWidth: AppTheme.strokeWidth)
+                    }
+            }
+        }
+        .font(AppType.badge)
+        .foregroundStyle(AppTheme.accent)
+        .accessibilityLabel(accessibilityName)
     }
 }
 
 /// Expiry flag. Detail headers spell it out; list rows use the compact `E` disc so the
 /// badge doesn't crowd the roll title.
 struct ExpiredLabel: View {
-    var style: Style = .full
-
-    enum Style {
-        case full
-        case compact
-    }
+    var style: AccentBadge.Style = .full
 
     var body: some View {
-        Group {
-            switch style {
-            case .full:
-                Text("EXPIRED")
-                    .padding(.horizontal, AppTheme.Spacing.xs)
-                    .padding(.vertical, 2)
-                    .background {
-                        Capsule()
-                            .strokeBorder(AppTheme.accent, lineWidth: 1)
-                    }
-            case .compact:
-                Text("E")
-                    .frame(width: 18, height: 18)
-                    .background {
-                        Circle()
-                            .strokeBorder(AppTheme.accent, lineWidth: 1)
-                    }
-            }
-        }
-        .font(AppType.badge)
-        .foregroundStyle(AppTheme.accent)
-        .accessibilityLabel("Expired")
+        AccentBadge(
+            text: style == .full ? "EXPIRED" : "E",
+            style: style,
+            accessibilityName: "Expired"
+        )
+    }
+}
+
+/// Discontinued catalog flag. Grid uses `D`; the stock title uses `DISC.`
+struct DiscontinuedLabel: View {
+    var style: AccentBadge.Style = .full
+
+    var body: some View {
+        AccentBadge(
+            text: style == .full ? "DISC." : "D",
+            style: style,
+            accessibilityName: "Discontinued"
+        )
     }
 }
 
@@ -1150,9 +1303,12 @@ struct RollLedgerRow: View {
     @Environment(AppStore.self) private var store
     let roll: Roll
     var showsCameraName: Bool = true
+    /// When set, the second line is the roll's status instead of the camera name —
+    /// used on a camera's history list, where the body is already known.
+    var showsStatus: Bool = false
 
     var body: some View {
-        HStack(alignment: .center, spacing: AppTheme.Spacing.sm) {
+        HStack(alignment: .center, spacing: AppTheme.Spacing.lg) {
             RollPlate(stock: stock, size: 100)
 
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
@@ -1219,7 +1375,77 @@ struct RollLedgerRow: View {
     }
 
     private var cameraLine: String? {
-        showsCameraName ? cameraName : nil
+        if showsStatus { return roll.status.displayName }
+        return showsCameraName ? cameraName : nil
+    }
+}
+
+/// Placeholder tile for a lens that has no photograph yet — same 100pt plate as
+/// cameras and rolls, with the aperture mark standing in for glass.
+struct LensPlate: View {
+    var size: CGFloat = 100
+
+    var body: some View {
+        ZStack {
+            Rectangle().fill(AppTheme.surface)
+            LucideIcon(.aperture)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.Spacing.sm))
+        .overlay {
+            RoundedRectangle(cornerRadius: AppTheme.Spacing.sm)
+                .strokeBorder(AppTheme.rule, lineWidth: AppTheme.strokeWidth)
+        }
+    }
+}
+
+/// Same ledger shape as a camera row: 100pt plate, title, optional spec, notes.
+struct LensLedgerRow: View {
+    let lens: CameraLens
+    var showsDefault: Bool = true
+
+    var body: some View {
+        HStack(alignment: .center, spacing: AppTheme.Spacing.lg) {
+            LensPlate(size: 100)
+
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                HStack(alignment: .top, spacing: AppTheme.Spacing.sm) {
+                    Text(lens.name)
+                        .font(AppType.title)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if lens.isPrimary, showsDefault {
+                        Text("Default")
+                            .font(AppType.title)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .layoutPriority(1)
+                    }
+                }
+
+                if let spec = lens.specLine {
+                    Text(spec)
+                        .font(AppType.callout)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+
+                let notes = lens.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !notes.isEmpty {
+                    Text(notes)
+                        .font(AppType.callout)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 
@@ -1227,27 +1453,132 @@ struct CameraPhotoPlate: View {
     var photoData: Data? = nil
     var size: CGFloat = 56
     var square: Bool = true
-    var height: CGFloat = 220
+
+    /// The hero matches the frame gate on the frame detail screen, so a camera is shown at
+    /// the same proportions — and the same corner — as the photos it takes.
+    private static let heroAspect: CGFloat = 3.0 / 2.0
+    private static let heroCorner = AppTheme.Spacing.sm
+
+    private var image: UIImage? {
+        photoData.flatMap(UIImage.init(data:))
+    }
 
     var body: some View {
-        Group {
-            if let photoData, let uiImage = UIImage(data: photoData) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                ZStack {
-                    Rectangle().fill(AppTheme.surface)
-                    Rectangle().strokeBorder(AppTheme.rule, lineWidth: 1)
-                    LucideIcon(.camera)
-                        .foregroundStyle(AppTheme.textSecondary)
+        if square {
+            fill
+                .frame(width: size, height: size)
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Spacing.sm))
+                .background(AppTheme.bg)
+                .overlay {
+                    RoundedRectangle(cornerRadius: AppTheme.Spacing.sm)
+                        .strokeBorder(AppTheme.rule, lineWidth: AppTheme.strokeWidth)
                 }
+        } else {
+            Rectangle()
+                .fill(AppTheme.bg)
+                .aspectRatio(Self.heroAspect, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .overlay { fill }
+                .clipShape(RoundedRectangle(cornerRadius: Self.heroCorner))
+                .instrumentStroke(RoundedRectangle(cornerRadius: Self.heroCorner))
+        }
+    }
+
+    @ViewBuilder
+    private var fill: some View {
+        if let image {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+        } else {
+            ZStack {
+                Rectangle().fill(AppTheme.surface)
+                LucideIcon(.camera)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
         }
-        .frame(maxWidth: square ? nil : .infinity)
-        .frame(width: square ? size : nil, height: square ? size : height)
-        .clipped()
-        .background(AppTheme.bg)
+    }
+}
+
+struct CameraLedgerRow: View {
+    @Environment(AppStore.self) private var store
+    let camera: Camera
+
+    var body: some View {
+        HStack(alignment: .center, spacing: AppTheme.Spacing.lg) {
+            CameraPhotoPlate(photoData: camera.photoData, size: 100)
+
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                HStack(alignment: .top, spacing: AppTheme.Spacing.sm) {
+                    Text(camera.name)
+                        .font(AppType.title)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .lineLimit(1)
+
+                    Spacer(minLength: AppTheme.Spacing.xs)
+
+                    if let roll = loadedRoll {
+                        Text("\(roll.frameCount)/\(roll.totalExposures)")
+                            .font(AppType.title)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .monospacedDigit()
+                            .layoutPriority(1)
+                    } else {
+                        Text("Empty")
+                            .font(AppType.title)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .layoutPriority(1)
+                    }
+                }
+
+                if let subtitle = camera.listSubtitle {
+                    Text(subtitle)
+                        .font(AppType.callout)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+
+                if let stockName = loadedStock?.name {
+                    Text(stockName)
+                        .font(AppType.callout)
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var loadedRoll: Roll? { store.loadedRoll(for: camera.id) }
+    private var loadedStock: FilmStock? {
+        guard let roll = loadedRoll else { return nil }
+        return store.stock(for: roll.stockId)
+    }
+}
+
+struct PersistFailureBanner: View {
+    let problem: PersistProblem
+    let onRetry: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: AppTheme.Spacing.lg) {
+            Text(problem.message)
+                .font(AppType.callout)
+                .foregroundStyle(AppTheme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: AppTheme.Spacing.sm)
+            Button(problem.retryTitle, action: onRetry)
+                .font(AppType.calloutEmphasized)
+                .foregroundStyle(AppTheme.textPrimary)
+                .underline(color: AppTheme.textPrimary)
+                .fixedSize()
+        }
+        .padding(.horizontal, AppTheme.horizontalPadding)
+        .padding(.vertical, AppTheme.Spacing.lg)
+        .background(AppTheme.surface)
     }
 }
 

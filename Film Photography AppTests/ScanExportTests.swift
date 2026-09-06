@@ -22,6 +22,7 @@ struct ScanExportTests {
             notes: "Rain on the glass",
             cameraName: "Leica M6",
             lens: "50mm Summicron",
+            focalLength: 50,
             serialNumber: "1234567",
             filmStock: "Portra 400",
             filmBrand: "Kodak",
@@ -42,6 +43,7 @@ struct ScanExportTests {
         #expect((exif[kCGImagePropertyExifISOSpeedRatings] as? [Int])?.first == 400)
         #expect(exif[kCGImagePropertyExifDateTimeOriginal] as? String != nil)
         #expect(exif[kCGImagePropertyExifLensModel] as? String == "50mm Summicron")
+        #expect(exif[kCGImagePropertyExifFocalLength] as? Double == 50)
         #expect(exif[kCGImagePropertyExifBodySerialNumber] as? String == "1234567")
 
         let comment = try #require(exif[kCGImagePropertyExifUserComment] as? String)
@@ -150,10 +152,60 @@ struct ScanExportTests {
         #expect(metadata.filmDescription == "Kodak Gold 200")
     }
 
+    @Test func frameLensWinsOverPrimaryOnTheBody() {
+        let primary = CameraLens(
+            id: UUID(),
+            name: "Primary Summicron",
+            focalLength: "50mm",
+            maxAperture: "f/2",
+            notes: "",
+            isPrimary: true
+        )
+        let extra = CameraLens(
+            id: UUID(),
+            name: "Elmarit",
+            focalLength: "28mm",
+            maxAperture: "f/2.8",
+            notes: "",
+            isPrimary: false
+        )
+        let camera = sampleCamera(lenses: [primary, extra])
+        let marker = FrameMarker(frameIndex: 5, lensId: extra.id, lensName: extra.exifModel)
+
+        #expect(ScanMetadata.lensModel(marker: marker, camera: camera) == extra.exifModel)
+        #expect(ScanMetadata.lensModel(marker: nil, camera: camera) == primary.name)
+        #expect(
+            ScanMetadata.lensModel(
+                marker: FrameMarker(frameIndex: 1, lensName: "Kept after delete"),
+                camera: camera
+            ) == "Kept after delete"
+        )
+    }
+
     @Test func exportNameIsFileSystemSafe() {
         #expect(ScanExport.exportName(rollLabel: "HP5 Plus", frameIndex: 7) == "HP5-Plus-frame-7.jpg")
         #expect(ScanExport.exportName(rollLabel: "Portra 400 / #3", frameIndex: 2) == "Portra-400-3-frame-2.jpg")
         #expect(ScanExport.exportName(rollLabel: "///", frameIndex: 1) == "scan-frame-1.jpg")
+    }
+
+    private func sampleCamera(lenses: [CameraLens]) -> Camera {
+        Camera(
+            id: UUID(),
+            name: "Leica M6",
+            lensSubtitle: lenses.first?.name ?? "",
+            cameraType: "Rangefinder",
+            serialNumber: nil,
+            purchaseDate: nil,
+            purchasePrice: nil,
+            photoData: nil,
+            quirks: [],
+            repairHistory: [],
+            hasAttentionNeeded: false,
+            defaultFormat: nil,
+            lensMinAperture: nil,
+            lensMaxAperture: nil,
+            lenses: lenses
+        )
     }
 
     /// The pixels are irrelevant here; only the container has to be a real JPEG.

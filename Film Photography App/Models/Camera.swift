@@ -11,6 +11,55 @@ struct RepairRecord: Identifiable, Codable, Hashable {
     var description: String
 }
 
+/// A glass a body can carry. Cameras used to store a single `lensSubtitle` string;
+/// that still seeds the first lens on decode so existing bodies don't go empty.
+struct CameraLens: Identifiable, Codable, Hashable {
+    let id: UUID
+    var name: String
+    var focalLength: String
+    var maxAperture: String
+    var notes: String
+    var isPrimary: Bool
+
+    var specLine: String? {
+        let parts = [focalLength, maxAperture]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// Millimetres parsed from `focalLength` (`50mm`, `50`, `28–70mm` → first number).
+    var focalLengthMillimeters: Double? {
+        let normalized = focalLength.replacingOccurrences(of: ",", with: ".")
+        var digits = ""
+        var started = false
+        for character in normalized {
+            if character.isNumber || (character == "." && !digits.contains(".")) {
+                digits.append(character)
+                started = true
+            } else if started {
+                break
+            }
+        }
+        guard let value = Double(digits), value > 0 else { return nil }
+        return value
+    }
+
+    var focalLengthDisplay: String {
+        let trimmed = focalLength.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? name : trimmed
+    }
+
+    /// What EXIF `LensModel` should say: the name, plus focal / aperture when they
+    /// are not already sitting in the name.
+    var exifModel: String {
+        let named = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let spec = specLine else { return named }
+        if named.localizedCaseInsensitiveContains(spec) { return named }
+        return named.isEmpty ? spec : "\(named) · \(spec)"
+    }
+}
+
 struct Camera: Identifiable, Codable, Hashable {
     let id: UUID
     var name: String
@@ -28,16 +77,33 @@ struct Camera: Identifiable, Codable, Hashable {
     var lensMinAperture: Double?
     var lensMaxAperture: Double?
     var notes: String?
+    var lenses: [CameraLens]
 
-    var displaySubtitle: String {
-        "\(lensSubtitle) · \(cameraType)"
+    var primaryLens: CameraLens? {
+        lenses.first(where: \.isPrimary) ?? lenses.first
     }
 
-    /// Subtitle for list rows — lens only; camera type is on the detail page.
+    var primaryLensName: String {
+        let named = primaryLens?.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !named.isEmpty { return named }
+        return lensSubtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var displaySubtitle: String {
+        let lens = primaryLensName
+        return lens.isEmpty ? cameraType : "\(lens) · \(cameraType)"
+    }
+
+    /// Subtitle for list rows — primary lens only; camera type is on the detail page.
     var listSubtitle: String? {
-        let lens = lensSubtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lens = primaryLensName
         guard !lens.isEmpty, lens != "1", lens.count > 2 else { return nil }
         return lens
+    }
+
+    mutating func syncPrimaryLensSubtitle() {
+        let name = primaryLensName
+        if !name.isEmpty { lensSubtitle = name }
     }
 
     init(
@@ -56,7 +122,8 @@ struct Camera: Identifiable, Codable, Hashable {
         defaultFormat: FilmFormat?,
         lensMinAperture: Double?,
         lensMaxAperture: Double?,
-        notes: String? = nil
+        notes: String? = nil,
+        lenses: [CameraLens] = []
     ) {
         self.id = id
         self.name = name
@@ -74,6 +141,7 @@ struct Camera: Identifiable, Codable, Hashable {
         self.lensMinAperture = lensMinAperture
         self.lensMaxAperture = lensMaxAperture
         self.notes = notes
+        self.lenses = lenses
     }
 
     init(from decoder: Decoder) throws {
@@ -96,5 +164,25 @@ struct Camera: Identifiable, Codable, Hashable {
         lensMinAperture = try container.decodeIfPresent(Double.self, forKey: .lensMinAperture)
         lensMaxAperture = try container.decodeIfPresent(Double.self, forKey: .lensMaxAperture)
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
+        let storedLenses = try container.decodeIfPresent([CameraLens].self, forKey: .lenses) ?? []
+        if storedLenses.isEmpty {
+            let legacy = lensSubtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !legacy.isEmpty, legacy != "1", legacy.count > 2 {
+                lenses = [
+                    CameraLens(
+                        id: UUID(),
+                        name: legacy,
+                        focalLength: "",
+                        maxAperture: "",
+                        notes: "",
+                        isPrimary: true
+                    )
+                ]
+            } else {
+                lenses = []
+            }
+        } else {
+            lenses = storedLenses
+        }
     }
 }

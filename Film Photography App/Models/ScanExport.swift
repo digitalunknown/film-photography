@@ -20,6 +20,7 @@ nonisolated struct ScanMetadata: Sendable {
     var notes: String? = nil
     var cameraName: String? = nil
     var lens: String? = nil
+    var focalLength: Double? = nil
     var serialNumber: String? = nil
     var filmStock: String? = nil
     var filmBrand: String? = nil
@@ -118,12 +119,42 @@ extension ScanMetadata {
             longitude: marker?.longitude,
             notes: marker?.notes,
             cameraName: camera?.name,
-            lens: camera?.lensSubtitle,
+            lens: Self.lensModel(marker: marker, camera: camera),
+            focalLength: Self.focalLength(marker: marker, camera: camera),
             serialNumber: camera?.serialNumber,
             filmStock: stock?.name,
             filmBrand: stock?.brand,
             pushPull: roll.pushPull
         )
+    }
+}
+
+extension ScanMetadata {
+    /// Frame glass first; live lens on the body if that id still exists; then the
+    /// denormalized name; then the body's default. P&S and unset frames use the default.
+    static func lensModel(marker: FrameMarker?, camera: Camera?) -> String? {
+        if let lensId = marker?.lensId,
+           let lens = camera?.lenses.first(where: { $0.id == lensId }) {
+            let model = lens.exifModel.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !model.isEmpty { return model }
+        }
+        if let named = marker?.lensName?.trimmingCharacters(in: .whitespacesAndNewlines), !named.isEmpty {
+            return named
+        }
+        let fallback = camera?.primaryLensName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return fallback.isEmpty ? nil : fallback
+    }
+
+    static func selectedLens(marker: FrameMarker?, camera: Camera?) -> CameraLens? {
+        if let lensId = marker?.lensId,
+           let lens = camera?.lenses.first(where: { $0.id == lensId }) {
+            return lens
+        }
+        return camera?.primaryLens
+    }
+
+    static func focalLength(marker: FrameMarker?, camera: Camera?) -> Double? {
+        selectedLens(marker: marker, camera: camera)?.focalLengthMillimeters
     }
 }
 
@@ -253,6 +284,9 @@ nonisolated enum ScanExport {
 
         if let lens = metadata.lens?.trimmedOrNil {
             exif[kCGImagePropertyExifLensModel] = lens
+        }
+        if let focalLength = metadata.focalLength, focalLength > 0 {
+            exif[kCGImagePropertyExifFocalLength] = focalLength
         }
         if let serial = metadata.serialNumber?.trimmedOrNil {
             exif[kCGImagePropertyExifBodySerialNumber] = serial

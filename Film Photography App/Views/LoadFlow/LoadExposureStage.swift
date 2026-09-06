@@ -240,6 +240,12 @@ struct LoadExposureStage: View {
     /// Frames still free to take a scan, counted from the first empty one to the end of
     /// the roll. This caps what the picker will let through, so a selection can't be made
     /// that the roll has no room for.
+    /// Alone on the row it can use the full label; next to Arrange/Save it stays short.
+    private var addScansTitle: String {
+        if isPreparingScans { return "Adding…" }
+        return hasScans ? "Add" : "Add Scans"
+    }
+
     private var remainingScanCapacity: Int {
         max(max(roll.totalExposures, 1) - nextFrameIndexForScans() + 1, 0)
     }
@@ -258,7 +264,7 @@ struct LoadExposureStage: View {
                 // Three pills share the row, so the busy label stays as short as the
                 // widest resting one rather than crowding its neighbours.
                 PillButtonLabel(
-                    title: isPreparingScans ? "Adding…" : "Add",
+                    title: addScansTitle,
                     icon: .imageUp
                 )
             }

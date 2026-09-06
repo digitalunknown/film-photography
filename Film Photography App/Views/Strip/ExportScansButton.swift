@@ -17,12 +17,13 @@ struct ExportScansButton: View {
     }
 
     @State private var isSaving = false
-    @State private var alert: ExportAlert?
+    @State private var statusTitle: String?
 
-    private struct ExportAlert: Identifiable {
-        let id = UUID()
-        let title: String
-        var detail: String?
+    private var pillTitle: String {
+        if let statusTitle { return statusTitle }
+        if isSaving { return "Saving…" }
+        if case .pill(let title) = style { return title }
+        return "Save"
     }
 
     var body: some View {
@@ -40,38 +41,28 @@ struct ExportScansButton: View {
             case .icon:
                 LucideIcon(.imageDown)
                     .foregroundStyle(AppTheme.textPrimary)
-            case .pill(let title):
-                PillButtonLabel(title: isSaving ? "Saving…" : title, icon: .imageDown)
+            case .pill:
+                PillButtonLabel(title: pillTitle, icon: .imageDown)
             }
         }
         .disabled(isSaving)
         .accessibilityLabel(label)
-        .alert(
-            alert?.title ?? "",
-            isPresented: Binding(get: { alert != nil }, set: { if !$0 { alert = nil } }),
-            presenting: alert
-        ) { _ in
-            Button("OK", role: .cancel) {}
-        } message: { alert in
-            if let detail = alert.detail {
-                Text(detail)
-            }
-        }
+        .accessibilityValue(statusTitle ?? "")
     }
 
     private func saveToPhotos() async {
         isSaving = true
+        statusTitle = nil
         defer { isSaving = false }
 
         do {
             try await PhotoLibraryExport.save(scans)
-            alert = ExportAlert(
-                title: scans.count == 1
-                    ? "Saved to Photos"
-                    : "\(scans.count) scans saved to Photos"
-            )
+            statusTitle = scans.count == 1 ? "Saved" : "Saved \(scans.count)"
         } catch {
-            alert = ExportAlert(title: "Couldn't save", detail: error.localizedDescription)
+            statusTitle = "Couldn't save"
         }
+
+        try? await Task.sleep(for: .seconds(2))
+        statusTitle = nil
     }
 }

@@ -137,7 +137,7 @@ private struct PipelineStageStrip: View {
             Circle()
                 .strokeBorder(
                     isCurrent || isPast ? emulsion : AppTheme.rule,
-                    lineWidth: isCurrent ? 2 : 1
+                    lineWidth: AppTheme.strokeWidth
                 )
                 .frame(width: isCurrent ? 12 : 10, height: isCurrent ? 12 : 10)
             if isPast || isCurrent {
@@ -223,7 +223,7 @@ private struct PipelineAdvanceSlider: View {
                 .padding(.leading, inset)
                 .padding(.trailing, gateWidth - 4)
             RoundedRectangle(cornerRadius: 3)
-                .strokeBorder(AppTheme.rule, lineWidth: 0.5)
+                .strokeBorder(AppTheme.rule, lineWidth: AppTheme.strokeWidth)
             VStack {
                 Rectangle().fill(AppTheme.rule.opacity(0.85)).frame(height: 1)
                 Spacer()
@@ -293,7 +293,7 @@ private struct PipelineAdvanceSlider: View {
                 RoundedRectangle(cornerRadius: 2)
                     .strokeBorder(
                         progress > 0.8 || isComplete ? emulsion.opacity(0.6) : AppTheme.rule,
-                        lineWidth: isComplete ? 1.25 : 0.75
+                        lineWidth: AppTheme.strokeWidth
                     )
             )
             .padding(.trailing, inset + 2)
@@ -314,7 +314,7 @@ private struct PipelineAdvanceSlider: View {
                                 RoundedRectangle(cornerRadius: 2)
                                     .strokeBorder(
                                         progress > 0.85 || isComplete ? emulsion.opacity(0.85) : AppTheme.rule,
-                                        lineWidth: isComplete ? 1.25 : 0.5
+                                        lineWidth: AppTheme.strokeWidth
                                     )
                             )
                     )
@@ -325,7 +325,7 @@ private struct PipelineAdvanceSlider: View {
                     .highPriorityGesture(dragGesture)
             } else {
                 RoundedRectangle(cornerRadius: 2)
-                    .strokeBorder(AppTheme.rule, lineWidth: 0.5)
+                    .strokeBorder(AppTheme.rule, lineWidth: AppTheme.strokeWidth)
                     .frame(width: thumbSize, height: thumbSize)
                     .overlay(
                         LucideIcon(.chevronRight)

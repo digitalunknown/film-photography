@@ -98,11 +98,10 @@ struct CamerasTabView: View {
                     .contentShape(Rectangle())
                     .onTapGesture { selectedCamera = camera }
                     .contextMenu {
-                        Button(role: .destructive) {
+                        Button(destructive: "Delete", lucide: .trash) {
                             cameraToDelete = camera
-                        } label: {
-                            Label("Delete", lucide: .trash)
                         }
+                        .font(AppType.body)
                     }
                     .padding(.horizontal, AppTheme.horizontalPadding)
                     .padding(.vertical, AppTheme.Spacing.sm)
@@ -113,65 +112,6 @@ struct CamerasTabView: View {
                 }
             }
         }
-    }
-}
-
-private struct CameraLedgerRow: View {
-    @Environment(AppStore.self) private var store
-    let camera: Camera
-
-    var body: some View {
-        HStack(alignment: .center, spacing: AppTheme.Spacing.sm) {
-            CameraPhotoPlate(photoData: camera.photoData, size: 100)
-
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                HStack(alignment: .top, spacing: AppTheme.Spacing.sm) {
-                    Text(camera.name)
-                        .font(AppType.title)
-                        .foregroundStyle(AppTheme.textPrimary)
-                        .lineLimit(1)
-
-                    Spacer(minLength: AppTheme.Spacing.xs)
-
-                    if let roll = loadedRoll {
-                        Text("\(roll.frameCount)/\(roll.totalExposures)")
-                            .font(AppType.title)
-                            .foregroundStyle(AppTheme.textPrimary)
-                            .monospacedDigit()
-                            .layoutPriority(1)
-                    } else {
-                        Text("Empty")
-                            .font(AppType.title)
-                            .foregroundStyle(AppTheme.textSecondary)
-                            .layoutPriority(1)
-                    }
-                }
-
-                if let subtitle = camera.listSubtitle {
-                    Text(subtitle)
-                        .font(AppType.callout)
-                        .foregroundStyle(AppTheme.textPrimary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
-
-                if let stockName = loadedStock?.name {
-                    Text(stockName)
-                        .font(AppType.callout)
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .lineLimit(2)
-                        .truncationMode(.tail)
-                        .multilineTextAlignment(.leading)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    private var loadedRoll: Roll? { store.loadedRoll(for: camera.id) }
-    private var loadedStock: FilmStock? {
-        guard let roll = loadedRoll else { return nil }
-        return store.stock(for: roll.stockId)
     }
 }
 

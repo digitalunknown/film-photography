@@ -43,8 +43,7 @@ struct AddCameraView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .font(AppType.body)
+                    InstrumentCloseButton { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") { save() }
@@ -68,12 +67,12 @@ struct AddCameraView: View {
     private var formRows: some View {
         HairlineRule()
         fieldRow("Name") {
-            TextField(placeholder: "Konica C35 FD", text: $name)
+            TextField(placeholder: "Name", text: $name)
                 .focused($focusedField, equals: .name)
         }
         HairlineRule()
         fieldRow("Lens") {
-            TextField(placeholder: "38mm f/1.8", text: $lensSubtitle)
+            TextField(placeholder: "Lens", text: $lensSubtitle)
                 .focused($focusedField, equals: .lens)
         }
         HairlineRule()

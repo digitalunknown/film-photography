@@ -21,6 +21,8 @@ struct ScanFrameView: View {
     @State private var notesText = ""
     @State private var placeCoordinate: CLLocationCoordinate2D?
     @State private var captureDate: Date?
+    @State private var lensId: UUID?
+    @State private var lensName: String?
     @State private var loadedFields = FieldSnapshot()
 
     @State private var showingLocationSearch = false
@@ -46,6 +48,8 @@ struct ScanFrameView: View {
         var location = ""
         var notes = ""
         var captureDate: Date?
+        var lensId: UUID?
+        var lensName: String?
     }
 
     private var roll: Roll? {
@@ -100,6 +104,7 @@ struct ScanFrameView: View {
             .onAppear { loadFields() }
             .task(id: scanFileName) { await loadGateImage() }
             .onChange(of: frame.index) { _, _ in loadFields() }
+            .onChange(of: camera?.id) { _, _ in loadFields() }
             .onChange(of: liveMarker?.location) { _, place in adoptStampedLocation(place) }
             .onChange(of: isoText) { _, _ in saveFieldsIfNeeded() }
             .task(id: dialSelection) { await saveWhenDialSettles() }
@@ -141,8 +146,9 @@ struct ScanFrameView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
                 scanBlock
+                    .padding(.bottom, AppTheme.tableGap)
                 HairlineRule()
-                exifBlock
+                exifCard
                 HairlineRule()
                 metadataBlock
                 HairlineRule()
@@ -193,6 +199,11 @@ struct ScanFrameView: View {
             metadata.latitude = placeCoordinate.latitude
             metadata.longitude = placeCoordinate.longitude
         }
+        var draft = liveMarker ?? FrameMarker(frameIndex: frame.index)
+        draft.lensId = lensId
+        draft.lensName = lensName
+        metadata.lens = ScanMetadata.lensModel(marker: draft, camera: camera)
+        metadata.focalLength = ScanMetadata.focalLength(marker: draft, camera: camera)
         return metadata
     }
 
@@ -281,10 +292,12 @@ struct ScanFrameView: View {
                 Button("Replace scan", lucide: .imageUp) {
                     showingPhotoPicker = true
                 }
+                .font(AppType.body)
                 if hasRemovablePhoto {
-                    Button("Remove scan", lucide: .trash, role: .destructive) {
+                    Button(destructive: "Remove scan", lucide: .trash) {
                         showingDeleteConfirm = true
                     }
+                    .font(AppType.body)
                 }
             } label: {
                 frameGate
@@ -301,10 +314,7 @@ struct ScanFrameView: View {
             .frame(maxWidth: .infinity)
             .overlay { gateContent }
             .clipShape(RoundedRectangle(cornerRadius: Self.gateCorner))
-            .overlay {
-                RoundedRectangle(cornerRadius: Self.gateCorner)
-                    .strokeBorder(AppTheme.surface, lineWidth: 1.25)
-            }
+            .instrumentStroke(RoundedRectangle(cornerRadius: Self.gateCorner))
             .overlay { cornerBrackets }
             .contentShape(Rectangle())
     }
@@ -359,13 +369,6 @@ struct ScanFrameView: View {
 
     // MARK: - EXIF
 
-    private var exifBlock: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
-            SectionLabel(title: "Exif Data", style: .detail)
-            exifCard
-        }
-    }
-
     private var exifCard: some View {
         HStack(spacing: AppTheme.Spacing.md) {
             ExposureDial(unit: "A", scale: .aperture, selection: $apertureIndex)
@@ -386,6 +389,10 @@ struct ScanFrameView: View {
             isoRow
             HairlineRule()
             cameraRow
+            if showsFocalLengthRow {
+                HairlineRule()
+                focalLengthRow
+            }
         }
     }
 
@@ -393,7 +400,7 @@ struct ScanFrameView: View {
     /// and it already defaults to the roll's rated speed.
     private var isoRow: some View {
         HStack(spacing: AppTheme.Spacing.lg) {
-            Text("ISO")
+            Text("ISO/ASA")
                 .font(AppType.body)
                 .foregroundStyle(AppTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -410,19 +417,35 @@ struct ScanFrameView: View {
 
     private var locationRow: some View {
         let hasLocation = !locationText.isEmpty
-        return StackedFieldRow(
-            label: "Location",
-            accessory: hasLocation ? .mapPinMinus : .mapPinPlus,
-            accessoryLabel: hasLocation ? "Clear location" : "Use current location",
-            accessoryAction: hasLocation ? clearLocation : useCurrentLocation
-        ) {
-            fieldValueButton(
-                text: locationDisplay,
-                isPlaceholder: !hasLocation
+        return VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            StackedFieldRow(
+                label: "Location",
+                accessory: hasLocation ? .mapPinMinus : .mapPinPlus,
+                accessoryLabel: hasLocation ? "Clear location" : "Use current location",
+                accessoryAction: hasLocation ? clearLocation : useCurrentLocation
             ) {
-                showingLocationSearch = true
+                fieldValueButton(
+                    text: locationDisplay,
+                    isPlaceholder: !hasLocation
+                ) {
+                    showingLocationSearch = true
+                }
+            }
+
+            if let coordinate = mapCoordinate {
+                FrameLocationMap(coordinate: coordinate)
             }
         }
+    }
+
+    /// A named place with no fix still shows the field; the map only appears once we
+    /// have a real coordinate (zero is treated as unset).
+    private var mapCoordinate: CLLocationCoordinate2D? {
+        if let placeCoordinate { return placeCoordinate }
+        guard let marker = liveMarker, marker.latitude != 0 || marker.longitude != 0 else {
+            return nil
+        }
+        return CLLocationCoordinate2D(latitude: marker.latitude, longitude: marker.longitude)
     }
 
     private var locationDisplay: String {
@@ -454,10 +477,25 @@ struct ScanFrameView: View {
 
     private var filmRow: some View {
         StackedFieldRow(label: "Film") {
-            Text(stock?.name ?? "Not set")
-                .font(AppType.body)
-                .foregroundStyle(stock == nil ? AppTheme.textSecondary : AppTheme.textPrimary)
-                .multilineTextAlignment(.leading)
+            if let stock {
+                NavigationLink {
+                    StockDetailView(stockId: stock.id)
+                } label: {
+                    HStack(spacing: AppTheme.Spacing.xs) {
+                        Text(stock.name)
+                            .font(AppType.body)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .multilineTextAlignment(.leading)
+                        LucideIcon(.chevronRight)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+                .buttonStyle(.plain)
+            } else {
+                Text("Not set")
+                    .font(AppType.body)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
         }
     }
 
@@ -487,6 +525,67 @@ struct ScanFrameView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Camera")
         }
+    }
+
+    /// Focal length sits under the body. One lens is a label; several become a dropdown.
+    private var showsFocalLengthRow: Bool {
+        guard let camera, !camera.lenses.isEmpty else { return false }
+        return true
+    }
+
+    private var selectedLens: CameraLens? {
+        if let lensId, let lens = camera?.lenses.first(where: { $0.id == lensId }) {
+            return lens
+        }
+        return camera?.primaryLens
+    }
+
+    private var focalLengthLabel: String {
+        if let selectedLens {
+            return selectedLens.focalLengthDisplay
+        }
+        if let lensName, !lensName.isEmpty { return lensName }
+        return "Not set"
+    }
+
+    @ViewBuilder
+    private var focalLengthRow: some View {
+        HStack(alignment: .top, spacing: AppTheme.Spacing.lg) {
+            Text("Focal length")
+                .font(AppType.body)
+                .foregroundStyle(AppTheme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if (camera?.lenses.count ?? 0) > 1 {
+                Menu {
+                    ForEach(camera?.lenses ?? []) { lens in
+                        Button(lens.focalLengthDisplay) { setLens(lens) }
+                    }
+                } label: {
+                    HStack(spacing: AppTheme.Spacing.xs) {
+                        Text(focalLengthLabel)
+                            .font(AppType.body)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .multilineTextAlignment(.trailing)
+                        LucideIcon(.chevronsUpDown)
+                            .foregroundStyle(AppTheme.textPrimary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Focal length")
+            } else {
+                Text(focalLengthLabel)
+                    .font(AppType.body)
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .multilineTextAlignment(.trailing)
+            }
+        }
+    }
+
+    private func setLens(_ lens: CameraLens?) {
+        lensId = lens?.id
+        lensName = lens?.exifModel
+        saveFieldsIfNeeded()
     }
 
     // MARK: - Notes
@@ -623,7 +722,9 @@ struct ScanFrameView: View {
             shutterIndex: shutterIndex,
             location: locationText,
             notes: notesText,
-            captureDate: captureDate
+            captureDate: captureDate,
+            lensId: lensId,
+            lensName: lensName
         )
     }
 
@@ -635,6 +736,12 @@ struct ScanFrameView: View {
         guard let place, locationText.isEmpty, loadedFields.location.isEmpty else { return }
         locationText = place
         loadedFields.location = place
+        if let marker = liveMarker, marker.latitude != 0 || marker.longitude != 0 {
+            placeCoordinate = CLLocationCoordinate2D(
+                latitude: marker.latitude,
+                longitude: marker.longitude
+            )
+        }
     }
 
     private func loadFields() {
@@ -647,7 +754,16 @@ struct ScanFrameView: View {
         locationText = marker?.location ?? ""
         notesText = marker?.notes ?? ""
         captureDate = marker?.captureDate
-        placeCoordinate = nil
+        lensId = marker?.lensId
+        lensName = marker?.lensName
+        if let marker, marker.latitude != 0 || marker.longitude != 0 {
+            placeCoordinate = CLLocationCoordinate2D(
+                latitude: marker.latitude,
+                longitude: marker.longitude
+            )
+        } else {
+            placeCoordinate = nil
+        }
         loadedFields = currentFields
     }
 
@@ -679,6 +795,8 @@ struct ScanFrameView: View {
         marker.location = locationText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         marker.notes = notesText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         marker.captureDate = captureDate
+        marker.lensId = lensId
+        marker.lensName = lensName
 
         if let placeCoordinate {
             marker.latitude = placeCoordinate.latitude
@@ -694,6 +812,8 @@ struct ScanFrameView: View {
             || marker.location != nil
             || marker.notes != nil
             || marker.captureDate != nil
+            || marker.lensId != nil
+            || marker.lensName != nil
             || liveMarker != nil
 
         guard hasData else { return }

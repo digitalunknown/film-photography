@@ -72,17 +72,28 @@ struct ExposureDial: View {
     /// Points of travel per whole stop. Generous enough that the ladder runs well past
     /// both ends of the dial, giving the scale room to be dragged through.
     private static let pitch: CGFloat = 24
+    /// Minor ticks drawn between each pair of whole stops. The ladder still snaps stop to
+    /// stop; these only make the scale read as a finely graduated dial rather than a comb.
+    private static let subdivisions = 4
     private static let tickWidth: CGFloat = 1.25
-    private static let tickHeight: CGFloat = 24
-    /// Ticks brighten towards the left so the scale reads as building up to the value.
-    private static let tickShadeLeading: CGFloat = 0.55
-    private static let tickShadeTrailing: CGFloat = 0.12
+    private static let tickHeight: CGFloat = 16
+    /// Everything left of the needle is "filled": it builds from dim at the left edge to
+    /// full strength under the needle, so turning up the value fills the dial.
+    private static let fillShadeMin: CGFloat = 0.35
+    private static let fillShadeMax: CGFloat = 1.0
+    /// Right of the needle — the part not yet reached.
+    private static let emptyShade: CGFloat = 0.16
+    /// Before the frame carries a reading there is nothing to fill, so the whole scale
+    /// sits at one inert shade, matching the greyed-out needle.
+    private static let inertShade: CGFloat = 0.30
     private static let needleWidth: CGFloat = 2
     private static let needleHeight: CGFloat = 14
     /// Holds the needles off the card edge so both rounded ends stay visible.
     private static let needleInset: CGFloat = 2
     /// Carries the scale between notches when a turn isn't tracking a finger.
     private static let glide: Animation = .snappy(duration: 0.18)
+    /// Line box for the spinning readout — matches a 17pt title so the reel clips cleanly.
+    private static let valueHeight: CGFloat = 22
     @State private var width: CGFloat = 0
     @State private var dragOrigin: Int?
     @State private var spin: CGFloat = 0
@@ -98,6 +109,11 @@ struct ExposureDial: View {
         selection != nil
     }
 
+    /// A finger is on the scale. Used to lift the rim so the active dial reads as held.
+    private var isTurning: Bool {
+        dragOrigin != nil
+    }
+
     /// Where the scale sits under the needle, measured in notches. Whole at rest, and
     /// fractional while the dial is being turned or is gliding to the notch it landed on.
     private var position: CGFloat {
@@ -106,7 +122,7 @@ struct ExposureDial: View {
 
     var body: some View {
         ZStack {
-            Ticks(position: position, count: scale.notches.count)
+            Ticks(position: position, count: scale.notches.count, isSet: isSet)
             needles
             readout
         }
@@ -116,17 +132,31 @@ struct ExposureDial: View {
         .frame(maxWidth: .infinity)
         .frame(height: Self.height)
         .clipShape(.rect(cornerRadius: Self.corner))
-        // Figma cuts the dial face darker than the sheet. Liquid glass can only lighten
-        // what is behind it, so the face is a flat fill with a hairline rim instead.
-        .background(AppTheme.well, in: .rect(cornerRadius: Self.corner))
+        // The face sits flush with the sheet, so only the hairline rim separates the two.
+        // It stays a flat fill rather than glass, which can only lighten what is behind it.
+        .background(AppTheme.bg, in: .rect(cornerRadius: Self.corner))
         .overlay {
             RoundedRectangle(cornerRadius: Self.corner)
-                .strokeBorder(AppTheme.surface, lineWidth: 1.25)
+                .strokeBorder(
+                    AppTheme.textPrimary.opacity(isTurning ? 0.28 : 0.10),
+                    lineWidth: AppTheme.strokeWidth
+                )
+                .animation(.easeOut(duration: 0.16), value: isTurning)
         }
         .contentShape(.rect)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .onTapGesture(coordinateSpace: .local) { step(from: $0) }
         .simultaneousGesture(spinGesture)
+        .contextMenu {
+            Button("Unset", lucide: .squareX) {
+                withAnimation(Self.glide) {
+                    selection = nil
+                    spin = 0
+                }
+            }
+            .font(AppType.body)
+            .disabled(!isSet)
+        }
         .sensoryFeedback(.selection, trigger: notchesTurned)
         .accessibilityElement()
         .accessibilityLabel(unit)
@@ -153,6 +183,7 @@ struct ExposureDial: View {
     private struct Ticks: View, Animatable {
         var position: CGFloat
         let count: Int
+        let isSet: Bool
 
         var animatableData: CGFloat {
             get { position }
@@ -167,8 +198,9 @@ struct ExposureDial: View {
                 let centre = size.width / 2
                 let top = (size.height - tickHeight) / 2
 
-                for notch in 0..<count {
-                    let x = centre + (CGFloat(notch) - position) * pitch
+                for tickIndex in 0...((count - 1) * ExposureDial.subdivisions) {
+                    let notch = CGFloat(tickIndex) * step
+                    let x = centre + (notch - position) * pitch
                     guard x > -tickWidth, x < size.width + tickWidth else { continue }
 
                     let tick = CGRect(
@@ -177,16 +209,31 @@ struct ExposureDial: View {
                         width: tickWidth,
                         height: tickHeight
                     )
-                    let ramp = min(max(x / size.width, 0), 1)
-                    let shade = ExposureDial.tickShadeLeading
-                        + (ExposureDial.tickShadeTrailing - ExposureDial.tickShadeLeading) * ramp
                     context.fill(
                         Path(roundedRect: tick, cornerRadius: tickWidth / 2),
-                        with: .color(AppTheme.textSecondary.opacity(shade))
+                        with: .color(shade(notch: notch, x: x, centre: centre))
                     )
                 }
             }
         }
+
+        /// Filled ticks ramp toward the needle so the fill reads as building up to it.
+        /// The ramp is measured in screen space rather than along the ladder, so it looks
+        /// the same at either end of the scale.
+        private func shade(notch: CGFloat, x: CGFloat, centre: CGFloat) -> Color {
+            guard isSet else {
+                return AppTheme.textSecondary.opacity(ExposureDial.inertShade)
+            }
+            guard notch <= position + step / 2 else {
+                return AppTheme.textSecondary.opacity(ExposureDial.emptyShade)
+            }
+            let ramp = min(max(x / centre, 0), 1)
+            let shade = ExposureDial.fillShadeMin
+                + (ExposureDial.fillShadeMax - ExposureDial.fillShadeMin) * ramp
+            return AppTheme.textPrimary.opacity(shade)
+        }
+
+        private var step: CGFloat { 1 / CGFloat(ExposureDial.subdivisions) }
     }
 
     /// Fixed centre marks, reaching in from the top and bottom edges.
@@ -211,27 +258,42 @@ struct ExposureDial: View {
     /// the ticks rather than covering them, so the glass still shows through the gap.
     private var readout: some View {
         VStack(spacing: 0) {
-            Text(isSet ? scale.notches[index].label : scale.blankLabel)
-                .font(AppType.title)
-                .foregroundStyle(AppTheme.textPrimary)
+            Group {
+                if isSet {
+                    VerticalSpinnerText(
+                        labels: scale.notches.map(\.label),
+                        index: index,
+                        font: AppType.title,
+                        color: AppTheme.textPrimary,
+                        height: Self.valueHeight
+                    )
+                } else {
+                    Text(scale.blankLabel)
+                        .font(AppType.title)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .frame(height: Self.valueHeight)
+                }
+            }
+            .frame(height: Self.valueHeight)
+            .clipped()
             Text(unit)
                 .font(AppType.microRegular)
                 .foregroundStyle(AppTheme.textSecondary)
         }
-        .padding(.horizontal, AppTheme.Spacing.xl)
+        .padding(.horizontal, AppTheme.Spacing.xl + AppTheme.Spacing.sm)
         .background {
             LinearGradient(
                 stops: [
                     .init(color: .white.opacity(0), location: 0),
-                    .init(color: .white, location: 0.2),
-                    .init(color: .white, location: 0.8),
+                    .init(color: .white, location: 0.32),
+                    .init(color: .white, location: 0.68),
                     .init(color: .white.opacity(0), location: 1),
                 ],
                 startPoint: .leading,
                 endPoint: .trailing
             )
-            // Only as tall as the thirds, so a whole stop's taller tick keeps its tips
-            // even when the value sits right on top of it.
+            // Only as tall as the tick band, so the fill either side of the value stays
+            // untouched above and below it.
             .frame(height: Self.tickHeight)
             .blendMode(.destinationOut)
         }

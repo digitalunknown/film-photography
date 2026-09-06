@@ -61,10 +61,14 @@ private enum CanisterSpec {
 
     static let tongueWidth: Float = 223
     static let tongueHeight: Float = 300
-    static let tongueShift: Float = 206
-    /// How far the leader's free end swings toward the viewer. Film leaves a cassette on
-    /// a curve, and the curve is most of what stops the sheet reading as a flat card.
-    static let tongueBend: Float = 64
+    /// A few pixels off the body so the sheet hugs the cylinder without z-fighting the label.
+    static let tongueWrapRadius: Float = 121
+    /// How far the free end lifts off the can. Zero would glue the leader to the shell.
+    static let tonguePeel: Float = 38
+    /// Film leaves the felt on the +X side and wraps toward the back (−Z), so the
+    /// leader sits behind the can and the label stays clear.
+    static let tongueStartAngle: Float = 0
+    static let tongueWrapAngle: Float = -1.28
 
     /// Sprocket perforations, in tongue-local artwork pixels. Scaled off the real KS-1870
     /// spec against the 300px sheet standing in for 35mm: 2.79mm along the film by
@@ -77,14 +81,9 @@ private enum CanisterSpec {
     static let holeRows: [CGFloat] = [129, -129]
     static var holeColumns: [CGFloat] { (-2...2).map { CGFloat($0) * holePitch } }
 
-    /// The leader is cut away right of this x and below this y — the taper on real 35mm.
-    /// Clear of the outermost perforation, so the taper doesn't slice one in half.
-    static let leaderCutX: CGFloat = 66
-    static let leaderCutY: CGFloat = 15
-
-    /// Centres the assembly on the origin; the tongue pushes its bounds off-axis, as
-    /// does the spindle.
-    static let centreX: Float = 100.5
+    /// Centres the assembly on the origin. The wrap sits close to the shell, so the
+    /// felt is what still pulls the bounds a little off-axis.
+    static let centreX: Float = 22
     static var centreY: Float { (spindleRise + spindleHeight / 2 + feltBottom) / 2 }
 
     /// The canister's resting three-quarter pose, before any device tilt. Just below the
@@ -322,28 +321,40 @@ private enum Lathe {
     }
 }
 
-/// A sheet bent along its length, for the film leader. A flat plane carries one normal,
-/// so no amount of lighting will shade it and it reads as a card glued to the side of
-/// the canister; a curve gives it a gradient of its own and a silhouette that moves as
-/// the canister tilts.
+/// The film leader, swept around the back of the canister rather than bent away from it.
+/// Real stock leaves the felt still hugging the shell — the curl is the memory of being
+/// wound — and only the free end lifts off. Built in assembly space so the arc shares
+/// an axis with the body.
 private enum Sweep {
-    private static let columns = 28
+    private static let columns = 36
 
     @MainActor
-    static func sheet(width: Float, height: Float, bend: Float) -> MeshResource? {
+    static func leader() -> MeshResource? {
+        let height = CanisterSpec.metres(CanisterSpec.tongueHeight)
+        let radius0 = CanisterSpec.metres(CanisterSpec.tongueWrapRadius)
+        let peel = CanisterSpec.metres(CanisterSpec.tonguePeel)
+        let theta0 = CanisterSpec.tongueStartAngle
+        let sweep = CanisterSpec.tongueWrapAngle
+
         var positions: [SIMD3<Float>] = []
         var normals: [SIMD3<Float>] = []
         var coordinates: [SIMD2<Float>] = []
 
         for column in 0...columns {
             let across = Float(column) / Float(columns)
-            // Quadratic, so the sheet leaves the light trap flat and tightens as it goes.
-            let depth = bend * across * across
-            let slope = 2 * bend * across / width
-            let normal = simd_normalize(SIMD3<Float>(-slope, 0, 1))
+            let theta = theta0 + across * sweep
+            // Quadratic peel, so the sheet leaves the trap tight and only the tongue lifts.
+            let radius = radius0 + peel * across * across
+            let cosine = cos(theta)
+            let sine = sin(theta)
+            let x = radius * cosine
+            let z = radius * sine
+
+            // Radial, so the wrap direction can't flip the lit face inward.
+            let normal = simd_normalize(SIMD3<Float>(cosine, 0, sine))
 
             for row in 0...1 {
-                positions.append([(across - 0.5) * width, (0.5 - Float(row)) * height, depth])
+                positions.append([x, (0.5 - Float(row)) * height, z])
                 normals.append(normal)
                 coordinates.append([across, Float(row)])
             }
@@ -497,12 +508,9 @@ private enum CanisterBuilder {
                              0]
         pivot.addChild(assembly)
 
-        // Both are lifted off the body colour, because in a lit render the base colour is
-        // a starting point rather than the result. The film keeps most of that lift so it
-        // stays readable against the background; the caps keep very little, since they
-        // are glossy black on a real cassette and read as such once the rolled rim
-        // catches a highlight.
-        let chrome = UIColor(AppTheme.canisterBody).shaded(by: 1.3)
+        // Caps stay close to the body colour: they are glossy black on a real cassette
+        // and only the rolled rim needs to catch a highlight. The film has its own
+        // acetate colour, baked in the texture rather than tinted from this slate.
         let shell = UIColor(AppTheme.canisterBody).shaded(by: 0.8)
 
         if let turned = Lathe.puck(radius: CanisterSpec.metres(CanisterSpec.bodyRadius),
@@ -565,7 +573,7 @@ private enum CanisterBuilder {
                          0]
         assembly.addChild(felt)
 
-        if let tongue = tongueEntity(chrome: chrome) {
+        if let tongue = tongueEntity() {
             assembly.addChild(tongue)
         }
 
@@ -633,31 +641,27 @@ private enum CanisterBuilder {
 
     /// The film is a double-sided sheet rather than a solid — real film has no thickness
     /// worth modelling — with the perforations and the leader taper carried as alpha so
-    /// they read as cutouts.
+    /// they read as cutouts. The mesh is already in assembly space, hugging the body.
     @MainActor
-    private static func tongueEntity(chrome: UIColor) -> ModelEntity? {
-        guard let image = CanisterTexture.film(chrome: chrome),
+    private static func tongueEntity() -> ModelEntity? {
+        guard let image = CanisterTexture.film(),
               let material = cutout(from: image),
-              let mesh = Sweep.sheet(width: CanisterSpec.metres(CanisterSpec.tongueWidth),
-                                     height: CanisterSpec.metres(CanisterSpec.tongueHeight),
-                                     bend: CanisterSpec.metres(CanisterSpec.tongueBend))
+              let mesh = Sweep.leader()
         else { return nil }
-
-        let tongue = ModelEntity(mesh: mesh, materials: [material])
-        tongue.position.x = CanisterSpec.metres(CanisterSpec.tongueShift)
-        return tongue
+        return ModelEntity(mesh: mesh, materials: [material])
     }
 
-    /// Film base is lacquered and genuinely shiny — the sheen sweeping across the curl is
-    /// most of what identifies it. Mid roughness rather than mirror-smooth: with only two
-    /// lights and a gradient environment, a tight lobe reflects the dark half of that
-    /// environment and the film goes black instead of shiny. This is wide enough for the
-    /// key light to lay a broad sheen along the curve.
+    /// Acetate is lacquered. Mid roughness keeps the key light's sheen broad — a tighter
+    /// lobe, with only two lights and a gradient environment, reflects the dark half of
+    /// that environment and the film goes black. Clearcoat adds the hard specular that
+    /// the base lobe is too wide to hold on its own.
     @MainActor
     private static func cutout(from image: CGImage) -> PhysicallyBasedMaterial? {
         guard var material = printed(image) else { return nil }
-        material.roughness = .init(floatLiteral: 0.3)
+        material.roughness = .init(floatLiteral: 0.24)
         material.specular = .init(floatLiteral: 1.0)
+        material.clearcoat = .init(floatLiteral: 0.55)
+        material.clearcoatRoughness = .init(floatLiteral: 0.18)
         material.opacityThreshold = 0.5
         return material
     }
@@ -752,36 +756,25 @@ private enum CanisterTexture {
     /// fills the screen.
     private static let density: CGFloat = 3
 
-    static func film(chrome: UIColor) -> CGImage? {
+    static func film() -> CGImage? {
         let width = CGFloat(CanisterSpec.tongueWidth)
         let height = CGFloat(CanisterSpec.tongueHeight)
         let size = CGSize(width: width * density, height: height * density)
+        let outline = leaderOutline(width: size.width, height: size.height)
 
         return UIGraphicsImageRenderer(size: size).image { context in
             let cg = context.cgContext
 
-            // The film sheet, with the leader taper missing from its lower right.
-            let cutX = (CanisterSpec.leaderCutX + width / 2) * density
-            let cutY = (height / 2 - CanisterSpec.leaderCutY) * density
-            let sheet = CGMutablePath()
-            sheet.addLines(between: [
-                CGPoint(x: 0, y: 0),
-                CGPoint(x: size.width, y: 0),
-                CGPoint(x: size.width, y: cutY),
-                CGPoint(x: cutX, y: cutY),
-                CGPoint(x: cutX, y: size.height),
-                CGPoint(x: 0, y: size.height)
-            ])
-            sheet.closeSubpath()
-
             cg.saveGState()
-            cg.addPath(sheet)
+            cg.addPath(outline)
             cg.clip()
 
-            // Form shading, angled to agree with the key light.
-            let stops = [chrome.shaded(by: 1.3).cgColor, chrome.shaded(by: 0.8).cgColor]
+            // Acetate is a warm chocolate, not the canister's grey. Lit side lifted
+            // enough to stay off the page; the shade side is almost black.
+            let lit = UIColor(red: 0.36, green: 0.22, blue: 0.15, alpha: 1)
+            let shade = UIColor(red: 0.11, green: 0.07, blue: 0.05, alpha: 1)
             if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
-                                         colors: stops as CFArray,
+                                         colors: [lit.cgColor, shade.cgColor] as CFArray,
                                          locations: [0, 1]) {
                 cg.drawLinearGradient(gradient,
                                       start: .zero,
@@ -790,21 +783,20 @@ private enum CanisterTexture {
                                                 .drawsAfterEndLocation])
             }
 
-            // Film base is lacquered, and the sheen sliding along it is most of what
-            // identifies the material. Two directional lights and a gradient environment
-            // can't lay a broad enough highlight on a sheet this gently curved, so the
-            // bands are baked. They run across the width because it is the curvature
-            // along the length that decides where the sheet turns to face the light.
+            // Lacquer sheen, baked because two lights and a gradient environment can't
+            // lay a highlight this broad on a wrap this tight. Cool-white bands, the
+            // colour of a specular on dark acetate, running across the length so they
+            // ride the curvature as the canister tilts.
             let sheen = [
-                UIColor(white: 1, alpha: 0).cgColor,
-                UIColor(white: 1, alpha: 0.19).cgColor,
-                UIColor(white: 1, alpha: 0).cgColor,
-                UIColor(white: 1, alpha: 0.07).cgColor,
-                UIColor(white: 1, alpha: 0).cgColor
+                UIColor(red: 0.78, green: 0.88, blue: 1, alpha: 0).cgColor,
+                UIColor(red: 0.86, green: 0.92, blue: 1, alpha: 0.34).cgColor,
+                UIColor(red: 0.78, green: 0.88, blue: 1, alpha: 0).cgColor,
+                UIColor(red: 0.92, green: 0.86, blue: 0.78, alpha: 0.14).cgColor,
+                UIColor(red: 0.78, green: 0.88, blue: 1, alpha: 0).cgColor
             ]
             if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
                                          colors: sheen as CFArray,
-                                         locations: [0, 0.26, 0.5, 0.74, 1]) {
+                                         locations: [0, 0.22, 0.48, 0.72, 1]) {
                 cg.drawLinearGradient(gradient,
                                       start: .zero,
                                       end: CGPoint(x: size.width, y: 0),
@@ -813,6 +805,7 @@ private enum CanisterTexture {
             }
             cg.restoreGState()
 
+            let clip = UIBezierPath(cgPath: outline)
             for row in CanisterSpec.holeRows {
                 for column in CanisterSpec.holeColumns {
                     let hole = CGRect(
@@ -821,6 +814,8 @@ private enum CanisterTexture {
                         width: CanisterSpec.holeSize.width * density,
                         height: CanisterSpec.holeSize.height * density
                     )
+                    // The tongue only keeps the top row; skip any hole the cut removed.
+                    guard clip.contains(CGPoint(x: hole.midX, y: hole.midY)) else { continue }
                     cg.setBlendMode(.clear)
                     cg.addPath(UIBezierPath(roundedRect: hole,
                                             cornerRadius: CanisterSpec.holeCorner * density).cgPath)
@@ -829,6 +824,32 @@ private enum CanisterTexture {
                 }
             }
         }.cgImage
+    }
+
+    /// Classic 35mm leader: full height out of the cassette, a rounded shoulder cutting
+    /// away the bottom edge, then a half-height tongue with a rounded tip. Only the
+    /// top perforation row survives onto the tongue.
+    private static func leaderOutline(width: CGFloat, height: CGFloat) -> CGPath {
+        let path = CGMutablePath()
+        let tip = height * 0.07
+        let tongue = height * 0.50
+        let fullUntil = width * 0.34
+        let scoopEnd = width * 0.56
+
+        path.move(to: CGPoint(x: 0, y: 0))
+        path.addLine(to: CGPoint(x: width - tip, y: 0))
+        path.addQuadCurve(to: CGPoint(x: width, y: tip),
+                          control: CGPoint(x: width, y: 0))
+        path.addLine(to: CGPoint(x: width, y: tongue - tip * 0.55))
+        path.addQuadCurve(to: CGPoint(x: width - tip, y: tongue),
+                          control: CGPoint(x: width, y: tongue))
+        path.addLine(to: CGPoint(x: scoopEnd, y: tongue))
+        path.addCurve(to: CGPoint(x: fullUntil, y: height),
+                      control1: CGPoint(x: scoopEnd - width * 0.05, y: tongue + (height - tongue) * 0.42),
+                      control2: CGPoint(x: fullUntil + width * 0.11, y: height))
+        path.addLine(to: CGPoint(x: 0, y: height))
+        path.closeSubpath()
+        return path
     }
 
     /// The label, wrapped around the body rather than applied as a flat decal, so the

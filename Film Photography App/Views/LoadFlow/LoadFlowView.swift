@@ -182,7 +182,7 @@ struct LoadFlowView: View {
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(
                     AppTheme.textSecondary,
-                    style: StrokeStyle(lineWidth: 1.5, dash: [8])
+                    style: StrokeStyle(lineWidth: AppTheme.strokeWidth, dash: [8])
                 )
                 .frame(width: 140, height: 100)
                 .overlay {
@@ -273,14 +273,18 @@ struct LoadFlowView: View {
             .padding(.vertical, AppTheme.Spacing.xl)
         }
         .sheet(isPresented: $showingCameraPicker) {
-            pickerSheet(title: "Camera", items: store.cameras.map { ($0.id, $0.name) }) { id in
-                selectedCameraId = id
-                if let camera = store.camera(for: id), let defaultFormat = camera.defaultFormat {
-                    format = defaultFormat
-                    exposuresText = String(defaultFormat.defaultExposures)
-                }
-                recognitionResult?.cameraConfidence = .manual
-            }
+            ChooseCameraSheet(
+                onSelect: { camera in
+                    selectedCameraId = camera.id
+                    if let defaultFormat = camera.defaultFormat {
+                        format = defaultFormat
+                        exposuresText = String(defaultFormat.defaultExposures)
+                    }
+                    recognitionResult?.cameraConfidence = .manual
+                    showingCameraPicker = false
+                },
+                onDismiss: { showingCameraPicker = false }
+            )
         }
         .sheet(isPresented: $showingStockPicker) {
             pickerSheet(title: "Stock", items: store.stocks.map { ($0.id, $0.name) }) { id in
@@ -291,7 +295,7 @@ struct LoadFlowView: View {
                 recognitionResult?.stockConfidence = .manual
             }
         }
-        .confirmationDialog("Shooting ISO", isPresented: $showingPushPicker) {
+        .confirmationDialog("Shooting ISO/ASA", isPresented: $showingPushPicker) {
             Button("Box speed (\(selectedStock?.iso ?? shootingISO))") { pushPull = 0 }
             Button("Push +1") { pushPull = 1 }
             Button("Push +2") { pushPull = 2 }
@@ -320,7 +324,7 @@ struct LoadFlowView: View {
                     .scaledToFill()
             } else {
                 ZStack {
-                    Rectangle().strokeBorder(AppTheme.rule, lineWidth: 0.5)
+                    Rectangle().strokeBorder(AppTheme.rule, lineWidth: AppTheme.strokeWidth)
                     Text("Load photo captured")
                         .font(AppType.callout)
                         .foregroundStyle(AppTheme.textSecondary)
@@ -335,7 +339,7 @@ struct LoadFlowView: View {
         Button { showingPushPicker = true } label: {
             HStack {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                    Text("Shooting ISO")
+                    Text("Shooting ISO/ASA")
                         .font(AppType.callout)
                         .foregroundStyle(AppTheme.textSecondary)
                     HStack(spacing: AppTheme.Spacing.sm) {
@@ -360,11 +364,11 @@ struct LoadFlowView: View {
 
     private var isoDisplayText: String {
         if pushPull == 0 {
-            return "ISO \(shootingISO)"
+            return "ISO/ASA \(shootingISO)"
         }
         let sign = pushPull > 0 ? "+" : ""
         let effectiveISO = shootingISO * Int(pow(2.0, Double(abs(pushPull))))
-        return "ISO \(effectiveISO) (pushed \(sign)\(pushPull))"
+        return "ISO/ASA \(effectiveISO) (pushed \(sign)\(pushPull))"
     }
 
     @ViewBuilder
