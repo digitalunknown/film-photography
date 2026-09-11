@@ -9,6 +9,8 @@ struct PersistedAppData: Codable {
     var fridgeItems: [FridgeItem]
     var devRecipePresets: [DevRecipePreset]
     var customStocks: [FilmStock]
+    /// When this snapshot was last written. iCloud uses it to pick a winner.
+    var updatedAt: Date?
 
     init(
         version: Int = currentVersion,
@@ -16,7 +18,8 @@ struct PersistedAppData: Codable {
         rolls: [Roll],
         fridgeItems: [FridgeItem] = [],
         devRecipePresets: [DevRecipePreset] = [],
-        customStocks: [FilmStock] = []
+        customStocks: [FilmStock] = [],
+        updatedAt: Date? = nil
     ) {
         self.version = version
         self.cameras = cameras
@@ -24,6 +27,7 @@ struct PersistedAppData: Codable {
         self.fridgeItems = fridgeItems
         self.devRecipePresets = devRecipePresets
         self.customStocks = customStocks
+        self.updatedAt = updatedAt
     }
 
     init(from decoder: Decoder) throws {
@@ -34,6 +38,21 @@ struct PersistedAppData: Codable {
         fridgeItems = try container.decodeIfPresent([FridgeItem].self, forKey: .fridgeItems) ?? []
         devRecipePresets = try container.decodeIfPresent([DevRecipePreset].self, forKey: .devRecipePresets) ?? []
         customStocks = try container.decodeIfPresent([FilmStock].self, forKey: .customStocks) ?? []
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt)
+    }
+
+    /// Cameras, rolls, fridge, recipes, or custom stocks — not an empty first-launch file.
+    var hasLibraryContent: Bool {
+        !cameras.isEmpty
+            || !rolls.isEmpty
+            || !fridgeItems.isEmpty
+            || !devRecipePresets.isEmpty
+            || !customStocks.isEmpty
+    }
+
+    /// Newest write wins when both sides have real data. Missing stamps sort as oldest.
+    var syncTimestamp: Date {
+        updatedAt ?? .distantPast
     }
 }
 
@@ -77,7 +96,8 @@ enum DataPersistence {
 
     /// Tests point this at an isolated file so they never touch the live store.
     /// Production leaves it nil and writes to the App Group container.
-    nonisolated(unsafe) static var fileURLOverride: URL?
+    /// Task-local so parallel suites cannot clobber each other's path.
+    @TaskLocal static var fileURLOverride: URL?
 
     static var fileURL: URL {
         fileURLOverride ?? AppGroupStorage.resolvedDataURL()
@@ -121,14 +141,16 @@ enum DataPersistence {
         rolls: [Roll],
         fridgeItems: [FridgeItem],
         devRecipePresets: [DevRecipePreset],
-        customStocks: [FilmStock] = []
+        customStocks: [FilmStock] = [],
+        updatedAt: Date? = nil
     ) throws {
         let payload = PersistedAppData(
             cameras: cameras,
             rolls: rolls,
             fridgeItems: fridgeItems,
             devRecipePresets: devRecipePresets,
-            customStocks: customStocks
+            customStocks: customStocks,
+            updatedAt: updatedAt ?? Date()
         )
         try write(payload)
     }

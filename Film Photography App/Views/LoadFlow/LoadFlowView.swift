@@ -394,7 +394,7 @@ struct LoadFlowView: View {
                         .font(AppType.body)
                         .foregroundStyle(AppTheme.textPrimary)
                     LucideIcon(.chevronsUpDown)
-                        .foregroundStyle(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
         }

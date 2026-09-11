@@ -69,7 +69,7 @@ struct RollsTabView: View {
                     } label: {
                         LucideIcon(.plus)
                     }
-                    .accessibilityLabel("Add roll")
+                    .accessibilityLabel("Add film")
                 }
             }
             .navigationDestination(item: $selectedRoll) { roll in
@@ -77,6 +77,10 @@ struct RollsTabView: View {
             }
             .navigationDestination(for: Roll.self) { roll in
                 RollDetailView(rollId: roll.id)
+            }
+            .onAppear { openPendingRoll() }
+            .onChange(of: store.pendingOpenRollId) { _, _ in
+                openPendingRoll()
             }
             .alert(deleteAlertTitle, isPresented: deleteRollBinding) {
                 Button("Delete", role: .destructive) {
@@ -129,7 +133,7 @@ struct RollsTabView: View {
                         .foregroundStyle(AppTheme.textSecondary)
                         .monospacedDigit()
                     LucideIcon(.chevronRight)
-                        .foregroundStyle(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .padding(.horizontal, AppTheme.horizontalPadding)
                 .padding(.vertical, AppTheme.Spacing.sm)
@@ -147,6 +151,12 @@ struct RollsTabView: View {
 
     /// Most recently added first. Rolls are appended as they are created, so the
     /// store's own order is the order they arrived in.
+    private func openPendingRoll() {
+        guard let id = store.pendingOpenRollId, let roll = store.roll(for: id) else { return }
+        selectedRoll = roll
+        store.pendingOpenRollId = nil
+    }
+
     private func rolls(for status: RollStatus) -> [Roll] {
         Array(
             store.activeRolls

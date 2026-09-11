@@ -211,11 +211,11 @@ struct RollDetailView: View {
             NavigationLink {
                 StockDetailView(stockId: stock.id)
             } label: {
-                DetailFieldRow(label: "Stock") {
+                DetailFieldRow(label: "Film") {
                     HStack(spacing: AppTheme.Spacing.xs) {
                         DetailFieldValue(text: stock.name)
                         LucideIcon(.chevronRight)
-                            .foregroundStyle(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
                 .contentShape(Rectangle())

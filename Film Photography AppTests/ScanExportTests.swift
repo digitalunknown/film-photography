@@ -76,13 +76,14 @@ struct ScanExportTests {
         #expect(gps[kCGImagePropertyGPSLongitudeRef] as? String == "W")
     }
 
-    /// Bulb has no duration, so it must not be written as a zero-second exposure.
-    @Test func bulbAndEmptyFieldsAreLeftOut() throws {
+    /// Auto and Bulb have no stop to record, so they must not be written as a number.
+    @Test func autoAndBulbAreLeftOutOfExif() throws {
         let source = try makeSourceJPEG()
         defer { try? FileManager.default.removeItem(at: source) }
 
         let metadata = ScanMetadata(
             frameIndex: 1,
+            aperture: ExposureScale.autoValue,
             shutterSpeed: ExposureScale.bulbSeconds,
             place: "   ",
             latitude: 0,
@@ -98,6 +99,7 @@ struct ScanExportTests {
         )
         let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any] ?? [:]
 
+        #expect(exif[kCGImagePropertyExifFNumber] == nil)
         #expect(exif[kCGImagePropertyExifExposureTime] == nil)
         #expect(properties[kCGImagePropertyGPSDictionary] == nil)
         #expect((properties[kCGImagePropertyIPTCDictionary] as? [CFString: Any])?[kCGImagePropertyIPTCSubLocation] == nil)
@@ -180,6 +182,46 @@ struct ScanExportTests {
                 camera: camera
             ) == "Kept after delete"
         )
+        #expect(ScanMetadata.focalLength(marker: marker, camera: camera) == 28)
+        #expect(ScanMetadata.focalLength(marker: nil, camera: camera) == 50)
+        #expect(
+            ScanMetadata.focalLength(
+                marker: FrameMarker(frameIndex: 1, lensName: "Elmarit · 28mm · f/2.8"),
+                camera: camera
+            ) == 28
+        )
+        #expect(
+            ScanMetadata.focalLength(
+                marker: FrameMarker(frameIndex: 1, lensName: "Kept after delete"),
+                camera: camera
+            ) == nil
+        )
+    }
+
+    @Test func millimetersAreReadFromFreeText() {
+        #expect(CameraLens.millimeters(from: "50mm") == 50)
+        #expect(CameraLens.millimeters(from: "28–70mm") == 28)
+        #expect(CameraLens.millimeters(from: "Elmarit · 28mm · f/2.8") == 28)
+        #expect(CameraLens.millimeters(from: "no length") == nil)
+    }
+
+    @Test func autoIsTheFirstNotchOnBothDials() {
+        #expect(ExposureScale.aperture.notches.first?.label == "Auto")
+        #expect(ExposureScale.aperture.notches.first?.value == ExposureScale.autoValue)
+        #expect(ExposureScale.shutter.notches.first?.label == "Auto")
+        #expect(ExposureScale.shutter.notches.first?.value == ExposureScale.autoValue)
+        #expect(ExposureScale.shutter.notches[1].label == "B")
+        #expect(ExposureScale.aperture.nearestIndex(to: ExposureScale.autoValue) == 0)
+        #expect(ExposureScale.shutter.nearestIndex(to: ExposureScale.autoValue) == 0)
+        #expect(ExposureScale.shutter.nearestIndex(to: ExposureScale.bulbSeconds) == 1)
+        #expect(ExposureFormat.aperture(ExposureScale.autoValue) == "Auto")
+        #expect(ExposureFormat.shutter(ExposureScale.autoValue) == "Auto")
+        #expect(ExposureFormat.shutter(ExposureScale.bulbSeconds) == "B")
+        #expect(ExposureFormat.parseAperture("3.5") == 3.5)
+        #expect(ExposureFormat.parseAperture("f/3.5") == 3.5)
+        #expect(ExposureFormat.parseShutter("1/90") == 1.0 / 90.0)
+        #expect(ExposureFormat.parseShutter("90") == 1.0 / 90.0)
+        #expect(ExposureFormat.parseShutter("2s") == 2)
     }
 
     @Test func exportNameIsFileSystemSafe() {

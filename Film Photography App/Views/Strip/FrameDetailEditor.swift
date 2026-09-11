@@ -77,7 +77,7 @@ struct FrameDetailEditor: View {
             descriptionText = ""
             return
         }
-        apertureText = marker.aperture.map { String($0) } ?? ""
+        apertureText = marker.aperture.map { ExposureFormat.aperture($0) } ?? ""
         shutterText = marker.shutterSpeed.map { ExposureFormat.shutter($0) } ?? ""
         locationText = marker.location ?? ""
         descriptionText = marker.notes ?? ""
@@ -109,16 +109,31 @@ struct FrameDetailEditor: View {
     }
 
     private func parseAperture(_ text: String) -> Double? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "f/", with: "")
-            .replacingOccurrences(of: "F/", with: "")
-        guard !trimmed.isEmpty else { return nil }
-        return Double(trimmed)
+        ExposureFormat.parseAperture(text)
     }
 }
 
 enum ExposureFormat {
+    static func aperture(_ value: Double) -> String {
+        if value == ExposureScale.autoValue { return "Auto" }
+        return "f/" + String(format: "%g", value)
+    }
+
+    static func parseAperture(_ text: String) -> Double? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        if trimmed.caseInsensitiveCompare("Auto") == .orderedSame {
+            return ExposureScale.autoValue
+        }
+        let number = trimmed
+            .replacingOccurrences(of: "f/", with: "")
+            .replacingOccurrences(of: "F/", with: "")
+        guard !number.isEmpty else { return nil }
+        return Double(number)
+    }
+
     static func shutter(_ seconds: Double) -> String {
+        if seconds == ExposureScale.autoValue { return "Auto" }
         guard seconds > 0 else { return "B" }
         if seconds >= 1 { return String(format: "%.1f", seconds) }
         let denom = Int(round(1.0 / seconds))
@@ -126,8 +141,11 @@ enum ExposureFormat {
     }
 
     static func parseShutter(_ text: String) -> Double? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
+        if trimmed.caseInsensitiveCompare("Auto") == .orderedSame {
+            return ExposureScale.autoValue
+        }
         if trimmed.caseInsensitiveCompare("B") == .orderedSame {
             return ExposureScale.bulbSeconds
         }
@@ -136,7 +154,23 @@ enum ExposureFormat {
             guard parts.count == 2, let denom = Double(parts[1]), denom > 0 else { return nil }
             return 1.0 / denom
         }
-        return Double(trimmed)
+
+        // A trailing "s" means seconds. A bare integer above 1 is a denominator —
+        // "90" is 1/90, the way a shutter dial writes it.
+        let lowered = trimmed.lowercased()
+        if lowered.hasSuffix("sec") {
+            trimmed = String(trimmed.dropLast(3)).trimmingCharacters(in: .whitespaces)
+            return Double(trimmed)
+        }
+        if lowered.hasSuffix("s") {
+            trimmed = String(trimmed.dropLast()).trimmingCharacters(in: .whitespaces)
+            return Double(trimmed)
+        }
+        guard let number = Double(trimmed) else { return nil }
+        if number == floor(number), number > 1 {
+            return 1 / number
+        }
+        return number
     }
 
     static func exposure(aperture: Double?, shutterSpeed: Double?) -> String? {
@@ -145,7 +179,7 @@ enum ExposureFormat {
             parts.append(shutter(shutterSpeed))
         }
         if let aperture {
-            parts.append("f/\(aperture)")
+            parts.append(Self.aperture(aperture))
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }

@@ -1,4 +1,5 @@
 import CoreLocation
+import Network
 import SwiftUI
 import UIKit
 import WidgetKit
@@ -69,6 +70,8 @@ final class AppStore {
     var addRollEntry: AddRollEntry?
     var showingLoadFlow = false
     var showingSettings = false
+    /// Set when a widget (or other deep link) asks to show a roll.
+    var pendingOpenRollId: UUID?
     var showingArchive = false
     /// Opens Load Flow past the source chooser (camera already taken or about to open).
     var loadFlowStartWithCamera = false
@@ -78,9 +81,48 @@ final class AppStore {
     /// last good file on disk is left untouched until a retry succeeds.
     var persistProblem: PersistProblem?
 
+    var iCloudSyncEnabled: Bool {
+        get { iCloudLibraryMirror.isEnabled }
+        set {
+            guard iCloudLibraryMirror.isEnabled != newValue else { return }
+            iCloudLibraryMirror.isEnabled = newValue
+            if newValue {
+                reconcileiCloud()
+            } else {
+                iCloudPushTask?.cancel()
+                iCloudPushTask = nil
+                if case .syncing = iCloudSyncStatus {
+                    iCloudSyncStatus = iCloudLibraryMirror.rememberedStatus
+                }
+            }
+        }
+    }
+
+    var iCloudSyncStatus: iCloudSyncStatus = iCloudLibraryMirror.rememberedStatus
+
+    var iCloudStatusLine: String {
+        displayediCloudStatus.line
+    }
+
+    private var displayediCloudStatus: iCloudSyncStatus {
+        if case .syncing = iCloudSyncStatus { return .syncing }
+        if iCloudSyncEnabled, !canUseiCloud { return .unavailable }
+        return iCloudSyncStatus
+    }
+
+    private var canUseiCloud: Bool {
+        !iCloudLibraryMirror.isDisabled
+            && DataPersistence.fileURLOverride == nil
+            && iCloudLibraryMirror.isAvailable
+    }
+
     private var deletionTask: Task<Void, Never>?
     /// After a failed load we must not write a new store over the unreadable file.
     private var didFailToLoadStore = false
+    private var libraryUpdatedAt: Date?
+    @ObservationIgnored private var iCloudPushTask: Task<Void, Never>?
+    @ObservationIgnored private var iCloudReconcileTask: Task<Void, Never>?
+    @ObservationIgnored private var pathMonitor: NWPathMonitor?
 
     /// How long a location fix stays good enough to reuse for the next frame.
     private static let fixLifetime: TimeInterval = 90
@@ -97,19 +139,21 @@ final class AppStore {
         stocks = StockCatalog.loadStocks()
         pendingDeletion = nil
         deletionTask = nil
-        loadFromDisk(createEmptyStoreIfNeeded: true)
+        loadFromDisk()
+        startNetworkMonitor()
+        reconcileiCloud()
     }
 
     /// Retries a failed save, or reloads from disk after a failed read.
     func retryPersist() {
         if persistProblem?.kind == .load {
-            loadFromDisk(createEmptyStoreIfNeeded: false)
+            loadFromDisk()
             return
         }
         persist()
     }
 
-    private func loadFromDisk(createEmptyStoreIfNeeded: Bool) {
+    private func loadFromDisk() {
         switch DataPersistence.load() {
         case .loaded(let saved, let source):
             apply(saved)
@@ -121,9 +165,7 @@ final class AppStore {
         case .empty:
             didFailToLoadStore = false
             persistProblem = nil
-            if createEmptyStoreIfNeeded {
-                persist()
-            }
+            // Leave the file unwritten so a reinstall can still pull iCloud data.
         case .unreadable(let message):
             didFailToLoadStore = true
             persistProblem = PersistProblem(
@@ -141,23 +183,31 @@ final class AppStore {
         customStocks = saved.customStocks
         stocks = StockCatalog.loadStocks() + saved.customStocks
         pendingDeletion = nil
+        libraryUpdatedAt = saved.updatedAt
     }
 
-    private func persist() {
+    private func persist(touchUpdatedAt: Bool = true, pushToiCloud: Bool = true) {
         do {
             if didFailToLoadStore {
                 try DataPersistence.quarantineUnreadablePrimary()
+            }
+            if touchUpdatedAt {
+                libraryUpdatedAt = Date()
             }
             try DataPersistence.save(
                 cameras: cameras,
                 rolls: rolls.map { var r = $0; r.status = $0.status.normalized; return r },
                 fridgeItems: fridgeItems,
                 devRecipePresets: devRecipePresets,
-                customStocks: customStocks
+                customStocks: customStocks,
+                updatedAt: libraryUpdatedAt
             )
             didFailToLoadStore = false
             persistProblem = nil
             WidgetCenter.shared.reloadTimelines(ofKind: AppGroupStorage.widgetKind)
+            if pushToiCloud {
+                scheduleiCloudPush()
+            }
         } catch {
             persistProblem = PersistProblem(
                 kind: didFailToLoadStore ? .load : .save,
@@ -165,6 +215,109 @@ final class AppStore {
                     ? "Couldn't replace the unreadable save. Your last file is still on disk."
                     : "Couldn't save your rolls. They're still in this session — tap Retry so they aren't lost."
             )
+        }
+    }
+
+    /// Opens the roll named by a widget tap. Returns false if the URL is not ours.
+    @discardableResult
+    func openRoll(from url: URL) -> Bool {
+        guard let id = AppDeepLink.rollId(from: url) else { return false }
+        pendingOpenRollId = id
+        showingSettings = false
+        showingAddCamera = false
+        showingLoadFlow = false
+        addRollEntry = nil
+        return true
+    }
+
+    func reconcileiCloud() {
+        guard iCloudSyncEnabled, canUseiCloud else {
+            if iCloudSyncEnabled, !canUseiCloud {
+                iCloudSyncStatus = .unavailable
+            }
+            return
+        }
+        iCloudReconcileTask?.cancel()
+        iCloudReconcileTask = Task { await runiCloudReconcile() }
+    }
+
+    private func currentPayload() -> PersistedAppData {
+        PersistedAppData(
+            cameras: cameras,
+            rolls: rolls.map { var r = $0; r.status = $0.status.normalized; return r },
+            fridgeItems: fridgeItems,
+            devRecipePresets: devRecipePresets,
+            customStocks: customStocks,
+            updatedAt: libraryUpdatedAt
+        )
+    }
+
+    private func scheduleiCloudPush() {
+        guard iCloudSyncEnabled, canUseiCloud else { return }
+        iCloudPushTask?.cancel()
+        iCloudPushTask = Task { await runiCloudPush() }
+    }
+
+    private func runiCloudPush() async {
+        guard iCloudSyncEnabled, canUseiCloud else { return }
+        try? await Task.sleep(for: .milliseconds(400))
+        guard !Task.isCancelled else { return }
+        iCloudSyncStatus = .syncing
+        do {
+            try await iCloudLibraryMirror.push(currentPayload())
+            iCloudSyncStatus = iCloudLibraryMirror.rememberedStatus
+        } catch {
+            iCloudSyncStatus = .failed
+        }
+    }
+
+    private func runiCloudReconcile() async {
+        guard iCloudSyncEnabled, canUseiCloud else { return }
+        iCloudSyncStatus = .syncing
+        do {
+            let remote = try await iCloudLibraryMirror.fetchRemote()
+            guard !Task.isCancelled else { return }
+            let local = currentPayload()
+            switch iCloudLibraryMirror.resolve(local: local, remote: remote) {
+            case .takeRemote:
+                if let remote {
+                    apply(remote)
+                    persist(touchUpdatedAt: false, pushToiCloud: false)
+                }
+                iCloudLibraryMirror.lastSyncedAt = Date()
+                iCloudSyncStatus = iCloudLibraryMirror.rememberedStatus
+            case .keepLocal:
+                try await iCloudLibraryMirror.push(local)
+                iCloudSyncStatus = iCloudLibraryMirror.rememberedStatus
+            case .nothing:
+                iCloudSyncStatus = iCloudLibraryMirror.rememberedStatus
+            }
+        } catch {
+            guard !Task.isCancelled else { return }
+            iCloudSyncStatus = .failed
+        }
+    }
+
+    private func startNetworkMonitor() {
+        guard DataPersistence.fileURLOverride == nil, pathMonitor == nil else { return }
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            guard path.status == .satisfied else { return }
+            Task { @MainActor in
+                self?.reconcileiCloud()
+            }
+        }
+        monitor.start(queue: .main)
+        pathMonitor = monitor
+
+        NotificationCenter.default.addObserver(
+            forName: .NSUbiquityIdentityDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.reconcileiCloud()
+            }
         }
     }
 
@@ -921,8 +1074,9 @@ final class AppStore {
     }
 
     /// Records when — and where — a frame was shot at the moment the shutter is logged.
-    /// The date lands straight away; the location follows once a fix arrives. Both are
-    /// only ever filled in when empty, so a later edit by the photographer wins.
+    /// The date lands straight away; the location follows once a fix arrives. The lens
+    /// copies the previous frame, or the body's default. All three stay empty until
+    /// filled, so a later edit by the photographer wins.
     private func stampCapture(on rollId: UUID, frameIndex: Int) {
         guard let roll = roll(for: rollId), frameIndex > 0 else { return }
 
@@ -931,6 +1085,13 @@ final class AppStore {
         if marker.captureDate == nil {
             marker.captureDate = Date()
         }
+        if marker.lensId == nil, (marker.lensName?.isEmpty ?? true) {
+            if let inherited = inheritedLens(on: roll, before: frameIndex) {
+                marker.lensId = inherited.id
+                marker.lensName = inherited.name
+            }
+        }
+        applyPointAndShootDefaults(to: &marker, on: roll)
         if marker != existing {
             upsertFrameMarker(rollId, marker: marker)
         }
@@ -940,6 +1101,35 @@ final class AppStore {
         // rather than treating the date as proof the whole stamp already happened.
         guard marker.location == nil else { return }
         Task { await stampLocation(on: rollId, frameIndex: frameIndex) }
+    }
+
+    /// A P&S picks the stop itself. Only empty readings are filled, so a later
+    /// edit on the dials still wins.
+    private func applyPointAndShootDefaults(to marker: inout FrameMarker, on roll: Roll) {
+        guard let camera = roll.cameraId.flatMap({ camera(for: $0) }), camera.isPointAndShoot else {
+            return
+        }
+        if marker.aperture == nil {
+            marker.aperture = ExposureScale.autoValue
+        }
+        if marker.shutterSpeed == nil {
+            marker.shutterSpeed = ExposureScale.autoValue
+        }
+    }
+
+    /// Previous frame's glass, then the body's default. A new shot keeps the last
+    /// lens until the photographer picks another one on that frame.
+    private func inheritedLens(on roll: Roll, before frameIndex: Int) -> (id: UUID?, name: String?)? {
+        let previous = roll.frameMarkers
+            .filter { $0.frameIndex < frameIndex }
+            .max { $0.frameIndex < $1.frameIndex }
+        if let previous, previous.lensId != nil || !(previous.lensName?.isEmpty ?? true) {
+            return (previous.lensId, previous.lensName)
+        }
+        guard let lens = roll.cameraId.flatMap({ camera(for: $0) })?.primaryLens else {
+            return nil
+        }
+        return (lens.id, lens.exifModel)
     }
 
     private func stampLocation(on rollId: UUID, frameIndex: Int) async {
@@ -1200,8 +1390,8 @@ final class AppStore {
         ]
 
         for (index, marker) in roll.frameMarkers.enumerated() {
-            let aperture = marker.aperture.map { "f/\($0)" } ?? ""
-            let shutter = marker.shutterSpeed.map { formatShutter($0) } ?? ""
+            let aperture = marker.aperture.map { ExposureFormat.aperture($0) } ?? ""
+            let shutter = marker.shutterSpeed.map { ExposureFormat.shutter($0) } ?? ""
             lines.append([
                 "\(index + 1)",
                 DateFormatters.telemetry.string(from: marker.timestamp),
@@ -1217,26 +1407,11 @@ final class AppStore {
         return lines.joined(separator: "\n")
     }
 
-    private func formatAperture(_ value: Double) -> String {
-        if value == floor(value) {
-            return String(format: "%.0f", value)
-        }
-        return String(format: "%g", value)
-    }
-
     private func csvEscape(_ value: String) -> String {
         if value.contains(",") || value.contains("\"") {
             return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
         }
         return value
-    }
-
-    private func formatShutter(_ seconds: Double) -> String {
-        guard seconds > 0 else { return "B" }
-        if seconds >= 1 {
-            return String(format: "%.1fs", seconds)
-        }
-        return "1/\(Int(round(1 / seconds)))"
     }
 
     func mockRecognize() -> LoadRecognitionResult {

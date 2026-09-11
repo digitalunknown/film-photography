@@ -47,6 +47,14 @@ struct ContentView: View {
         .sheet(isPresented: $store.showingSettings) {
             SettingsView()
         }
+        .onOpenURL { url in
+            if store.openRoll(from: url) {
+                selectedTab = .film
+            }
+        }
+        .onChange(of: store.pendingOpenRollId) { _, id in
+            if id != nil { selectedTab = .film }
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if let problem = store.persistProblem {
                 PersistFailureBanner(problem: problem) {

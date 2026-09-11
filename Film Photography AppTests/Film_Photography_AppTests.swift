@@ -1,10 +1,3 @@
-//
-//  Film_Photography_AppTests.swift
-//  Film Photography AppTests
-//
-//  Created by Piotr Osmenda on 7/7/26.
-//
-
 import Testing
 import Foundation
 @testable import Film_Photography_App
@@ -12,6 +5,9 @@ import Foundation
 struct Film_Photography_AppTests {
 
     @Test func addAndRemoveScanFilesFromRoll() throws {
+        iCloudLibraryMirror.isDisabled = true
+        defer { iCloudLibraryMirror.isDisabled = false }
+
         let store = AppStore()
         store.rolls.removeAll()
 
@@ -39,6 +35,9 @@ struct Film_Photography_AppTests {
     }
 
     @Test func requestDeleteRollRemovesFromStore() throws {
+        iCloudLibraryMirror.isDisabled = true
+        defer { iCloudLibraryMirror.isDisabled = false }
+
         let store = AppStore()
         store.rolls.removeAll()
 
@@ -59,5 +58,39 @@ struct Film_Photography_AppTests {
         store.undoDelete()
         #expect(store.roll(for: rollId) != nil)
         #expect(store.pendingDeletion == nil)
+    }
+
+    @Test func pointAndShootStampsAutoOnAdvance() throws {
+        iCloudLibraryMirror.isDisabled = true
+        defer { iCloudLibraryMirror.isDisabled = false }
+
+        let store = AppStore()
+        store.rolls.removeAll()
+        store.addCamera(
+            name: "Mju II",
+            lensSubtitle: "35mm",
+            cameraType: "Point & shoot",
+            serialNumber: nil,
+            purchaseDate: nil,
+            purchasePrice: nil,
+            quirkNote: nil
+        )
+        let cameraId = try #require(store.cameras.last?.id)
+        #expect(store.camera(for: cameraId)?.isPointAndShoot == true)
+
+        let stockId = try #require(store.stocks.first?.id)
+        store.addRoll(
+            stockId: stockId,
+            status: .inCamera,
+            cameraId: cameraId,
+            exposures: 36
+        )
+        let rollId = try #require(store.rolls.last?.id)
+
+        store.advanceExposure(on: rollId)
+
+        let marker = try #require(store.roll(for: rollId)?.frameMarkers.first)
+        #expect(marker.aperture == ExposureScale.autoValue)
+        #expect(marker.shutterSpeed == ExposureScale.autoValue)
     }
 }

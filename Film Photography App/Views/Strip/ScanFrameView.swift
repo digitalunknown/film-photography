@@ -15,8 +15,8 @@ struct ScanFrameView: View {
     @State private var showingPhotoPicker = false
     @State private var uploadPickerItem: PhotosPickerItem?
     @State private var isoText = ""
-    @State private var apertureIndex: Int?
-    @State private var shutterIndex: Int?
+    @State private var aperture: Double?
+    @State private var shutterSpeed: Double?
     @State private var locationText = ""
     @State private var notesText = ""
     @State private var placeCoordinate: CLLocationCoordinate2D?
@@ -43,8 +43,8 @@ struct ScanFrameView: View {
     /// from writing a marker, which would otherwise push the roll's exposure counter on.
     private struct FieldSnapshot: Equatable {
         var iso = ""
-        var apertureIndex: Int?
-        var shutterIndex: Int?
+        var aperture: Double?
+        var shutterSpeed: Double?
         var location = ""
         var notes = ""
         var captureDate: Date?
@@ -188,8 +188,8 @@ struct ScanFrameView: View {
             stock: stock
         )
         metadata.captureDate = captureDate
-        metadata.aperture = apertureIndex.map { ExposureScale.aperture.notches[$0].value }
-        metadata.shutterSpeed = shutterIndex.map { ExposureScale.shutter.notches[$0].value }
+        metadata.aperture = aperture
+        metadata.shutterSpeed = shutterSpeed
         metadata.place = locationText
         metadata.notes = notesText
         if let iso = Int(isoText.trimmingCharacters(in: .whitespacesAndNewlines)) {
@@ -371,8 +371,8 @@ struct ScanFrameView: View {
 
     private var exifCard: some View {
         HStack(spacing: AppTheme.Spacing.md) {
-            ExposureDial(unit: "A", scale: .aperture, selection: $apertureIndex)
-            ExposureDial(unit: "S/S", scale: .shutter, selection: $shutterIndex)
+            ExposureDial(unit: "A", scale: .aperture, value: $aperture)
+            ExposureDial(unit: "S/S", scale: .shutter, value: $shutterSpeed)
         }
     }
 
@@ -389,9 +389,9 @@ struct ScanFrameView: View {
             isoRow
             HairlineRule()
             cameraRow
-            if showsFocalLengthRow {
+            if showsLensRow {
                 HairlineRule()
-                focalLengthRow
+                lensRow
             }
         }
     }
@@ -476,7 +476,12 @@ struct ScanFrameView: View {
     }
 
     private var filmRow: some View {
-        StackedFieldRow(label: "Film") {
+        HStack(spacing: AppTheme.Spacing.lg) {
+            Text("Film")
+                .font(AppType.body)
+                .foregroundStyle(AppTheme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
             if let stock {
                 NavigationLink {
                     StockDetailView(stockId: stock.id)
@@ -485,9 +490,9 @@ struct ScanFrameView: View {
                         Text(stock.name)
                             .font(AppType.body)
                             .foregroundStyle(AppTheme.textPrimary)
-                            .multilineTextAlignment(.leading)
+                            .multilineTextAlignment(.trailing)
                         LucideIcon(.chevronRight)
-                            .foregroundStyle(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
                 .buttonStyle(.plain)
@@ -527,8 +532,9 @@ struct ScanFrameView: View {
         }
     }
 
-    /// Focal length sits under the body. One lens is a label; several become a dropdown.
-    private var showsFocalLengthRow: Bool {
+    /// Lens sits under the body. One glass is a label; several become a dropdown so
+    /// each frame can name a different one.
+    private var showsLensRow: Bool {
         guard let camera, !camera.lenses.isEmpty else { return false }
         return true
     }
@@ -537,21 +543,24 @@ struct ScanFrameView: View {
         if let lensId, let lens = camera?.lenses.first(where: { $0.id == lensId }) {
             return lens
         }
-        return camera?.primaryLens
+        return nil
     }
 
-    private var focalLengthLabel: String {
+    private var lensLabel: String {
         if let selectedLens {
-            return selectedLens.focalLengthDisplay
+            return selectedLens.displayName
         }
         if let lensName, !lensName.isEmpty { return lensName }
+        if let primary = camera?.primaryLens {
+            return primary.displayName
+        }
         return "Not set"
     }
 
     @ViewBuilder
-    private var focalLengthRow: some View {
+    private var lensRow: some View {
         HStack(alignment: .top, spacing: AppTheme.Spacing.lg) {
-            Text("Focal length")
+            Text("Lens")
                 .font(AppType.body)
                 .foregroundStyle(AppTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -559,11 +568,11 @@ struct ScanFrameView: View {
             if (camera?.lenses.count ?? 0) > 1 {
                 Menu {
                     ForEach(camera?.lenses ?? []) { lens in
-                        Button(lens.focalLengthDisplay) { setLens(lens) }
+                        Button(lens.displayName) { setLens(lens) }
                     }
                 } label: {
                     HStack(spacing: AppTheme.Spacing.xs) {
-                        Text(focalLengthLabel)
+                        Text(lensLabel)
                             .font(AppType.body)
                             .foregroundStyle(AppTheme.textPrimary)
                             .multilineTextAlignment(.trailing)
@@ -572,9 +581,9 @@ struct ScanFrameView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Focal length")
+                .accessibilityLabel("Lens")
             } else {
-                Text(focalLengthLabel)
+                Text(lensLabel)
                     .font(AppType.body)
                     .foregroundStyle(AppTheme.textPrimary)
                     .multilineTextAlignment(.trailing)
@@ -718,8 +727,8 @@ struct ScanFrameView: View {
     private var currentFields: FieldSnapshot {
         FieldSnapshot(
             iso: isoText,
-            apertureIndex: apertureIndex,
-            shutterIndex: shutterIndex,
+            aperture: aperture,
+            shutterSpeed: shutterSpeed,
             location: locationText,
             notes: notesText,
             captureDate: captureDate,
@@ -749,8 +758,14 @@ struct ScanFrameView: View {
         isoText = marker?.iso.map(String.init)
             ?? (roll?.shootingISO ?? stock?.iso).map(String.init)
             ?? ""
-        apertureIndex = marker?.aperture.map { ExposureScale.aperture.nearestIndex(to: $0) }
-        shutterIndex = marker?.shutterSpeed.map { ExposureScale.shutter.nearestIndex(to: $0) }
+        aperture = Self.dialValue(
+            stored: marker?.aperture,
+            pointAndShoot: camera?.isPointAndShoot == true
+        )
+        shutterSpeed = Self.dialValue(
+            stored: marker?.shutterSpeed,
+            pointAndShoot: camera?.isPointAndShoot == true
+        )
         locationText = marker?.location ?? ""
         notesText = marker?.notes ?? ""
         captureDate = marker?.captureDate
@@ -767,8 +782,16 @@ struct ScanFrameView: View {
         loadedFields = currentFields
     }
 
-    private var dialSelection: [Int?] {
-        [apertureIndex, shutterIndex]
+    /// A stored reading wins. On a P&S with nothing logged yet, Auto is the default
+    /// so the dials match the body; it is not written until something else saves.
+    private static func dialValue(stored: Double?, pointAndShoot: Bool) -> Double? {
+        if let stored { return stored }
+        if pointAndShoot { return ExposureScale.autoValue }
+        return nil
+    }
+
+    private var dialSelection: [Double?] {
+        [aperture, shutterSpeed]
     }
 
     /// A dial reports every notch it passes. Waiting for the turn to settle keeps one
@@ -790,8 +813,8 @@ struct ScanFrameView: View {
         var marker = liveMarker ?? FrameMarker(frameIndex: frame.index)
         marker.frameIndex = frame.index
         marker.iso = Int(isoText.trimmingCharacters(in: .whitespacesAndNewlines))
-        marker.aperture = apertureIndex.map { ExposureScale.aperture.notches[$0].value }
-        marker.shutterSpeed = shutterIndex.map { ExposureScale.shutter.notches[$0].value }
+        marker.aperture = aperture
+        marker.shutterSpeed = shutterSpeed
         marker.location = locationText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         marker.notes = notesText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         marker.captureDate = captureDate

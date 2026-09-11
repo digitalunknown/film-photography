@@ -165,6 +165,14 @@ struct DateFormatters {
         f.dateFormat = "d MMM, HH:mm"
         return f
     }()
+
+    /// iCloud status: `Sep 6, 2026 at 9:14 AM`.
+    static let synced: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }()
 }
 
 enum ExpirationDate {

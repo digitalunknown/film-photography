@@ -30,7 +30,12 @@ struct CameraLens: Identifiable, Codable, Hashable {
 
     /// Millimetres parsed from `focalLength` (`50mm`, `50`, `28–70mm` → first number).
     var focalLengthMillimeters: Double? {
-        let normalized = focalLength.replacingOccurrences(of: ",", with: ".")
+        Self.millimeters(from: focalLength)
+    }
+
+    /// First positive number in a free-text spec, used for EXIF and leftover lens names.
+    static func millimeters(from string: String) -> Double? {
+        let normalized = string.replacingOccurrences(of: ",", with: ".")
         var digits = ""
         var started = false
         for character in normalized {
@@ -48,6 +53,12 @@ struct CameraLens: Identifiable, Codable, Hashable {
     var focalLengthDisplay: String {
         let trimmed = focalLength.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? name : trimmed
+    }
+
+    /// What the frame picker should show: the lens name, not the millimetre spec.
+    var displayName: String {
+        let named = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return named.isEmpty ? focalLengthDisplay : named
     }
 
     /// What EXIF `LensModel` should say: the name, plus focal / aperture when they
@@ -81,6 +92,13 @@ struct Camera: Identifiable, Codable, Hashable {
 
     var primaryLens: CameraLens? {
         lenses.first(where: \.isPrimary) ?? lenses.first
+    }
+
+    /// Compact bodies choose the stop themselves, so frame dials start on Auto.
+    var isPointAndShoot: Bool {
+        let type = cameraType.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if type == "p&s" { return true }
+        return type.contains("point") && type.contains("shoot")
     }
 
     var primaryLensName: String {

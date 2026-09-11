@@ -33,7 +33,7 @@ struct FrameLocationMap: View {
         }
         .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
         .mapControlVisibility(.hidden)
-        .frame(height: 160)
+        .frame(height: 96)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.Spacing.sm))
         .allowsHitTesting(false)
         .accessibilityHidden(true)

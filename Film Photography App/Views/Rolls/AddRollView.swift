@@ -97,7 +97,7 @@ struct AddRollView: View {
             }
             .instrumentDetailScroll()
             .instrumentScreen()
-            .navigationTitle("Add Roll")
+            .navigationTitle("Add Film")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -236,7 +236,7 @@ struct AddRollView: View {
     private var filmRows: some View {
         HairlineRule()
         if isManual {
-            fieldRow("Stock") {
+            fieldRow("Film") {
                 TextField(placeholder: "Name", text: $manualStockName)
                     .focused($focusedField, equals: .stock)
             }
@@ -269,11 +269,7 @@ struct AddRollView: View {
         }
 
         HairlineRule()
-        fieldRow("Expected frames") {
-            TextField(placeholder: "36", text: $exposuresText)
-                .keyboardType(.numberPad)
-                .focused($focusedField, equals: .exposures)
-        }
+        expectedFramesRow
 
         // Tech-spec values stay in the primary colour even at their defaults,
         // matching the roll detail screen.
@@ -334,7 +330,6 @@ struct AddRollView: View {
     private var storageRows: some View {
         if status == .shotUndeveloped || status == .inFridge {
             HairlineRule()
-            SectionLabel(title: "Storage", style: .detail)
             menuRow("Storage method", value: StorageMethod.resolved(from: storageLocation).displayName) {
                 ForEach(StorageMethod.allCases) { method in
                     Button(method.displayName) {
@@ -389,16 +384,15 @@ struct AddRollView: View {
         Button {
             showingStockPicker = true
         } label: {
-            DetailFieldRow(label: "Stock") {
+            DetailFieldRow(label: "Film") {
                 HStack(spacing: AppTheme.Spacing.xs) {
-                    if selectedStock != nil {
-                        RollPlate(stock: selectedStock, size: 22)
-                    }
                     DetailFieldValue(
                         text: selectedStock?.name ?? "Choose film",
                         isPlaceholder: selectedStock == nil
                     )
-                    .lineLimit(2)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(minWidth: 0, maxWidth: 180, alignment: .trailing)
                     LucideIcon(.chevronsUpDown)
                         .foregroundStyle(AppTheme.textPrimary)
                 }
@@ -406,7 +400,43 @@ struct AddRollView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Stock")
+        .accessibilityLabel("Film")
+    }
+
+    private var expectedFramesRow: some View {
+        DetailFieldRow(label: "Expected frames") {
+            HStack(spacing: AppTheme.Spacing.md) {
+                Button {
+                    exposuresText = String(max(exposures - 1, 1))
+                } label: {
+                    Text("−")
+                        .font(AppType.title)
+                        .foregroundStyle(exposures > 1 ? AppTheme.textPrimary : AppTheme.textTertiary)
+                }
+                .buttonStyle(.plain)
+                .disabled(exposures <= 1)
+                .accessibilityLabel("Fewer frames")
+
+                TextField(placeholder: "36", text: $exposuresText)
+                    .font(AppType.body)
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
+                    .monospacedDigit()
+                    .frame(minWidth: 28)
+                    .focused($focusedField, equals: .exposures)
+
+                Button {
+                    exposuresText = String(min(exposures + 1, 100))
+                } label: {
+                    Text("+")
+                        .font(AppType.title)
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("More frames")
+            }
+        }
     }
 
     // MARK: - Row builders

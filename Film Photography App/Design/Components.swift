@@ -262,7 +262,7 @@ struct InstrumentMenuRow<MenuContent: View>: View {
                         .foregroundStyle(valueBright ? AppTheme.textPrimary : AppTheme.textSecondary)
                         .multilineTextAlignment(.leading)
                     LucideIcon(.chevronsUpDown)
-                        .foregroundStyle(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Spacer(minLength: 0)
                 }
             }

@@ -40,7 +40,7 @@ struct AddFridgeItemView: View {
                                             )
                                         Spacer(minLength: 0)
                                         LucideIcon(.chevronsUpDown)
-                                            .foregroundStyle(AppTheme.textTertiary)
+                                            .foregroundStyle(AppTheme.textPrimary)
                                     }
                                 }
                             }

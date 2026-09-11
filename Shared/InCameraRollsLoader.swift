@@ -37,9 +37,9 @@ enum InCameraRollsLoader {
         var manufacturer: String
     }
 
-    /// Three rolls in a single column, or six once the pipeline has enough to fill a 2×3.
-    static let listLimit = 3
-    static let gridLimit = 6
+    /// Battery-widget layout: four rings on small/medium, eight on large.
+    static let listLimit = 4
+    static let gridLimit = 8
 
     static func loadRows(maxVisible: Int? = nil) -> (rows: [InCameraRollRow], totalCount: Int) {
         let all = loadAllRows()

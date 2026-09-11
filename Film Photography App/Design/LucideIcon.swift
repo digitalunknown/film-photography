@@ -32,6 +32,7 @@ enum Lucide: String {
     case circleCheckBig = "circle-check-big"
     case squareCheck = "square-check"
     case squareX = "square-x"
+    case pencil
     case gripVertical = "grip-vertical"
     case arrowUpDown = "arrow-up-down"
 

@@ -132,11 +132,13 @@ struct DataPersistenceTests {
             .appendingPathComponent("persist-tests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let url = directory.appendingPathComponent("app-data.json")
-        DataPersistence.fileURLOverride = url
+        iCloudLibraryMirror.isDisabled = true
         defer {
-            DataPersistence.fileURLOverride = nil
+            iCloudLibraryMirror.isDisabled = false
             try? FileManager.default.removeItem(at: directory)
         }
-        try body(url)
+        try DataPersistence.$fileURLOverride.withValue(url) {
+            try body(url)
+        }
     }
 }

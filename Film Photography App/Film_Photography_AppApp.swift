@@ -19,8 +19,11 @@ struct Film_Photography_AppApp: App {
                 // sheets included.
                 .scrollIndicators(.hidden)
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active, store.persistProblem?.kind == .save {
-                        store.retryPersist()
+                    if phase == .active {
+                        if store.persistProblem?.kind == .save {
+                            store.retryPersist()
+                        }
+                        store.reconcileiCloud()
                     }
                 }
         }

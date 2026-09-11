@@ -52,3 +52,21 @@ Keep fields that help someone **pick a stock and shoot it correctly**. Lore is f
 2. Leave other makers untouched unless you are validating them.
 3. Do not ship a `validation` key — that is review metadata only.
 4. After editing, copy the file to `Film Photography Widget/Resources/film-stocks.json`.
+
+## iCloud Sync
+
+Approach **A**: the on-device `library.json` is mirrored to the app’s iCloud Drive container (`iCloud.digitalunknown.Film-Photography-App` / `Documents/library.json`). Scan image files stay on the device. File Export / Import is unchanged.
+
+**Conflict rule:** if one side is empty and the other has cameras, rolls, fridge stock, recipes, or custom films, take the side with data. If both have data, the newest `updatedAt` wins. Equal stamps keep the local copy.
+
+Toggle off stops uploads. A file import still replaces the device library; if sync is on, that result is then pushed to iCloud.
+
+### Testing
+
+1. **First restore:** enable iCloud Sync, add a roll, wait for `Last synced …`. Delete the app. Reinstall (same Apple ID). Library should return without Import.
+2. **Two devices:** edit on A, foreground B (or wait). B should show A’s change after `Syncing…` clears.
+3. **Toggle off:** turn sync off, edit locally. iCloud copy must not change. Export Backup still works.
+4. **Unavailable:** Settings → [Apple ID] → iCloud off (or signed out). Status reads `iCloud unavailable — check Settings → [Apple ID] → iCloud`.
+5. **Simulators:** sign two simulators into the same Apple ID, or use one simulator plus a device.
+
+Widget timelines keep reading the App Group local store. Sync writes local first, then the widget reloads.

@@ -8,8 +8,12 @@ struct ExposureScale {
         let label: String
     }
 
+    /// The camera chose the stop, so there is no number to record. Negative so it never
+    /// collides with bulb (0) or a real reading.
+    static let autoValue: Double = -1
+
     /// Bulb holds the shutter open for as long as it is held, so it has no timed value.
-    /// Non-positive seconds stand for it wherever a shutter speed is stored or printed.
+    /// Zero stands for it wherever a shutter speed is stored or printed.
     static let bulbSeconds: Double = 0
 
     let notches: [Notch]
@@ -19,11 +23,40 @@ struct ExposureScale {
     /// Where the needle parks before the photographer has set anything.
     let defaultIndex: Int
 
+    var autoIndex: Int? {
+        notches.firstIndex { $0.value == Self.autoValue }
+    }
+
+    /// True when `value` is this notch, not merely the nearest stop.
+    func exactIndex(of value: Double) -> Int? {
+        if value <= 0 {
+            return notches.firstIndex { $0.value == value }
+        }
+        return notches.firstIndex {
+            $0.value > 0 && abs(log($0.value) - log(value)) < 1e-6
+        }
+    }
+
+    func displayLabel(for value: Double) -> String {
+        if let index = exactIndex(of: value) {
+            return notches[index].label
+        }
+        return blankLabel.hasPrefix("f/")
+            ? ExposureFormat.aperture(value)
+            : ExposureFormat.shutter(value)
+    }
+
+    func parse(_ text: String) -> Double? {
+        blankLabel.hasPrefix("f/")
+            ? ExposureFormat.parseAperture(text)
+            : ExposureFormat.parseShutter(text)
+    }
+
     /// Stops are logarithmic, so nearness is measured there rather than on raw values.
-    /// Untimed notches sit outside that space and are matched exactly instead.
+    /// Untimed notches (Auto, Bulb) sit outside that space and are matched exactly.
     func nearestIndex(to value: Double) -> Int {
         guard value > 0 else {
-            return notches.firstIndex { $0.value <= 0 } ?? defaultIndex
+            return notches.firstIndex { $0.value == value } ?? defaultIndex
         }
         let target = log(value)
         return notches.indices
@@ -34,17 +67,20 @@ struct ExposureScale {
 
     static let aperture: ExposureScale = {
         let stops: [Double] = [1, 1.4, 2, 2.8, 4, 5.6, 8, 11, 16, 22, 32, 45, 64]
+        var notches = [Notch(value: autoValue, label: "Auto")]
+        notches += stops.map { Notch(value: $0, label: "f/" + String(format: "%g", $0)) }
         return ExposureScale(
-            notches: stops.map { Notch(value: $0, label: "f/" + String(format: "%g", $0)) },
+            notches: notches,
             blankLabel: "f/--",
-            defaultIndex: stops.firstIndex(of: 8) ?? 0
+            defaultIndex: notches.firstIndex { $0.value == 8 } ?? 0
         )
     }()
 
     static let shutter: ExposureScale = {
         let denominators: [Double] = [1, 2, 4, 8, 15, 30, 60, 125, 250, 500, 1000, 2000, 4000]
 
-        var notches = [Notch(value: bulbSeconds, label: "B")]
+        var notches = [Notch(value: autoValue, label: "Auto")]
+        notches.append(Notch(value: bulbSeconds, label: "B"))
         notches += denominators.map { denominator in
             Notch(
                 value: 1 / denominator,
@@ -65,7 +101,7 @@ struct ExposureScale {
 struct ExposureDial: View {
     let unit: String
     let scale: ExposureScale
-    @Binding var selection: Int?
+    @Binding var value: Double?
 
     private static let height: CGFloat = 70
     private static let corner = AppTheme.Spacing.lg
@@ -98,15 +134,23 @@ struct ExposureDial: View {
     @State private var dragOrigin: Int?
     @State private var spin: CGFloat = 0
     @State private var notchesTurned = 0
+    @State private var showingCustom = false
+    @State private var customText = ""
 
     /// An unset field parks the needle on the scale's default so the dial still reads as
-    /// one; the value stays greyed out until it is actually turned.
+    /// one; the value stays greyed out until it is actually turned. A custom amount
+    /// sits on the nearest stop.
     private var index: Int {
-        selection ?? scale.defaultIndex
+        value.map { scale.nearestIndex(to: $0) } ?? scale.defaultIndex
     }
 
     private var isSet: Bool {
-        selection != nil
+        value != nil
+    }
+
+    private var isCustom: Bool {
+        guard let value else { return false }
+        return scale.exactIndex(of: value) == nil
     }
 
     /// A finger is on the scale. Used to lift the rim so the active dial reads as held.
@@ -148,19 +192,34 @@ struct ExposureDial: View {
         .onTapGesture(coordinateSpace: .local) { step(from: $0) }
         .simultaneousGesture(spinGesture)
         .contextMenu {
+            Button("Custom", lucide: .pencil) {
+                customText = value.map { scale.displayLabel(for: $0) } ?? ""
+                Task { @MainActor in
+                    showingCustom = true
+                }
+            }
+            .font(AppType.body)
             Button("Unset", lucide: .squareX) {
                 withAnimation(Self.glide) {
-                    selection = nil
+                    value = nil
                     spin = 0
                 }
             }
             .font(AppType.body)
             .disabled(!isSet)
         }
+        .alert(customTitle, isPresented: $showingCustom) {
+            TextField(customPlaceholder, text: $customText)
+                .keyboardType(.numbersAndPunctuation)
+            Button("Set") { applyCustom() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(customPrompt)
+        }
         .sensoryFeedback(.selection, trigger: notchesTurned)
         .accessibilityElement()
         .accessibilityLabel(unit)
-        .accessibilityValue(scale.notches[index].label)
+        .accessibilityValue(value.map { scale.displayLabel(for: $0) } ?? scale.blankLabel)
         .accessibilityAdjustableAction { direction in
             withAnimation(Self.glide) {
                 switch direction {
@@ -259,7 +318,14 @@ struct ExposureDial: View {
     private var readout: some View {
         VStack(spacing: 0) {
             Group {
-                if isSet {
+                if let value, isCustom {
+                    Text(scale.displayLabel(for: value))
+                        .font(AppType.title)
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(height: Self.valueHeight)
+                } else if isSet {
                     VerticalSpinnerText(
                         labels: scale.notches.map(\.label),
                         index: index,
@@ -334,10 +400,34 @@ struct ExposureDial: View {
         }
     }
 
+    private var customTitle: String {
+        scale.blankLabel.hasPrefix("f/") ? "Custom aperture" : "Custom shutter"
+    }
+
+    private var customPlaceholder: String {
+        scale.blankLabel.hasPrefix("f/") ? "f/3.5" : "1/90"
+    }
+
+    private var customPrompt: String {
+        scale.blankLabel.hasPrefix("f/")
+            ? "Type an f-number, like 3.5."
+            : "Type a speed, like 1/90 or 90."
+    }
+
+    private func applyCustom() {
+        guard let parsed = scale.parse(customText) else { return }
+        withAnimation(Self.glide) {
+            value = parsed
+            spin = 0
+        }
+        notchesTurned += 1
+    }
+
     private func commit(_ target: Int) {
         let target = clamped(target)
-        guard target != selection else { return }
-        selection = target
+        let next = scale.notches[target].value
+        guard next != value else { return }
+        value = next
         notchesTurned += 1
     }
 

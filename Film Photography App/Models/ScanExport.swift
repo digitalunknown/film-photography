@@ -153,8 +153,18 @@ extension ScanMetadata {
         return camera?.primaryLens
     }
 
+    /// Live glass first. A deleted lens keeps millimetres only when they are still
+    /// sitting in `lensName` — falling back to the body's default would stamp the
+    /// wrong length on a frame that used something else.
     static func focalLength(marker: FrameMarker?, camera: Camera?) -> Double? {
-        selectedLens(marker: marker, camera: camera)?.focalLengthMillimeters
+        if let lensId = marker?.lensId,
+           let lens = camera?.lenses.first(where: { $0.id == lensId }) {
+            return lens.focalLengthMillimeters
+        }
+        if let named = marker?.lensName?.trimmingCharacters(in: .whitespacesAndNewlines), !named.isEmpty {
+            return CameraLens.millimeters(from: named)
+        }
+        return camera?.primaryLens?.focalLengthMillimeters
     }
 }
 

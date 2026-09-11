@@ -14,11 +14,29 @@ struct SettingsView: View {
     @State private var documentPicker = BackupDocumentPicker()
 
     var body: some View {
+        @Bindable var store = store
+
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
-                    SectionLabel(title: "Backup", style: .detail)
-                    Text("Export a copy of your cameras, rolls, and scans. Import replaces everything on this device.")
+                    SectionLabel(title: "Data", style: .detail)
+                    DetailFieldRow(label: "iCloud Sync") {
+                        Toggle("iCloud Sync", isOn: $store.iCloudSyncEnabled)
+                            .labelsHidden()
+                            .tint(AppTheme.textSecondary)
+                    }
+                    if store.iCloudSyncEnabled {
+                        Text(store.iCloudStatusLine)
+                            .font(AppType.callout)
+                            .foregroundStyle(AppTheme.textSecondary)
+                        Text("When on, cameras, rolls, and notes are mirrored to iCloud with your Apple ID. Scan images stay on this device.")
+                            .font(AppType.callout)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+
+                    HairlineRule()
+
+                    Text("Export a copy of your cameras, rolls, and scans. Import replaces everything on this device, then syncs to iCloud if sync is on.")
                         .font(AppType.body)
                         .foregroundStyle(AppTheme.textSecondary)
 
