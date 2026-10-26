@@ -424,13 +424,11 @@ private struct RollRingCell: View {
     @ViewBuilder
     private func rollImage(size: CGFloat) -> some View {
         if let imageName = row.imageName {
-            var image = Image(imageName)
+            Image(imageName)
                 .resizable()
+                .widgetAccentedRenderingMode(.desaturated)
                 .scaledToFit()
-            if #available(iOS 18.0, *) {
-                image = image.widgetAccentedRenderingMode(.desaturated)
-            }
-            image.frame(width: size, height: size)
+                .frame(width: size, height: size)
         } else {
             Image(systemName: "film")
                 .font(.system(size: size * 0.45, weight: .regular))
@@ -470,11 +468,7 @@ struct InCameraRollsWidget: Widget {
 
 private struct WidgetAccentable: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 18.0, *) {
-            content.widgetAccentable()
-        } else {
-            content
-        }
+        content.widgetAccentable()
     }
 }
 
