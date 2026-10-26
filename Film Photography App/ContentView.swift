@@ -51,7 +51,7 @@ struct ContentView: View {
             SettingsView()
         }
         .onOpenURL { url in
-            if store.openAddFilm(from: url) || store.openRoll(from: url) {
+            if store.openAddFilm(from: url) || store.openRoll(from: url) || store.openMyFilm(from: url) {
                 selectedTab = .film
             }
         }

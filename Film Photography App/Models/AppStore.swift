@@ -232,6 +232,19 @@ final class AppStore {
         return true
     }
 
+    /// Opens the My Film tab without targeting a specific roll. Returns false if not our URL.
+    @discardableResult
+    func openMyFilm(from url: URL) -> Bool {
+        guard AppDeepLink.isMyFilm(url) else { return false }
+        pendingOpenRollId = nil
+        showingSettings = false
+        showingAddCamera = false
+        showingAddInventory = false
+        showingLoadFlow = false
+        addRollEntry = nil
+        return true
+    }
+
     /// Opens the roll named by a widget tap. Returns false if the URL is not ours.
     @discardableResult
     func openRoll(from url: URL) -> Bool {

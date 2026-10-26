@@ -524,8 +524,12 @@ struct ScanImportSheet: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .cancellationAction) {
             Button(action: onCancel) {
-                LucideIcon(.x)
-                    .foregroundStyle(AppTheme.textPrimary)
+                Label {
+                    Text("Close")
+                } icon: {
+                    LucideIcon(.x)
+                }
+                .foregroundStyle(AppTheme.textPrimary)
             }
             .accessibilityLabel("Cancel")
         }

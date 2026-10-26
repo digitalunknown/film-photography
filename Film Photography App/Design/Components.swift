@@ -44,8 +44,12 @@ struct InstrumentCloseButton: View {
 
     var body: some View {
         Button(action: action) {
-            LucideIcon(.x)
-                .foregroundStyle(AppTheme.textPrimary)
+            Label {
+                Text("Close")
+            } icon: {
+                LucideIcon(.x)
+            }
+            .foregroundStyle(AppTheme.textPrimary)
         }
         .accessibilityLabel("Close")
     }
