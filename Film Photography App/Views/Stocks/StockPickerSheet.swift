@@ -4,6 +4,7 @@ import SwiftUI
 struct StockPickerSheet: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     let title: String
     let selectedStockId: UUID?
@@ -11,11 +12,10 @@ struct StockPickerSheet: View {
 
     @State private var searchText = ""
 
-    private let columns = [
-        GridItem(.flexible(), spacing: AppTheme.Spacing.sm),
-        GridItem(.flexible(), spacing: AppTheme.Spacing.sm),
-        GridItem(.flexible(), spacing: AppTheme.Spacing.sm),
-    ]
+    private var columns: [GridItem] {
+        let count = (sizeClass == .regular) ? 4 : 3
+        return Array(repeating: GridItem(.flexible(), spacing: AppTheme.Spacing.sm), count: count)
+    }
 
     private var filteredStocks: [FilmStock] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)

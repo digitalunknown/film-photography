@@ -2,10 +2,24 @@ import Foundation
 
 /// Lightweight decode of `app-data.json` for the home-screen widget.
 enum InCameraRollsLoader {
-    struct Snapshot: Codable {
+    struct Snapshot: Decodable {
         var cameras: [CameraRow]
         var rolls: [RollRow]
         var customStocks: [StockRow]
+
+        private enum CodingKeys: String, CodingKey {
+            case cameras, rolls, customStocks
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            func decodeLossyArray<T: Decodable>(_ type: T.Type, forKey key: CodingKeys) -> [T] {
+                (try? container.decodeIfPresent([Lossy<T>].self, forKey: key))?.compactMap { $0.value } ?? []
+            }
+            cameras = decodeLossyArray(CameraRow.self, forKey: .cameras)
+            rolls = decodeLossyArray(RollRow.self, forKey: .rolls)
+            customStocks = decodeLossyArray(StockRow.self, forKey: .customStocks)
+        }
     }
 
     struct CameraRow: Codable {
@@ -37,33 +51,74 @@ enum InCameraRollsLoader {
         var manufacturer: String
     }
 
+    /// Drops elements that fail to decode while allowing the rest through.
+    private struct Lossy<T: Decodable>: Decodable {
+        let value: T?
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            value = try? container.decode(T.self)
+        }
+    }
+
     /// Battery-widget layout: four rings on small/medium, eight on large.
     static let listLimit = 4
     static let gridLimit = 8
 
     static func loadRows(maxVisible: Int? = nil) -> (rows: [InCameraRollRow], totalCount: Int) {
-        let all = loadAllRows()
-        let limit = maxVisible ?? (all.count >= gridLimit ? gridLimit : listLimit)
-        return (Array(all.prefix(limit)), all.count)
+        let limit = maxVisible ?? listLimit
+        switch loadState(maxVisible: limit) {
+        case .rows(let rows, let total):
+            return (rows, total)
+        case .unavailable:
+            return ([], 0)
+        }
+    }
+
+    enum LoadState {
+        case rows([InCameraRollRow], total: Int)
+        case unavailable
+    }
+
+    /// New entry point that only uses the App Group container.
+    /// - If the App Group is unavailable: `.unavailable`
+    /// - If neither the primary JSON nor the `.bak` exists: empty rows with total 0
+    /// - If both files are present but unreadable: `.unavailable`
+    static func loadState(maxVisible: Int) -> LoadState {
+        guard let primary = AppGroupStorage.sharedDataURL else {
+            return .unavailable
+        }
+        let backup = primary.deletingLastPathComponent().appendingPathComponent("app-data.json.bak")
+        let fm = FileManager.default
+        let primaryExists = fm.fileExists(atPath: primary.path)
+        let backupExists = fm.fileExists(atPath: backup.path)
+        guard primaryExists || backupExists else {
+            return .rows([], total: 0)
+        }
+        let snapshot: Snapshot? = decodeSnapshot(at: primary) ?? decodeSnapshot(at: backup)
+        guard let snapshot else {
+            return .unavailable
+        }
+        let all = buildRows(from: snapshot)
+        return .rows(Array(all.prefix(maxVisible)), total: all.count)
     }
 
     /// Same walk as My Film: pipeline sections in `activePipelineCases` order, newest
     /// first inside each section. Archived rolls stay out of the widget.
     static func loadAllRows() -> [InCameraRollRow] {
-        guard
-            let url = AppGroupStorage.sharedDataURL ?? Optional(AppGroupStorage.resolvedDataURL(createDirectories: false)),
-            FileManager.default.fileExists(atPath: url.path),
-            let data = try? Data(contentsOf: url)
-        else {
-            return []
-        }
+        guard let primary = AppGroupStorage.sharedDataURL else { return [] }
+        let backup = primary.deletingLastPathComponent().appendingPathComponent("app-data.json.bak")
+        guard let snapshot = decodeSnapshot(at: primary) ?? decodeSnapshot(at: backup) else { return [] }
+        return buildRows(from: snapshot)
+    }
 
+    private static func decodeSnapshot(at url: URL) -> Snapshot? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        guard let snapshot = try? decoder.decode(Snapshot.self, from: data) else {
-            return []
-        }
+        return try? decoder.decode(Snapshot.self, from: data)
+    }
 
+    private static func buildRows(from snapshot: Snapshot) -> [InCameraRollRow] {
         var stockById: [UUID: StockInfo] = [:]
         for stock in loadCatalogStocks() {
             stockById[stock.id] = StockInfo(name: stock.name, manufacturer: stock.manufacturer ?? "")

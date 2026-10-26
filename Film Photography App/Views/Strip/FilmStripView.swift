@@ -261,8 +261,6 @@ enum FilmStripFrameMetrics {
     static let bracketArm: CGFloat = 16
     static let bracketWidth: CGFloat = 2
     static let stripCorner: CGFloat = AppTheme.Spacing.sm
-    /// Hairline strokes for strip chrome (1 display pixel).
-    static var strokeWidth: CGFloat { 1 / max(UIScreen.main.scale, 1) }
     /// Cut-out perforation color — matches the page behind the strip.
     static let sprocketCutout = AppTheme.bg
 

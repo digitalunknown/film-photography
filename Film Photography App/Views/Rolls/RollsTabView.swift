@@ -63,7 +63,11 @@ struct RollsTabView: View {
                     Button {
                         store.showingSettings = true
                     } label: {
-                        LucideIcon(.cog)
+                        Label {
+                            Text("Settings")
+                        } icon: {
+                            LucideIcon(.cog)
+                        }
                     }
                     .accessibilityLabel("Settings")
                 }
@@ -78,7 +82,11 @@ struct RollsTabView: View {
                         }
                         .font(AppType.body)
                     } label: {
-                        LucideIcon(.plus)
+                        Label {
+                            Text("Add film")
+                        } icon: {
+                            LucideIcon(.plus)
+                        }
                     }
                     .accessibilityLabel("Add film")
                 }
@@ -200,9 +208,9 @@ struct RollsTabView: View {
     /// Most recently added first. Rolls are appended as they are created, so the
     /// store's own order is the order they arrived in.
     private func openPendingRoll() {
-        guard let id = store.pendingOpenRollId, let roll = store.roll(for: id) else { return }
-        selectedRoll = roll
+        guard let id = store.pendingOpenRollId else { return }
         store.pendingOpenRollId = nil
+        if let roll = store.roll(for: id) { selectedRoll = roll }
     }
 
     private func rolls(for status: RollStatus) -> [Roll] {

@@ -232,7 +232,11 @@ extension View {
                 if let addAction {
                     ToolbarItem(placement: .primaryAction) {
                         Button(action: addAction) {
-                            LucideIcon(.plus)
+                            Label {
+                                Text("Add")
+                            } icon: {
+                                LucideIcon(.plus)
+                            }
                         }
                         .accessibilityLabel("Add")
                     }

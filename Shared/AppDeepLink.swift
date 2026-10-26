@@ -8,12 +8,20 @@ enum AppDeepLink {
         URL(string: "\(scheme)://add-film")!
     }
 
+    static var myFilm: URL {
+        URL(string: "\(scheme)://my-film")!
+    }
+
     static func roll(_ id: UUID) -> URL {
         URL(string: "\(scheme)://roll/\(id.uuidString)")!
     }
 
     static func isAddFilm(_ url: URL) -> Bool {
         url.scheme == scheme && url.host == "add-film"
+    }
+
+    static func isMyFilm(_ url: URL) -> Bool {
+        url.scheme == scheme && url.host == "my-film"
     }
 
     static func rollId(from url: URL) -> UUID? {

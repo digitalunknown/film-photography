@@ -5,6 +5,7 @@ struct InCameraRollsEntry: TimelineEntry {
     let date: Date
     let rows: [InCameraRollRow]
     let totalCount: Int
+    let unavailable: Bool
 }
 
 struct InCameraRollsProvider: TimelineProvider {
@@ -12,23 +13,33 @@ struct InCameraRollsProvider: TimelineProvider {
         InCameraRollsEntry(
             date: Date(),
             rows: Array(Self.sampleRows.prefix(visibleLimit(for: context.family))),
-            totalCount: Self.sampleRows.count
+            totalCount: Self.sampleRows.count,
+            unavailable: false
         )
     }
 
     func getSnapshot(in context: Context, completion: @escaping (InCameraRollsEntry) -> Void) {
-        completion(makeEntry(family: context.family))
+        let entry = makeEntry(family: context.family)
+        if context.isPreview && entry.rows.isEmpty {
+            completion(placeholder(in: context))
+        } else {
+            completion(entry)
+        }
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<InCameraRollsEntry>) -> Void) {
         let entry = makeEntry(family: context.family)
-        let refresh = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date().addingTimeInterval(900)
-        completion(Timeline(entries: [entry], policy: .after(refresh)))
+        completion(Timeline(entries: [entry], policy: .never))
     }
 
     private func makeEntry(family: WidgetFamily) -> InCameraRollsEntry {
-        let loaded = InCameraRollsLoader.loadRows(maxVisible: visibleLimit(for: family))
-        return InCameraRollsEntry(date: Date(), rows: loaded.rows, totalCount: loaded.totalCount)
+        let state = InCameraRollsLoader.loadState(maxVisible: visibleLimit(for: family))
+        switch state {
+        case .rows(let rows, let total):
+            return InCameraRollsEntry(date: Date(), rows: rows, totalCount: total, unavailable: false)
+        case .unavailable:
+            return InCameraRollsEntry(date: Date(), rows: [], totalCount: 0, unavailable: true)
+        }
     }
 
     private func visibleLimit(for family: WidgetFamily) -> Int {
@@ -97,16 +108,45 @@ struct InCameraRollsWidgetView: View {
 
     var body: some View {
         Group {
-            if entry.rows.isEmpty {
+            if entry.unavailable {
+                unavailableState
+                    .widgetURL(AppDeepLink.myFilm)
+            } else if entry.rows.isEmpty {
                 emptyState
                     .widgetURL(AppDeepLink.addFilm)
             } else {
                 ringGrid
+                    .widgetURL(AppDeepLink.myFilm)
             }
         }
         .containerBackground(for: .widget) {
             AppPalette.bg
         }
+    }
+
+    /// Unavailable card when the App Group data cannot be read.
+    private var unavailableState: some View {
+        let metrics = emptyMetrics
+        return VStack(spacing: metrics.spacing) {
+            Image("lucide.focus")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: metrics.iconSize, height: metrics.iconSize)
+                .foregroundStyle(AppPalette.textPrimary)
+
+            Text("Open Filmwriter to refresh.")
+                .font(widgetFont(metrics.headlineSize, weight: .semibold))
+                .foregroundStyle(AppPalette.textPrimary)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.8)
+                .lineLimit(family == .systemSmall ? 3 : 4)
+        }
+        .padding(.horizontal, metrics.horizontalPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Open Filmwriter to refresh.")
+        .accessibilityAddTraits(.isButton)
     }
 
     /// Same stack as My Film: focus mark, headline, outlined Add film pill.
@@ -220,6 +260,17 @@ struct InCameraRollsWidgetView: View {
                                 Link(destination: AppDeepLink.roll(row.id)) {
                                     RollRingCell(row: row, family: family)
                                 }
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel({
+                                    var parts: [String] = [row.stockName]
+                                    if row.showsExposures {
+                                        parts.append(row.exposuresLabel)
+                                    }
+                                    if !row.cameraName.isEmpty {
+                                        parts.append(row.cameraName)
+                                    }
+                                    return parts.joined(separator: ", ")
+                                }())
                             } else {
                                 Color.clear
                             }
@@ -241,6 +292,7 @@ struct InCameraRollsWidgetView: View {
 private struct RollRingCell: View {
     let row: InCameraRollRow
     let family: WidgetFamily
+    @Environment(\.widgetRenderingMode) private var renderingMode
 
     private var progress: CGFloat {
         min(CGFloat(row.frameCount) / CGFloat(max(row.totalExposures, 1)), 1)
@@ -286,8 +338,10 @@ private struct RollRingCell: View {
                 }
                 .frame(width: diameter, height: diameter)
 
-                countPill
-                    .offset(y: pillHang)
+                if row.showsExposures {
+                    countPill
+                        .offset(y: pillHang)
+                }
             }
             .frame(width: diameter, height: diameter)
         }
@@ -311,7 +365,7 @@ private struct RollRingCell: View {
             .frame(width: diameter, height: diameter)
 
             VStack(spacing: 2) {
-                Text(row.exposuresLabel)
+                Text(row.showsExposures ? row.exposuresLabel : row.statusLabel)
                     .font(Self.widgetFont(labelSize))
                     .foregroundStyle(AppPalette.textPrimary)
                     .monospacedDigit()
@@ -337,7 +391,7 @@ private struct RollRingCell: View {
         ZStack {
             Circle()
                 .stroke(
-                    AppPalette.well,
+                    renderingMode == .fullColor ? AppPalette.well : AppPalette.textPrimary.opacity(0.2),
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
             Circle()
@@ -347,6 +401,7 @@ private struct RollRingCell: View {
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
+                .modifier(WidgetAccentable())
         }
         .frame(width: diameter, height: diameter)
     }
@@ -369,10 +424,13 @@ private struct RollRingCell: View {
     @ViewBuilder
     private func rollImage(size: CGFloat) -> some View {
         if let imageName = row.imageName {
-            Image(imageName)
+            var image = Image(imageName)
                 .resizable()
                 .scaledToFit()
-                .frame(width: size, height: size)
+            if #available(iOS 18.0, *) {
+                image = image.widgetAccentedRenderingMode(.desaturated)
+            }
+            image.frame(width: size, height: size)
         } else {
             Image(systemName: "film")
                 .font(.system(size: size * 0.45, weight: .regular))
@@ -407,6 +465,16 @@ struct InCameraRollsWidget: Widget {
         .description("How many frames you’ve shot on each roll.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
+    }
+}
+
+private struct WidgetAccentable: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.widgetAccentable()
+        } else {
+            content
+        }
     }
 }
 
@@ -453,7 +521,8 @@ struct InCameraRollsWidget: Widget {
                 imageName: "roll_kodak"
             ),
         ],
-        totalCount: 4
+        totalCount: 4,
+        unavailable: false
     )
 }
 
@@ -500,24 +569,51 @@ struct InCameraRollsWidget: Widget {
                 imageName: "roll_fujifilm"
             ),
         ],
-        totalCount: 4
+        totalCount: 4,
+        unavailable: false
     )
 }
 
 #Preview("Empty small", as: .systemSmall) {
     InCameraRollsWidget()
 } timeline: {
-    InCameraRollsEntry(date: .now, rows: [], totalCount: 0)
+    InCameraRollsEntry(date: .now, rows: [], totalCount: 0, unavailable: false)
 }
 
 #Preview("Empty medium", as: .systemMedium) {
     InCameraRollsWidget()
 } timeline: {
-    InCameraRollsEntry(date: .now, rows: [], totalCount: 0)
+    InCameraRollsEntry(date: .now, rows: [], totalCount: 0, unavailable: false)
 }
 
 #Preview("Empty large", as: .systemLarge) {
     InCameraRollsWidget()
 } timeline: {
-    InCameraRollsEntry(date: .now, rows: [], totalCount: 0)
+    InCameraRollsEntry(date: .now, rows: [], totalCount: 0, unavailable: false)
+}
+
+#Preview("Large", as: .systemLarge) {
+    InCameraRollsWidget()
+} timeline: {
+    InCameraRollsEntry(
+        date: .now,
+        rows: [
+            InCameraRollRow(id: UUID(), stockName: "Kodak Portra 400", cameraName: "Leica M6", statusLabel: "In camera", frameCount: 12, totalExposures: 36, imageName: "roll_kodak"),
+            InCameraRollRow(id: UUID(), stockName: "Ilford HP5 Plus", cameraName: "Nikon F3", statusLabel: "Shot, undeveloped", frameCount: 36, totalExposures: 36, imageName: "roll_ilford"),
+            InCameraRollRow(id: UUID(), stockName: "CineStill 800T", cameraName: "Contax T2", statusLabel: "In camera", frameCount: 8, totalExposures: 36, imageName: "roll_cinestill_800t"),
+            InCameraRollRow(id: UUID(), stockName: "Fujifilm Superia 400", cameraName: "", statusLabel: "In stock", frameCount: 0, totalExposures: 36, imageName: "roll_fujifilm"),
+            InCameraRollRow(id: UUID(), stockName: "Kodak Portra 400", cameraName: "Leica M6", statusLabel: "In camera", frameCount: 20, totalExposures: 36, imageName: "roll_kodak"),
+            InCameraRollRow(id: UUID(), stockName: "Ilford HP5 Plus", cameraName: "Nikon F3", statusLabel: "In camera", frameCount: 5, totalExposures: 36, imageName: "roll_ilford"),
+            InCameraRollRow(id: UUID(), stockName: "CineStill 800T", cameraName: "Contax T2", statusLabel: "In camera", frameCount: 18, totalExposures: 36, imageName: "roll_cinestill_800t"),
+            InCameraRollRow(id: UUID(), stockName: "Fujifilm Superia 400", cameraName: "", statusLabel: "In stock", frameCount: 0, totalExposures: 36, imageName: "roll_fujifilm")
+        ],
+        totalCount: 8,
+        unavailable: false
+    )
+}
+
+#Preview("Unavailable small", as: .systemSmall) {
+    InCameraRollsWidget()
+} timeline: {
+    InCameraRollsEntry(date: .now, rows: [], totalCount: 0, unavailable: true)
 }
