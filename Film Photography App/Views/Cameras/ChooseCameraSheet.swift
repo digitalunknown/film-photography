@@ -10,6 +10,7 @@ struct ChooseCameraSheet: View {
     var onDismiss: () -> Void
 
     @State private var showingAddCamera = false
+    @State private var cameraCountBeforeAdd = 0
 
     private var sortedCameras: [Camera] {
         store.cameras.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
@@ -39,7 +40,7 @@ struct ChooseCameraSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     if store.cameras.isEmpty {
-                        Text("No cameras in your collection.")
+                        Text("No cameras yet. Add one to load this roll.")
                             .font(AppType.body)
                             .foregroundStyle(AppTheme.textSecondary)
                             .padding(.horizontal, AppTheme.horizontalPadding)
@@ -62,6 +63,7 @@ struct ChooseCameraSheet: View {
                     }
 
                     Button {
+                        cameraCountBeforeAdd = store.cameras.count
                         showingAddCamera = true
                     } label: {
                         PillButtonLabel(title: "Add Camera", icon: .camera)
@@ -83,6 +85,12 @@ struct ChooseCameraSheet: View {
             }
             .sheet(isPresented: $showingAddCamera) {
                 AddCameraView()
+            }
+            .onChange(of: showingAddCamera) { _, isPresented in
+                guard !isPresented, store.cameras.count > cameraCountBeforeAdd else { return }
+                if let added = store.cameras.last {
+                    onSelect(added)
+                }
             }
         }
         .instrumentSheetChrome()

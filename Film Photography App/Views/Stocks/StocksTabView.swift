@@ -17,16 +17,6 @@ struct StocksTabView: View {
             )
             .instrumentScreen()
             .instrumentTabNavigation(title: "Library")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        store.showingSettings = true
-                    } label: {
-                        LucideIcon(.fileText)
-                    }
-                    .accessibilityLabel("Settings")
-                }
-            }
             .searchable(text: $searchText, prompt: "Search")
             .navigationDestination(item: $selectedStockId) { stockId in
                 StockDetailView(stockId: stockId)

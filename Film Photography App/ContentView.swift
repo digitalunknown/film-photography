@@ -37,6 +37,9 @@ struct ContentView: View {
         .sheet(isPresented: $store.showingAddCamera) {
             AddCameraView()
         }
+        .sheet(isPresented: $store.showingAddInventory) {
+            AddInventoryFilmView()
+        }
         .sheet(item: $store.addRollEntry) { entry in
             AddRollView(entry: entry)
         }
@@ -48,7 +51,7 @@ struct ContentView: View {
             SettingsView()
         }
         .onOpenURL { url in
-            if store.openRoll(from: url) {
+            if store.openAddFilm(from: url) || store.openRoll(from: url) {
                 selectedTab = .film
             }
         }

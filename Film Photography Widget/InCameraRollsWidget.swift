@@ -99,6 +99,7 @@ struct InCameraRollsWidgetView: View {
         Group {
             if entry.rows.isEmpty {
                 emptyState
+                    .widgetURL(AppDeepLink.addFilm)
             } else {
                 ringGrid
             }
@@ -108,16 +109,101 @@ struct InCameraRollsWidgetView: View {
         }
     }
 
+    /// Same stack as My Film: focus mark, headline, outlined Add film pill.
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Spacer(minLength: 0)
-            Text("No rolls in the pipeline.")
-                .font(widgetFont(13))
+        let metrics = emptyMetrics
+        return VStack(spacing: metrics.spacing) {
+            Image("lucide.focus")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: metrics.iconSize, height: metrics.iconSize)
                 .foregroundStyle(AppPalette.textPrimary)
-            Spacer(minLength: 0)
+
+            Text("Start by adding the rolls you have on hand.")
+                .font(widgetFont(metrics.headlineSize, weight: .semibold))
+                .foregroundStyle(AppPalette.textPrimary)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.8)
+                .lineLimit(family == .systemSmall ? 3 : 4)
+
+            addFilmPill(metrics: metrics)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(.horizontal, metrics.horizontalPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Start by adding the rolls you have on hand.")
+        .accessibilityHint("Opens Add film")
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private func addFilmPill(metrics: EmptyMetrics) -> some View {
+        HStack(spacing: 8) {
+            Image("lucide.plus")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: metrics.buttonIcon, height: metrics.buttonIcon)
+            Text("ADD FILM")
+                .font(widgetFont(metrics.buttonSize, weight: .semibold))
+        }
+        .foregroundStyle(AppPalette.textPrimary)
+        .padding(.vertical, metrics.pillVertical)
+        .padding(.horizontal, metrics.pillHorizontal)
+        .frame(maxWidth: family == .systemSmall ? nil : .infinity)
+        .overlay {
+            Capsule()
+                .strokeBorder(AppPalette.textPrimary, lineWidth: 1.25)
+        }
+    }
+
+    private var emptyMetrics: EmptyMetrics {
+        switch family {
+        case .systemLarge, .systemExtraLarge:
+            EmptyMetrics(
+                iconSize: 48,
+                headlineSize: 18,
+                buttonSize: 13,
+                buttonIcon: 20,
+                spacing: 16,
+                horizontalPadding: 24,
+                pillVertical: 12,
+                pillHorizontal: 16
+            )
+        case .systemMedium:
+            EmptyMetrics(
+                iconSize: 32,
+                headlineSize: 15,
+                buttonSize: 13,
+                buttonIcon: 20,
+                spacing: 10,
+                horizontalPadding: 20,
+                pillVertical: 10,
+                pillHorizontal: 16
+            )
+        default:
+            EmptyMetrics(
+                iconSize: 28,
+                headlineSize: 13,
+                buttonSize: 11,
+                buttonIcon: 16,
+                spacing: 8,
+                horizontalPadding: 14,
+                pillVertical: 7,
+                pillHorizontal: 12
+            )
+        }
+    }
+
+    private struct EmptyMetrics {
+        let iconSize: CGFloat
+        let headlineSize: CGFloat
+        let buttonSize: CGFloat
+        let buttonIcon: CGFloat
+        let spacing: CGFloat
+        let horizontalPadding: CGFloat
+        let pillVertical: CGFloat
+        let pillHorizontal: CGFloat
     }
 
     /// Small matches Figma 276:782 — 2×2 rings with the count pill on the ring.
@@ -298,13 +384,13 @@ private struct RollRingCell: View {
         let name: String
         switch weight {
         case .semibold:
-            name = "Figtree-SemiBold"
+            name = "InstrumentSans-SemiBold"
         case .bold, .heavy, .black:
-            name = "Figtree-Bold"
+            name = "InstrumentSans-Bold"
         case .medium:
-            name = "Figtree-Medium"
+            name = "InstrumentSans-Medium"
         default:
-            name = "Figtree-Regular"
+            name = "InstrumentSans-Regular"
         }
         return .custom(name, size: size)
     }
@@ -416,4 +502,22 @@ struct InCameraRollsWidget: Widget {
         ],
         totalCount: 4
     )
+}
+
+#Preview("Empty small", as: .systemSmall) {
+    InCameraRollsWidget()
+} timeline: {
+    InCameraRollsEntry(date: .now, rows: [], totalCount: 0)
+}
+
+#Preview("Empty medium", as: .systemMedium) {
+    InCameraRollsWidget()
+} timeline: {
+    InCameraRollsEntry(date: .now, rows: [], totalCount: 0)
+}
+
+#Preview("Empty large", as: .systemLarge) {
+    InCameraRollsWidget()
+} timeline: {
+    InCameraRollsEntry(date: .now, rows: [], totalCount: 0)
 }

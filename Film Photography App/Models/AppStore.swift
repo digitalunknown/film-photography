@@ -66,6 +66,8 @@ final class AppStore {
     var devRecipePresets: [DevRecipePreset]
     var pendingDeletion: PendingRollDeletion?
     var showingAddCamera = false
+    /// Fast inventory add: stock, quantity, and storage.
+    var showingAddInventory = false
     /// How the user chose to add a roll. Set to open the add-roll sheet on that path.
     var addRollEntry: AddRollEntry?
     var showingLoadFlow = false
@@ -87,13 +89,12 @@ final class AppStore {
             guard iCloudLibraryMirror.isEnabled != newValue else { return }
             iCloudLibraryMirror.isEnabled = newValue
             if newValue {
+                iCloudSyncStatus = canUseiCloud ? .syncing : .unavailable
                 reconcileiCloud()
             } else {
                 iCloudPushTask?.cancel()
                 iCloudPushTask = nil
-                if case .syncing = iCloudSyncStatus {
-                    iCloudSyncStatus = iCloudLibraryMirror.rememberedStatus
-                }
+                iCloudSyncStatus = iCloudLibraryMirror.rememberedStatus
             }
         }
     }
@@ -218,6 +219,19 @@ final class AppStore {
         }
     }
 
+    /// Opens the add-film sheet from the empty widget. Returns false if the URL is not ours.
+    @discardableResult
+    func openAddFilm(from url: URL) -> Bool {
+        guard AppDeepLink.isAddFilm(url) else { return false }
+        pendingOpenRollId = nil
+        showingSettings = false
+        showingAddCamera = false
+        showingLoadFlow = false
+        addRollEntry = nil
+        showingAddInventory = true
+        return true
+    }
+
     /// Opens the roll named by a widget tap. Returns false if the URL is not ours.
     @discardableResult
     func openRoll(from url: URL) -> Bool {
@@ -225,6 +239,7 @@ final class AppStore {
         pendingOpenRollId = id
         showingSettings = false
         showingAddCamera = false
+        showingAddInventory = false
         showingLoadFlow = false
         addRollEntry = nil
         return true
@@ -674,6 +689,47 @@ final class AppStore {
         return item
     }
 
+    /// Several in-stock rolls at once — the NUX inventory path.
+    func addInventoryRolls(
+        stockId: UUID,
+        quantity: Int,
+        format: FilmFormat,
+        storage: StorageMethod,
+        expiryDate: Date?
+    ) {
+        let count = min(max(quantity, 1), 99)
+        let iso = stock(for: stockId)?.iso
+        let exposures = format.defaultExposures
+        let frozen = storage == .freezer ? Date() : nil
+        for _ in 0..<count {
+            rolls.append(
+                Roll(
+                    id: UUID(),
+                    stockId: stockId,
+                    cameraId: nil,
+                    status: .inFridge,
+                    format: format,
+                    pushPull: nil,
+                    shootingISO: iso,
+                    frameCount: 0,
+                    pinCount: 0,
+                    totalExposures: exposures,
+                    loadedDate: nil,
+                    finishedDate: nil,
+                    storageLocation: storage.rawValue,
+                    frozenDate: frozen,
+                    expiryDate: expiryDate,
+                    dropOffDate: nil,
+                    labName: nil,
+                    developedDate: nil,
+                    scannedDate: nil,
+                    frameMarkers: []
+                )
+            )
+        }
+        persist()
+    }
+
     // MARK: - Roll actions
 
     func addRoll(
@@ -719,7 +775,7 @@ final class AppStore {
         )
 
         if normalizedStatus == .shotUndeveloped && roll.storageLocation == nil {
-            roll.storageLocation = "Fridge"
+            roll.storageLocation = StorageMethod.roomTemperature.rawValue
         }
         if normalizedStatus == .atLab {
             roll.development = DevelopmentRecord(path: .lab, labName: roll.labName ?? "The Darkroom", dropOffDate: now)
@@ -962,7 +1018,7 @@ final class AppStore {
             if roll.loadedDate == nil { roll.loadedDate = now }
         case .shotUndeveloped:
             if roll.finishedDate == nil { roll.finishedDate = now }
-            if roll.storageLocation == nil { roll.storageLocation = "Fridge" }
+            if roll.storageLocation == nil { roll.storageLocation = StorageMethod.roomTemperature.rawValue }
         case .atLab:
             if roll.dropOffDate == nil { roll.dropOffDate = now }
             if roll.labName == nil { roll.labName = "The Darkroom" }
@@ -979,6 +1035,13 @@ final class AppStore {
         default:
             break
         }
+    }
+
+    /// Adding the first scan is what moves a developed roll into Scanned.
+    private func markScannedIfDeveloped(at index: Int) {
+        guard rolls[index].status == .developed else { return }
+        applyAdvance(to: &rolls[index], next: .scanned, cameraId: nil)
+        rolls[index].status = .scanned
     }
 
     private func applyRevert(from roll: inout Roll, current: RollStatus) {
@@ -1180,6 +1243,7 @@ final class AppStore {
         if rolls[index].frameCount < frameIndex {
             rolls[index].frameCount = frameIndex
         }
+        markScannedIfDeveloped(at: index)
         persist()
     }
 
@@ -1230,6 +1294,9 @@ final class AppStore {
         if let highest = mapping.keys.compactMap(Int.init).max(), rolls[index].frameCount < highest {
             rolls[index].frameCount = highest
         }
+        if !mapping.isEmpty {
+            markScannedIfDeveloped(at: index)
+        }
         persist()
     }
 
@@ -1261,24 +1328,14 @@ final class AppStore {
     func importScans(to rollId: UUID, fileNames: [String]) {
         guard let index = rolls.firstIndex(where: { $0.id == rollId }) else { return }
         rolls[index].scanFileNames = fileNames
-        if rolls[index].status == .developed {
-            rolls[index].status = .scanned
-            if rolls[index].scannedDate == nil {
-                rolls[index].scannedDate = Date()
-            }
-        }
+        markScannedIfDeveloped(at: index)
         persist()
     }
 
     func appendScans(to rollId: UUID, fileNames: [String]) {
         guard let index = rolls.firstIndex(where: { $0.id == rollId }), !fileNames.isEmpty else { return }
         rolls[index].scanFileNames.append(contentsOf: fileNames)
-        if rolls[index].status == .developed {
-            rolls[index].status = .scanned
-            if rolls[index].scannedDate == nil {
-                rolls[index].scannedDate = Date()
-            }
-        }
+        markScannedIfDeveloped(at: index)
         persist()
     }
 

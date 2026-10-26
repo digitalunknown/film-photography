@@ -11,7 +11,11 @@ struct RollDetailView: View {
     @State private var showingFrozenDatePicker = false
     @State private var addDateDraft = Date()
     @State private var frozenDateDraft = Date()
-    @FocusState private var isNotesFocused: Bool
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case notes, lab, developer, dilution, time, temp, agitation
+    }
 
     private var roll: Roll? {
         store.roll(for: rollId)
@@ -20,6 +24,20 @@ struct RollDetailView: View {
     private var rollTitle: String {
         guard let roll else { return "Roll" }
         return store.label(for: roll)
+    }
+
+    private var keyboardFields: [Field] {
+        var fields: [Field] = []
+        switch store.roll(for: rollId)?.development?.path {
+        case .lab:
+            fields.append(.lab)
+        case .diy:
+            fields.append(contentsOf: [.developer, .dilution, .time, .temp, .agitation])
+        default:
+            break
+        }
+        fields.append(.notes)
+        return fields
     }
 
     var body: some View {
@@ -78,10 +96,7 @@ struct RollDetailView: View {
             }
 
             ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                InstrumentKeyboardDoneButton {
-                    isNotesFocused = false
-                }
+                InstrumentKeyboardAccessory(focus: $focusedField, fields: keyboardFields)
             }
         }
         .sheet(isPresented: $showingCameraPicker) {
@@ -129,7 +144,12 @@ struct RollDetailView: View {
             onAdvance: { store.advanceExposure(on: roll.id) },
             onUndo: { store.removeLastFrame(from: roll.id) },
             onSetCount: { store.setFrameCount($0, for: roll.id) },
-            onFinishRoll: { store.setRollStatus(roll.id, to: .shotUndeveloped) }
+            onAdvancePipeline: {
+                guard let next = store.roll(for: roll.id)?.status.nextStatus,
+                      next == .shotUndeveloped || next == .atLab || next == .developed
+                else { return }
+                store.setRollStatus(roll.id, to: next)
+            }
         )
     }
 
@@ -194,7 +214,7 @@ struct RollDetailView: View {
         .foregroundStyle(AppTheme.textPrimary)
         .lineLimit(2...8)
         .submitLabel(.return)
-        .focused($isNotesFocused)
+        .focused($focusedField, equals: .notes)
     }
 
     @ViewBuilder
@@ -232,16 +252,15 @@ struct RollDetailView: View {
         valueRow("Format", value: roll.format.displayName)
         HairlineRule()
         DetailFieldRow(label: "Expected frames") {
-            TextField(
-                "36",
-                value: exposuresBinding(for: roll),
-                format: .number,
-                prompt: .fieldPrompt("36")
-            )
-                .font(AppType.body)
-                .foregroundStyle(AppTheme.textPrimary)
-                .multilineTextAlignment(.trailing)
-                .keyboardType(.numberPad)
+            NumberStepper(
+                canDecrement: roll.totalExposures > 1,
+                decrementLabel: "Fewer frames",
+                incrementLabel: "More frames",
+                onDecrement: { exposuresBinding(for: roll).wrappedValue -= 1 },
+                onIncrement: { exposuresBinding(for: roll).wrappedValue += 1 }
+            ) {
+                Text("\(max(roll.totalExposures, 1))")
+            }
         }
         HairlineRule()
     }
@@ -456,15 +475,18 @@ struct RollDetailView: View {
             HairlineRule()
             fieldRow("Lab") {
                 TextField(placeholder: "Lab name", text: labNameBinding(for: roll))
+                    .focused($focusedField, equals: .lab)
             }
         } else if path == .diy {
             HairlineRule()
             fieldRow("Developer") {
                 TextField(placeholder: "Developer", text: devFieldBinding(for: roll, keyPath: \.developer))
+                    .focused($focusedField, equals: .developer)
             }
             HairlineRule()
             fieldRow("Dilution") {
                 TextField(placeholder: "Dilution", text: devFieldBinding(for: roll, keyPath: \.dilution))
+                    .focused($focusedField, equals: .dilution)
             }
             diyTimingRows(roll)
         }
@@ -476,16 +498,19 @@ struct RollDetailView: View {
         fieldRow("Time") {
             TextField(placeholder: "Minutes", text: devTimeBinding(for: roll))
                 .keyboardType(.decimalPad)
+                .focused($focusedField, equals: .time)
         }
         HairlineRule()
         fieldRow("Temp") {
             TextField(placeholder: "°C", text: devTempBinding(for: roll))
                 .keyboardType(.decimalPad)
+                .focused($focusedField, equals: .temp)
         }
         HairlineRule()
         fieldRow("Agitation") {
             TextField(placeholder: "Notes", text: devFieldBinding(for: roll, keyPath: \.agitationNotes), axis: .vertical)
                 .lineLimit(1...4)
+                .focused($focusedField, equals: .agitation)
         }
         developmentPresetRow(roll)
     }
@@ -520,7 +545,7 @@ struct RollDetailView: View {
     ) -> some View {
         DetailFieldRow(label: label) {
             content()
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.trailing)
         }
@@ -533,7 +558,7 @@ struct RollDetailView: View {
             get: { max(store.roll(for: rollId)?.totalExposures ?? 36, 1) },
             set: { newValue in
                 guard var updated = store.roll(for: rollId) else { return }
-                updated.totalExposures = max(newValue, 1)
+                updated.totalExposures = min(max(newValue, 1), 100)
                 store.updateRoll(updated)
             }
         )

@@ -15,13 +15,14 @@
 	</array>
 	<key>UIAppFonts</key>
 	<array>
-		<string>Figtree-Light.ttf</string>
-		<string>Figtree-Regular.ttf</string>
-		<string>Figtree-Medium.ttf</string>
-		<string>Figtree-SemiBold.ttf</string>
-		<string>Figtree-Bold.ttf</string>
-		<string>Figtree-Italic.ttf</string>
-		<string>Figtree-BoldItalic.ttf</string>
+		<string>InstrumentSans-Regular.ttf</string>
+		<string>InstrumentSans-Medium.ttf</string>
+		<string>InstrumentSans-SemiBold.ttf</string>
+		<string>InstrumentSans-Bold.ttf</string>
+		<string>InstrumentSans-Italic.ttf</string>
+		<string>InstrumentSans-MediumItalic.ttf</string>
+		<string>InstrumentSans-SemiBoldItalic.ttf</string>
+		<string>InstrumentSans-BoldItalic.ttf</string>
 	</array>
 </dict>
 </plist>

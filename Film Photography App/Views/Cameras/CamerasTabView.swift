@@ -7,33 +7,34 @@ struct CamerasTabView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if store.cameras.isEmpty {
-                        InstrumentEmptyState(
-                            message: "No cameras in your collection. Add a body to start tracking what's loaded.",
-                            primaryAction: "Add camera",
-                            primaryHandler: { store.showingAddCamera = true }
-                        )
-                        .padding(.horizontal, AppTheme.horizontalPadding)
-                        .padding(.top, AppTheme.Spacing.sm)
-                    } else {
-                        ForEach(Array(visibleSections.enumerated()), id: \.element.title) { index, section in
-                            if index > 0 {
-                                HairlineRule()
-                                    .padding(.horizontal, AppTheme.horizontalPadding)
-                                    .padding(.vertical, AppTheme.Spacing.lg)
-                            }
+            Group {
+                if store.cameras.isEmpty {
+                    InstrumentEmptyState(
+                        message: "No cameras yet. Add a body when you want to load a roll.",
+                        primaryAction: "Add camera",
+                        primaryHandler: { store.showingAddCamera = true }
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(Array(visibleSections.enumerated()), id: \.element.title) { index, section in
+                                if index > 0 {
+                                    HairlineRule()
+                                        .padding(.horizontal, AppTheme.horizontalPadding)
+                                        .padding(.vertical, AppTheme.Spacing.lg)
+                                }
 
-                            cameraSection(
-                                title: section.title,
-                                cameras: section.cameras,
-                                isFirst: index == 0
-                            )
+                                cameraSection(
+                                    title: section.title,
+                                    cameras: section.cameras,
+                                    isFirst: index == 0
+                                )
+                            }
                         }
+                        .padding(.bottom, AppTheme.Spacing.xl)
                     }
                 }
-                .padding(.bottom, AppTheme.Spacing.xl)
             }
             .instrumentScreen()
             .instrumentTabNavigation(title: "My Cameras") {

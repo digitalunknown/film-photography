@@ -19,25 +19,25 @@ struct SettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
-                    SectionLabel(title: "Data", style: .detail)
                     DetailFieldRow(label: "iCloud Sync") {
                         Toggle("iCloud Sync", isOn: $store.iCloudSyncEnabled)
                             .labelsHidden()
-                            .tint(AppTheme.textSecondary)
+                            .toggleStyle(.switch)
+                            .tint(AppTheme.well)
                     }
                     if store.iCloudSyncEnabled {
                         Text(store.iCloudStatusLine)
-                            .font(AppType.callout)
+                            .instrumentFieldFont()
                             .foregroundStyle(AppTheme.textSecondary)
                         Text("When on, cameras, rolls, and notes are mirrored to iCloud with your Apple ID. Scan images stay on this device.")
-                            .font(AppType.callout)
+                            .instrumentFieldFont()
                             .foregroundStyle(AppTheme.textSecondary)
                     }
 
                     HairlineRule()
 
                     Text("Export a copy of your cameras, rolls, and scans. Import replaces everything on this device, then syncs to iCloud if sync is on.")
-                        .font(AppType.body)
+                        .instrumentFieldFont()
                         .foregroundStyle(AppTheme.textSecondary)
 
                     Button {
@@ -45,7 +45,7 @@ struct SettingsView: View {
                     } label: {
                         PillButtonLabel(
                             title: isExporting ? "Generating Backup" : "Export Backup",
-                            icon: .share,
+                            icon: .fileDown,
                             isBusy: isExporting
                         )
                     }
@@ -55,7 +55,7 @@ struct SettingsView: View {
                     Button {
                         presentImporter()
                     } label: {
-                        PillButtonLabel(title: "Import Backup", icon: .fileText)
+                        PillButtonLabel(title: "Import Backup", icon: .fileUp)
                     }
                     .buttonStyle(.plain)
                     .disabled(isExporting)

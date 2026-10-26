@@ -12,7 +12,7 @@ enum StorageMethod: String, CaseIterable, Identifiable, Codable {
     /// Maps free-text leftovers (`Fridge`, `freezer`, custom notes) onto the three options.
     static func resolved(from stored: String?) -> StorageMethod {
         guard let stored, !stored.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return .fridge
+            return .roomTemperature
         }
         if let match = allCases.first(where: {
             $0.rawValue.compare(stored, options: .caseInsensitive) == .orderedSame
@@ -134,13 +134,12 @@ enum RollStatus: String, CaseIterable, Codable, Comparable {
     /// Label for the action that advances from this status to the next.
     var pipelineActionLabel: String? {
         switch self {
-        case .acquired, .inFridge: "Load in camera"
-        case .inCamera: "Unload roll"
+        case .acquired, .inFridge: "Load to Camera"
+        case .inCamera: "Finish Roll"
         case .shotUndeveloped: "Send to lab"
         case .atLab: "Mark developed"
-        case .developed: "Receive scans"
-        case .scanned: "Archive roll"
-        case .archived: nil
+        case .developed: "Add scans"
+        case .scanned, .archived: nil
         }
     }
 
@@ -148,11 +147,11 @@ enum RollStatus: String, CaseIterable, Codable, Comparable {
     var pipelineSlidePrompt: String? {
         switch self {
         case .acquired, .inFridge: nil // inventory rolls load via the camera picker
-        case .inCamera: "slide to unload"
+        case .inCamera: "slide to finish"
         case .shotUndeveloped: "slide to lab"
         case .atLab: "slide to developed"
-        case .developed: "slide for scans"
-        case .scanned: "slide to archive"
+        case .developed: nil
+        case .scanned: nil
         case .archived: nil
         }
     }

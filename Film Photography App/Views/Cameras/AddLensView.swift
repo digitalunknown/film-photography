@@ -13,7 +13,7 @@ struct AddLensView: View {
     @State private var notes = ""
     @FocusState private var focusedField: Field?
 
-    private enum Field {
+    private enum Field: Hashable {
         case name, focal, aperture, notes
     }
 
@@ -76,10 +76,10 @@ struct AddLensView: View {
                         .disabled(!canSave)
                 }
                 ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    InstrumentKeyboardDoneButton {
-                        focusedField = nil
-                    }
+                    InstrumentKeyboardAccessory(
+                        focus: $focusedField,
+                        fields: [.name, .focal, .aperture, .notes]
+                    )
                 }
             }
             .onAppear {
@@ -99,7 +99,7 @@ struct AddLensView: View {
     ) -> some View {
         DetailFieldRow(label: label) {
             content()
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.trailing)
         }

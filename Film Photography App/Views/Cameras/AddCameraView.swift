@@ -15,15 +15,14 @@ struct AddCameraView: View {
     @State private var quirkNote = ""
     @FocusState private var focusedField: Field?
 
-    private enum Field {
+    private enum Field: Hashable {
         case name, lens, serial, price, quirks
     }
 
     private let cameraTypes = ["Rangefinder", "SLR", "Point & shoot", "TLR", "Large format", "Instant"]
 
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !lensSubtitle.trimmingCharacters(in: .whitespaces).isEmpty
+        !name.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     var body: some View {
@@ -51,10 +50,10 @@ struct AddCameraView: View {
                         .disabled(!canSave)
                 }
                 ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    InstrumentKeyboardDoneButton {
-                        focusedField = nil
-                    }
+                    InstrumentKeyboardAccessory(
+                        focus: $focusedField,
+                        fields: [.name, .lens, .serial, .price, .quirks]
+                    )
                 }
             }
         }
@@ -72,7 +71,7 @@ struct AddCameraView: View {
         }
         HairlineRule()
         fieldRow("Lens") {
-            TextField(placeholder: "Lens", text: $lensSubtitle)
+            TextField(placeholder: "Not set", text: $lensSubtitle)
                 .focused($focusedField, equals: .lens)
         }
         HairlineRule()
@@ -83,14 +82,14 @@ struct AddCameraView: View {
         }
         HairlineRule()
         fieldRow("Serial number") {
-            TextField(placeholder: "Optional", text: $serialNumber)
+            TextField(placeholder: "Not set", text: $serialNumber)
                 .focused($focusedField, equals: .serial)
         }
         HairlineRule()
         purchaseDateRow
         HairlineRule()
         fieldRow("Purchase price") {
-            TextField(placeholder: "Optional", text: $purchasePrice)
+            TextField(placeholder: "Not set", text: $purchasePrice)
                 .keyboardType(.decimalPad)
                 .focused($focusedField, equals: .price)
         }
@@ -191,7 +190,7 @@ struct AddCameraView: View {
     ) -> some View {
         DetailFieldRow(label: label) {
             content()
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.trailing)
         }

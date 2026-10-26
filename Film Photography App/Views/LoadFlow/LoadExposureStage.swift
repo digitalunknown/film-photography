@@ -2,8 +2,9 @@ import SwiftUI
 import PhotosUI
 import UIKit
 
-/// Exposure carousel for a loaded roll — counter, film strip and scan import.
-/// Inventory rolls get a single button that picks a camera and loads them.
+/// Status-specific actions for a roll — load, finish, send to lab, mark developed,
+/// add scans, or add / edit / save once scans are in. Inventory rolls get a single
+/// button that picks a camera and loads them.
 struct LoadExposureStage: View {
     let roll: Roll
     let stock: FilmStock?
@@ -11,7 +12,7 @@ struct LoadExposureStage: View {
     var onAdvance: () -> Void
     var onUndo: (() -> Void)? = nil
     var onSetCount: (Int) -> Void
-    var onFinishRoll: (() -> Void)? = nil
+    var onAdvancePipeline: (() -> Void)? = nil
 
     @State private var selectedFrameIndex: Int?
     @State private var viewingFrame: StripFrame?
@@ -177,19 +178,23 @@ struct LoadExposureStage: View {
         .padding(.top, AppTheme.Spacing.xs)
     }
 
-    /// Shooting and scanning are separate jobs. While the roll is still in the camera the
-    /// photographer has no scans yet, so the action finishes the roll; scan import only
-    /// appears once the roll is off the camera.
+    /// The primary action for this status: load, finish, send to lab, mark developed,
+    /// add scans, or add / edit / save once the roll is scanned.
     @ViewBuilder
     private var rollAction: some View {
-        if roll.status.countsAsShot {
+        switch roll.status.normalized {
+        case .inCamera, .shotUndeveloped, .atLab:
+            pipelineAdvanceButton
+        case .developed:
+            addScansPicker
+        case .scanned, .archived:
             HStack(spacing: AppTheme.Spacing.md) {
                 addScansPicker
-                arrangeButton
+                editButton
                 saveButton
             }
-        } else {
-            finishRollButton
+        default:
+            EmptyView()
         }
     }
 
@@ -197,17 +202,15 @@ struct LoadExposureStage: View {
         !roll.framePhotoFileNames.isEmpty || !roll.scanFileNames.isEmpty
     }
 
-    /// Scans rarely come back from the lab in the order they were shot, and which photo
-    /// belongs to which frame is often only obvious with the whole roll laid out. This
-    /// opens that view without having to add a photo to get to it.
+    /// Opens the scan layout sheet so frames can be reordered without adding a photo.
     @ViewBuilder
-    private var arrangeButton: some View {
+    private var editButton: some View {
         if hasScans {
             Button {
                 pendingScans = []
                 isArranging = true
             } label: {
-                PillButtonLabel(title: "Arrange", icon: .arrowUpDown)
+                PillButtonLabel(title: "Edit", icon: .pencil)
             }
             .buttonStyle(.plain)
         }
@@ -228,21 +231,29 @@ struct LoadExposureStage: View {
     }
 
     @ViewBuilder
-    private var finishRollButton: some View {
-        if let onFinishRoll {
-            Button(action: onFinishRoll) {
-                PillButtonLabel(title: "Finish Roll", icon: .circleCheckBig)
+    private var pipelineAdvanceButton: some View {
+        if let onAdvancePipeline, let title = roll.status.pipelineActionLabel {
+            Button(action: onAdvancePipeline) {
+                PillButtonLabel(title: title, icon: pipelineAdvanceIcon)
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    private var pipelineAdvanceIcon: Lucide {
+        switch roll.status.normalized {
+        case .shotUndeveloped: .send
+        default: .circleCheckBig
         }
     }
 
     /// Frames still free to take a scan, counted from the first empty one to the end of
     /// the roll. This caps what the picker will let through, so a selection can't be made
     /// that the roll has no room for.
-    /// Alone on the row it can use the full label; next to Arrange/Save it stays short.
+    /// Alone on the row it can use the full label; next to Edit/Save it stays short.
     private var addScansTitle: String {
         if isPreparingScans { return "Adding…" }
+        if roll.status == .developed { return "Add scans" }
         return hasScans ? "Add" : "Add Scans"
     }
 

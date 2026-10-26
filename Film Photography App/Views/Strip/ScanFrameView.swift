@@ -163,7 +163,9 @@ struct ScanFrameView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .cancellationAction) { closeButton }
-        ToolbarItemGroup(placement: .keyboard) { keyboardDoneButton }
+        ToolbarItemGroup(placement: .keyboard) {
+            InstrumentKeyboardAccessory(focus: $focusedField, fields: [.iso, .notes])
+        }
     }
 
     private var exportedScan: ExportedScan? {
@@ -215,15 +217,6 @@ struct ScanFrameView: View {
                 .foregroundStyle(AppTheme.textPrimary)
         }
         .accessibilityLabel("Close")
-    }
-
-    private var keyboardDoneButton: some View {
-        HStack {
-            Spacer()
-            InstrumentKeyboardDoneButton {
-                focusedField = nil
-            }
-        }
     }
 
     // MARK: - Scan
@@ -401,12 +394,12 @@ struct ScanFrameView: View {
     private var isoRow: some View {
         HStack(spacing: AppTheme.Spacing.lg) {
             Text("ISO/ASA")
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(AppTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             TextField(placeholder: "\(defaultISO)", text: $isoText)
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(AppTheme.textPrimary)
                 .keyboardType(.numberPad)
                 .multilineTextAlignment(.trailing)
@@ -478,7 +471,7 @@ struct ScanFrameView: View {
     private var filmRow: some View {
         HStack(spacing: AppTheme.Spacing.lg) {
             Text("Film")
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(AppTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -488,7 +481,7 @@ struct ScanFrameView: View {
                 } label: {
                     HStack(spacing: AppTheme.Spacing.xs) {
                         Text(stock.name)
-                            .font(AppType.body)
+                            .instrumentFieldFont()
                             .foregroundStyle(AppTheme.textPrimary)
                             .multilineTextAlignment(.trailing)
                         LucideIcon(.chevronRight)
@@ -498,7 +491,7 @@ struct ScanFrameView: View {
                 .buttonStyle(.plain)
             } else {
                 Text("Not set")
-                    .font(AppType.body)
+                    .instrumentFieldFont()
                     .foregroundStyle(AppTheme.textSecondary)
             }
         }
@@ -508,7 +501,7 @@ struct ScanFrameView: View {
     private var cameraRow: some View {
         HStack(spacing: AppTheme.Spacing.lg) {
             Text("Camera")
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(AppTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -520,7 +513,7 @@ struct ScanFrameView: View {
             } label: {
                 HStack(spacing: AppTheme.Spacing.xs) {
                     Text(camera?.name ?? "Choose camera")
-                        .font(AppType.body)
+                        .instrumentFieldFont()
                         .foregroundStyle(camera == nil ? AppTheme.textSecondary : AppTheme.textPrimary)
                         .multilineTextAlignment(.trailing)
                     LucideIcon(.chevronsUpDown)
@@ -561,7 +554,7 @@ struct ScanFrameView: View {
     private var lensRow: some View {
         HStack(alignment: .top, spacing: AppTheme.Spacing.lg) {
             Text("Lens")
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(AppTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -573,7 +566,7 @@ struct ScanFrameView: View {
                 } label: {
                     HStack(spacing: AppTheme.Spacing.xs) {
                         Text(lensLabel)
-                            .font(AppType.body)
+                            .instrumentFieldFont()
                             .foregroundStyle(AppTheme.textPrimary)
                             .multilineTextAlignment(.trailing)
                         LucideIcon(.chevronsUpDown)
@@ -584,7 +577,7 @@ struct ScanFrameView: View {
                 .accessibilityLabel("Lens")
             } else {
                 Text(lensLabel)
-                    .font(AppType.body)
+                    .instrumentFieldFont()
                     .foregroundStyle(AppTheme.textPrimary)
                     .multilineTextAlignment(.trailing)
             }
@@ -617,7 +610,7 @@ struct ScanFrameView: View {
     ) -> some View {
         Button(action: action) {
             Text(text)
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(isPlaceholder ? AppTheme.textSecondary : AppTheme.textPrimary)
                 .lineLimit(1)
                 .truncationMode(.tail)

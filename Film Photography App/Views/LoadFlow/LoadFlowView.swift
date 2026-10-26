@@ -20,6 +20,11 @@ struct LoadFlowView: View {
     @State private var showingDeviceCamera = false
     @State private var capturedImage: UIImage?
     @State private var openedWithPendingCapture = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case exposures
+    }
 
     enum LoadStep {
         case source
@@ -53,6 +58,9 @@ struct LoadFlowView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                         .font(AppType.body)
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    InstrumentKeyboardAccessory(focus: $focusedField, fields: [.exposures])
                 }
             }
             .instrumentScreen()
@@ -261,6 +269,7 @@ struct LoadFlowView: View {
                             .multilineTextAlignment(.trailing)
                             .keyboardType(.numberPad)
                             .frame(width: 64)
+                            .focused($focusedField, equals: .exposures)
                     }
                 }
                 .padding(.bottom, AppTheme.Spacing.xl)

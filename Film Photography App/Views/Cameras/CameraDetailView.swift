@@ -15,8 +15,11 @@ struct CameraDetailView: View {
     @State private var purchaseDateDraft = Date()
     @State private var selectedHistoryRoll: Roll?
     @State private var scrollPosition = ScrollPosition()
-    @FocusState private var isNotesFocused: Bool
-    @FocusState private var isPriceFocused: Bool
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case name, serial, price, notes
+    }
 
     private enum CameraPane: String, CaseIterable {
         case info, rolls, lenses
@@ -64,31 +67,39 @@ struct CameraDetailView: View {
         }
     }
 
+    private var showsCenteredRollsEmpty: Bool {
+        pane == .rolls && cameraRolls.isEmpty
+    }
+
     var body: some View {
         Group {
             if let camera {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        photoHero(camera)
-                            .padding(.horizontal, AppTheme.horizontalPadding)
-                            .padding(.top, AppTheme.Spacing.lg)
-
-                        InstrumentSegmentedControl(
-                            options: CameraPane.allCases.map { ($0, $0.title, $0.icon) },
-                            selection: $pane
+                if showsCenteredRollsEmpty {
+                    VStack(spacing: 0) {
+                        cameraHeader(camera)
+                        InstrumentEmptyState(
+                            message: "No rolls on this camera yet.",
+                            primaryAction: "Load Roll",
+                            primaryHandler: { showingLoadPicker = true },
+                            actionIcon: .film
                         )
-                        .padding(.horizontal, AppTheme.horizontalPadding)
-                        .padding(.top, AppTheme.Spacing.sm)
-
-                        paneContent(camera)
-                            .padding(.horizontal, AppTheme.horizontalPadding)
-                            .padding(.top, AppTheme.Spacing.sm)
-                            .padding(.bottom, AppTheme.Spacing.xl)
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 0) {
+                            cameraHeader(camera)
+
+                            paneContent(camera)
+                                .padding(.horizontal, AppTheme.horizontalPadding)
+                                .padding(.top, AppTheme.Spacing.sm)
+                                .padding(.bottom, AppTheme.Spacing.xl)
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+                        }
+                    }
+                    .scrollPosition($scrollPosition)
+                    .instrumentDetailScroll()
                 }
-                .scrollPosition($scrollPosition)
-                .instrumentDetailScroll()
             } else {
                 VStack(alignment: .leading) {
                     Text("Camera not found")
@@ -117,17 +128,30 @@ struct CameraDetailView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                InstrumentKeyboardDoneButton {
-                    isNotesFocused = false
-                    isPriceFocused = false
-                }
+                InstrumentKeyboardAccessory(
+                    focus: $focusedField,
+                    fields: [.name, .serial, .price, .notes]
+                )
             }
         }
         .onChange(of: photoItem) { _, newItem in
             guard let newItem else { return }
             Task { await loadPhoto(from: newItem) }
         }
+    }
+
+    @ViewBuilder
+    private func cameraHeader(_ camera: Camera) -> some View {
+        photoHero(camera)
+            .padding(.horizontal, AppTheme.horizontalPadding)
+            .padding(.top, AppTheme.Spacing.lg)
+
+        InstrumentSegmentedControl(
+            options: CameraPane.allCases.map { ($0, $0.title, $0.icon) },
+            selection: $pane
+        )
+        .padding(.horizontal, AppTheme.horizontalPadding)
+        .padding(.top, AppTheme.Spacing.sm)
     }
 
     private func photoHero(_ camera: Camera) -> some View {
@@ -178,7 +202,7 @@ struct CameraDetailView: View {
             onAdvance: { store.advanceExposure(on: roll.id) },
             onUndo: { store.removeLastFrame(from: roll.id) },
             onSetCount: { store.setFrameCount($0, for: roll.id) },
-            onFinishRoll: { store.setRollStatus(roll.id, to: .shotUndeveloped) }
+            onAdvancePipeline: { store.setRollStatus(roll.id, to: .shotUndeveloped) }
         )
         .id("camera-load-stage-\(roll.id)")
     }
@@ -203,33 +227,26 @@ struct CameraDetailView: View {
     @ViewBuilder
     private var rollsPane: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if cameraRolls.isEmpty {
-                Text("No rolls on this camera yet.")
-                    .font(AppType.body)
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .padding(.bottom, AppTheme.Spacing.lg)
-            } else {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(cameraRolls.enumerated()), id: \.element.id) { index, roll in
-                        if index > 0 {
-                            HairlineRule()
-                        }
-                        Button {
-                            selectedHistoryRoll = roll
-                        } label: {
-                            RollLedgerRow(roll: roll, showsCameraName: false, showsStatus: true)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.vertical, AppTheme.Spacing.sm)
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(cameraRolls.enumerated()), id: \.element.id) { index, roll in
+                    if index > 0 {
+                        HairlineRule()
+                    }
+                    Button {
+                        selectedHistoryRoll = roll
+                    } label: {
+                        RollLedgerRow(roll: roll, showsCameraName: false, showsStatus: true)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.vertical, AppTheme.Spacing.sm)
 
-                        if roll.status == .inCamera {
-                            loadedExposureStage(roll)
-                                .padding(.bottom, AppTheme.Spacing.lg)
-                        }
+                    if roll.status == .inCamera {
+                        loadedExposureStage(roll)
+                            .padding(.bottom, AppTheme.Spacing.lg)
                     }
                 }
-                .padding(.bottom, AppTheme.Spacing.lg)
             }
+            .padding(.bottom, AppTheme.Spacing.lg)
 
             loadSection
         }
@@ -292,6 +309,7 @@ struct CameraDetailView: View {
         HairlineRule()
         fieldRow("Name") {
             TextField(placeholder: "Camera name", text: binding(camera, \.name))
+                .focused($focusedField, equals: .name)
         }
         HairlineRule()
         menuRow("Type", value: camera.cameraType.isEmpty ? "Not set" : camera.cameraType) {
@@ -314,7 +332,8 @@ struct CameraDetailView: View {
         }
         HairlineRule()
         fieldRow("Serial number") {
-            TextField(placeholder: "Optional", text: optionalStringBinding(camera, \.serialNumber))
+            TextField(placeholder: "Not set", text: optionalStringBinding(camera, \.serialNumber))
+                .focused($focusedField, equals: .serial)
         }
         HairlineRule()
         purchaseDateRow(camera)
@@ -341,11 +360,11 @@ struct CameraDetailView: View {
         DetailFieldRow(label: "Purchase price") {
             HStack(spacing: AppTheme.Spacing.xs) {
                 TextField(placeholder: "0", text: priceBinding(camera))
-                    .font(AppType.body)
+                    .instrumentFieldFont()
                     .foregroundStyle(AppTheme.textPrimary)
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
-                    .focused($isPriceFocused)
+                    .focused($focusedField, equals: .price)
 
                 Menu {
                     ForEach(currencyMenuCodes(for: camera), id: \.self) { code in
@@ -380,7 +399,7 @@ struct CameraDetailView: View {
         .foregroundStyle(AppTheme.textPrimary)
         .lineLimit(2...8)
         .submitLabel(.return)
-        .focused($isNotesFocused)
+        .focused($focusedField, equals: .notes)
     }
 
     // MARK: - Row builders
@@ -413,7 +432,7 @@ struct CameraDetailView: View {
     ) -> some View {
         DetailFieldRow(label: label) {
             content()
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.trailing)
         }
@@ -474,45 +493,76 @@ struct CameraDetailView: View {
 
     private var loadPickerSheet: some View {
         NavigationStack {
-            List {
-                if !store.inventoryRolls.isEmpty {
-                    Section("In stock") {
-                        ForEach(store.inventoryRolls) { roll in
-                            Button {
-                                showingLoadPicker = false
-                                store.assignRoll(roll.id, to: cameraId)
-                            } label: {
-                                Text(inventoryRollLabel(for: roll))
-                                    .font(AppType.body)
-                                    .foregroundStyle(AppTheme.textPrimary)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    if store.inventoryRolls.isEmpty && store.availableFridgeItems.isEmpty {
+                        Text(loadEmptyMessage)
+                            .font(AppType.body)
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .padding(.horizontal, AppTheme.horizontalPadding)
+                            .padding(.top, AppTheme.Spacing.lg)
+                            .padding(.bottom, AppTheme.Spacing.lg)
+                    } else {
+                        if !store.inventoryRolls.isEmpty {
+                            loadPickerSection(
+                                title: "In stock (\(store.inventoryRolls.count))",
+                                isFirst: true
+                            ) {
+                                ForEach(Array(store.inventoryRolls.enumerated()), id: \.element.id) { index, roll in
+                                    if index > 0 {
+                                        HairlineRule()
+                                            .padding(.horizontal, AppTheme.horizontalPadding)
+                                    }
+
+                                    Button {
+                                        showingLoadPicker = false
+                                        store.assignRoll(roll.id, to: cameraId)
+                                    } label: {
+                                        RollLedgerRow(roll: roll, showsCameraName: false, showsStatus: true)
+                                            .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .padding(.horizontal, AppTheme.horizontalPadding)
+                                    .padding(.vertical, AppTheme.Spacing.sm)
+                                }
+                            }
+                        }
+
+                        if !store.availableFridgeItems.isEmpty {
+                            if !store.inventoryRolls.isEmpty {
+                                HairlineRule()
+                                    .padding(.horizontal, AppTheme.horizontalPadding)
+                                    .padding(.vertical, AppTheme.Spacing.lg)
+                            }
+
+                            loadPickerSection(
+                                title: "Unopened stock (\(store.availableFridgeItems.count))",
+                                isFirst: store.inventoryRolls.isEmpty
+                            ) {
+                                ForEach(Array(store.availableFridgeItems.enumerated()), id: \.element.id) { index, item in
+                                    if index > 0 {
+                                        HairlineRule()
+                                            .padding(.horizontal, AppTheme.horizontalPadding)
+                                    }
+
+                                    Button {
+                                        showingLoadPicker = false
+                                        loadFridgeItem(item)
+                                    } label: {
+                                        fridgeItemRow(item)
+                                            .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .padding(.horizontal, AppTheme.horizontalPadding)
+                                    .padding(.vertical, AppTheme.Spacing.sm)
+                                }
                             }
                         }
                     }
-                }
-
-                if !store.availableFridgeItems.isEmpty {
-                    Section("Unopened stock") {
-                        ForEach(store.availableFridgeItems) { item in
-                            Button {
-                                showingLoadPicker = false
-                                loadFridgeItem(item)
-                            } label: {
-                                Text(fridgeItemLabel(for: item))
-                                    .font(AppType.body)
-                                    .foregroundStyle(AppTheme.textPrimary)
-                            }
-                        }
-                    }
-                }
-
-                if store.inventoryRolls.isEmpty && store.availableFridgeItems.isEmpty {
-                    Text(loadEmptyMessage)
-                        .font(AppType.body)
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .listRowBackground(Color.clear)
                 }
             }
-            .instrumentFormStyle()
+            .instrumentScreen()
+            .instrumentDetailScroll()
             .navigationTitle("Choose roll")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -521,8 +571,41 @@ struct CameraDetailView: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.hidden)
+        .instrumentSheetChrome()
+    }
+
+    private func loadPickerSection<Content: View>(
+        title: String,
+        isFirst: Bool,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionLabel(title: title)
+                .padding(.horizontal, AppTheme.horizontalPadding)
+                .padding(.top, isFirst ? AppTheme.Spacing.sm : 0)
+                .padding(.bottom, AppTheme.Spacing.sm)
+
+            content()
+        }
+    }
+
+    private func fridgeItemRow(_ item: FridgeItem) -> some View {
+        HStack(alignment: .center, spacing: AppTheme.Spacing.lg) {
+            RollPlate(stock: store.stock(for: item.stockId), size: 100)
+
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                Text(store.stock(for: item.stockId)?.name ?? "Stock")
+                    .font(AppType.title)
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .lineLimit(1)
+
+                Text(fridgeItemLabel(for: item))
+                    .font(AppType.callout)
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     private var loadEmptyMessage: String {
@@ -535,15 +618,9 @@ struct CameraDetailView: View {
         return "Choose a roll to load it."
     }
 
-    private func inventoryRollLabel(for roll: Roll) -> String {
-        let exposures = "\(roll.totalExposures) exp"
-        return "\(store.label(for: roll)) · \(roll.format.displayName) · \(exposures)"
-    }
-
     private func fridgeItemLabel(for item: FridgeItem) -> String {
-        let stockName = store.stock(for: item.stockId)?.name ?? "Stock"
         let qty = item.quantity > 1 ? " · ×\(item.quantity)" : ""
-        return "\(stockName) · \(item.format.displayName)\(qty)"
+        return "\(item.format.displayName)\(qty)"
     }
 
     private func purchaseDateDisplay(for camera: Camera) -> String {

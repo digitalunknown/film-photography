@@ -21,6 +21,8 @@ enum AppTheme {
 
     static let horizontalPadding: CGFloat = 20
     static let iconSize: CGFloat = 24
+    /// Outlined accessory on field and list rows — location, load to camera, undo.
+    static let accessoryButtonSize: CGFloat = 35
 
     enum Spacing {
         static let xs: CGFloat = 4
@@ -38,7 +40,7 @@ enum AppTheme {
     /// rhythm as the rows inside it, so the boundary between hero and table disappears.
     static let tableGap = Spacing.lg
 
-    /// Apply Figtree to navigation titles and other UIKit chrome once at launch.
+    /// Apply Instrument Sans to navigation titles and other UIKit chrome once at launch.
     static func applyTypography() {
         let largeTitle = UIFont(name: InstrumentFont.boldName, size: 32)
             ?? .systemFont(ofSize: 32, weight: .bold)
@@ -77,6 +79,8 @@ enum AppTheme {
 enum AppType {
     /// 32/Bold — screen titles.
     static let largeTitle = InstrumentFont.display(32, weight: .bold)
+    /// 22/SemiBold — empty-state headlines, under the page title.
+    static let headline = InstrumentFont.display(22, weight: .semibold)
     /// 17/SemiBold — list row titles, inline nav titles.
     static let title = InstrumentFont.display(17, weight: .semibold)
     /// 17/Regular — counter units and trailing counter copy.
@@ -89,7 +93,8 @@ enum AppType {
     static let calloutEmphasized = InstrumentFont.display(13, weight: .semibold)
     /// 13/Regular — list secondary lines and notes.
     static let callout = InstrumentFont.display(13, weight: .regular)
-    static let button = calloutEmphasized
+    /// 15/SemiBold — outlined pill labels (ADD FILM, LOAD TO CAMERA).
+    static let button = InstrumentFont.display(15, weight: .semibold)
     static let footnote = callout
     static let micro = InstrumentFont.display(11, weight: .semibold)
     /// 11/Regular — printed dial scale values.
@@ -104,38 +109,38 @@ enum AppType {
 }
 
 enum InstrumentFont {
-    static let lightName = "Figtree-Light"
-    static let regularName = "Figtree-Regular"
-    static let mediumName = "Figtree-Medium"
-    static let semiBoldName = "Figtree-SemiBold"
-    static let boldName = "Figtree-Bold"
-    static let italicName = "Figtree-Italic"
-    static let boldItalicName = "Figtree-BoldItalic"
+    /// Default-width faces from the Instrument Sans specimen (400–700, roman + italic).
+    static let regularName = "InstrumentSans-Regular"
+    static let mediumName = "InstrumentSans-Medium"
+    static let semiBoldName = "InstrumentSans-SemiBold"
+    static let boldName = "InstrumentSans-Bold"
+    static let italicName = "InstrumentSans-Italic"
+    static let mediumItalicName = "InstrumentSans-MediumItalic"
+    static let semiBoldItalicName = "InstrumentSans-SemiBoldItalic"
+    static let boldItalicName = "InstrumentSans-BoldItalic"
 
-    static func display(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        custom(size, weight: weight)
+    static func display(_ size: CGFloat, weight: Font.Weight = .regular, italic: Bool = false) -> Font {
+        custom(size, weight: weight, italic: italic)
     }
 
     static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
         custom(size, weight: weight)
     }
 
-    private static func custom(_ size: CGFloat, weight: Font.Weight) -> Font {
-        .custom(postScriptName(for: weight), size: size)
+    private static func custom(_ size: CGFloat, weight: Font.Weight, italic: Bool = false) -> Font {
+        .custom(postScriptName(for: weight, italic: italic), size: size)
     }
 
-    private static func postScriptName(for weight: Font.Weight) -> String {
+    private static func postScriptName(for weight: Font.Weight, italic: Bool = false) -> String {
         switch weight {
-        case .ultraLight, .thin, .light:
-            return lightName
         case .medium:
-            return mediumName
+            return italic ? mediumItalicName : mediumName
         case .semibold:
-            return semiBoldName
+            return italic ? semiBoldItalicName : semiBoldName
         case .bold, .heavy, .black:
-            return boldName
+            return italic ? boldItalicName : boldName
         default:
-            return regularName
+            return italic ? italicName : regularName
         }
     }
 }
@@ -238,5 +243,12 @@ extension View {
     func instrumentDetailNavigation(title: String) -> some View {
         navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// Field names and values share size and weight. Colour is the only distinction.
+    /// Applied explicitly so Menu and NavigationLink do not restyle the value to semibold.
+    func instrumentFieldFont() -> some View {
+        font(AppType.body)
+            .fontWeight(.regular)
     }
 }

@@ -2,25 +2,32 @@ import SwiftUI
 
 struct RollsTabView: View {
     @Environment(AppStore.self) private var store
+    @AppStorage("nux.skippedCameraPrompt") private var skippedCameraPrompt = false
     @State private var selectedRoll: Roll?
     @State private var rollToDelete: Roll?
+    @State private var rollToLoad: Roll?
 
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        if store.activeRolls.isEmpty {
-                            InstrumentEmptyState(
-                                message: "No rolls in the pipeline.",
-                                primaryAction: "Choose from library",
-                                primaryHandler: { store.addRollEntry = .library },
-                                secondaryAction: "Add manually",
-                                secondaryHandler: { store.addRollEntry = .manual }
-                            )
-                            .padding(.horizontal, AppTheme.horizontalPadding)
-                            .padding(.top, AppTheme.Spacing.sm)
-                        } else {
+                if store.activeRolls.isEmpty {
+                    VStack(spacing: 0) {
+                        InstrumentEmptyState(
+                            message: "Start by adding the rolls you have on hand",
+                            primaryAction: "Add film",
+                            primaryHandler: { store.showingAddInventory = true },
+                            actionFillsWidth: false
+                        ) {
+                            FilmEmptyRollCluster()
+                        }
+                        if !store.archivedRolls.isEmpty {
+                            archiveLink
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 0) {
                             ForEach(Array(visibleSections.enumerated()), id: \.element.status) { index, section in
                                 if index > 0 {
                                     HairlineRule()
@@ -30,13 +37,17 @@ struct RollsTabView: View {
 
                                 rollSection(status: section.status, rolls: section.rolls, isFirst: index == 0)
                             }
-                        }
 
-                        if !store.archivedRolls.isEmpty {
-                            archiveLink
+                            if shouldPromptCamera {
+                                cameraPrompt
+                            }
+
+                            if !store.archivedRolls.isEmpty {
+                                archiveLink
+                            }
                         }
+                        .padding(.bottom, store.pendingDeletion != nil ? AppTheme.Spacing.xl + AppTheme.Spacing.lg : AppTheme.Spacing.xl)
                     }
-                    .padding(.bottom, store.pendingDeletion != nil ? AppTheme.Spacing.xl + AppTheme.Spacing.lg : AppTheme.Spacing.xl)
                 }
 
                 if let pending = store.pendingDeletion {
@@ -52,14 +63,14 @@ struct RollsTabView: View {
                     Button {
                         store.showingSettings = true
                     } label: {
-                        LucideIcon(.fileText)
+                        LucideIcon(.cog)
                     }
                     .accessibilityLabel("Settings")
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
-                        Button("Choose from library", lucide: .library) {
-                            store.addRollEntry = .library
+                        Button("Add film", lucide: .film) {
+                            store.showingAddInventory = true
                         }
                         .font(AppType.body)
                         Button("Add manually", lucide: .fileText) {
@@ -77,6 +88,15 @@ struct RollsTabView: View {
             }
             .navigationDestination(for: Roll.self) { roll in
                 RollDetailView(rollId: roll.id)
+            }
+            .sheet(item: $rollToLoad) { roll in
+                ChooseCameraSheet(
+                    onSelect: { camera in
+                        store.assignRoll(roll.id, to: camera.id)
+                        rollToLoad = nil
+                    },
+                    onDismiss: { rollToLoad = nil }
+                )
             }
             .onAppear { openPendingRoll() }
             .onChange(of: store.pendingOpenRollId) { _, _ in
@@ -114,6 +134,34 @@ struct RollsTabView: View {
             return "\(store.label(for: roll)) is loaded in a camera. You can undo for 5 seconds."
         }
         return "\(store.label(for: roll)) will be removed. You can undo for 5 seconds."
+    }
+
+    private var shouldPromptCamera: Bool {
+        store.cameras.isEmpty && !skippedCameraPrompt
+    }
+
+    /// Soft second beat after the first rolls land — skippable, never blocks load.
+    private var cameraPrompt: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
+            HairlineRule()
+                .padding(.vertical, AppTheme.Spacing.lg)
+
+            Text("Add a camera when you want to load a roll. You can skip this and add one later.")
+                .font(AppType.body)
+                .foregroundStyle(AppTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
+                TextAction(label: "Add camera") {
+                    store.showingAddCamera = true
+                }
+                TextAction(label: "Not now") {
+                    skippedCameraPrompt = true
+                }
+            }
+        }
+        .padding(.horizontal, AppTheme.horizontalPadding)
+        .padding(.top, AppTheme.Spacing.lg)
     }
 
     private var archiveLink: some View {
@@ -173,7 +221,11 @@ struct RollsTabView: View {
                 .padding(.bottom, AppTheme.Spacing.sm)
 
             ForEach(Array(rolls.enumerated()), id: \.element.id) { index, roll in
-                RollLedgerRow(roll: roll)
+                RollLedgerRow(
+                    roll: roll,
+                    showsListActions: true,
+                    onLoadToCamera: { rollToLoad = roll }
+                )
                     .contentShape(Rectangle())
                     .onTapGesture { selectedRoll = roll }
                     .contextMenu {

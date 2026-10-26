@@ -13,6 +13,11 @@ struct FrameDetailEditor: View {
     @State private var locationText = ""
     @State private var descriptionText = ""
     @State private var isLoading = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case aperture, shutter, location, description
+    }
 
     private var canEdit: Bool {
         frame.state != .unexposed
@@ -41,6 +46,14 @@ struct FrameDetailEditor: View {
                     .foregroundStyle(AppTheme.textTertiary)
             }
         }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                InstrumentKeyboardAccessory(
+                    focus: $focusedField,
+                    fields: [.aperture, .shutter, .location, .description]
+                )
+            }
+        }
         .onAppear { loadFromMarker() }
         .onChange(of: frame.index) { _, _ in loadFromMarker() }
         .onChange(of: apertureText) { _, _ in saveIfNeeded() }
@@ -58,11 +71,21 @@ struct FrameDetailEditor: View {
     ) -> some View {
         InstrumentRow(label: label) {
             TextField(placeholder: placeholder, text: text, axis: axis)
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(AppTheme.textPrimary)
+                .focused($focusedField, equals: field(for: label))
                 .multilineTextAlignment(.trailing)
                 .lineLimit(axis == .vertical ? 2...4 : 1...1)
                 .keyboardType(keyboard)
+        }
+    }
+
+    private func field(for label: String) -> Field {
+        switch label {
+        case "Aperture": .aperture
+        case "Shutter speed": .shutter
+        case "Location": .location
+        default: .description
         }
     }
 

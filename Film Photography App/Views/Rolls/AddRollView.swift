@@ -24,17 +24,18 @@ struct AddRollView: View {
     @State private var exposuresText = "36"
     @State private var pushPull = 0
     @State private var frameCountText = "0"
-    @State private var storageLocation = StorageMethod.fridge.rawValue
+    @State private var storageLocation = StorageMethod.roomTemperature.rawValue
     @State private var frozenDate = Date()
     @State private var showingFrozenDatePicker = false
     @State private var labName = "The Darkroom"
     @State private var includeExpiryDate = false
     @State private var expiryDate = Date()
     @State private var showingExpiryPicker = false
+    @State private var showingChooseCamera = false
     @State private var hasAppeared = false
     @FocusState private var focusedField: Field?
 
-    private enum Field {
+    private enum Field: Hashable {
         case stock, boxSpeed, exposures, frames, storage, lab
     }
 
@@ -81,12 +82,19 @@ struct AddRollView: View {
         Self.pushPullOptions.first { $0.value == pushPull }?.label ?? "Box speed"
     }
 
-    private var availableCameras: [Camera] {
-        store.cameras.filter { store.loadedRoll(for: $0.id) == nil || $0.id == selectedCameraId }
-    }
-
     private var selectedCameraName: String? {
         selectedCameraId.flatMap { id in store.camera(for: id)?.name }
+    }
+
+    private var keyboardFields: [Field] {
+        var fields: [Field] = []
+        if isManual {
+            fields.append(contentsOf: [.stock, .boxSpeed])
+        }
+        fields.append(.exposures)
+        if status == .inCamera { fields.append(.frames) }
+        if status == .atLab { fields.append(.lab) }
+        return fields
     }
 
     var body: some View {
@@ -109,10 +117,7 @@ struct AddRollView: View {
                         .disabled(!canSave)
                 }
                 ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    InstrumentKeyboardDoneButton {
-                        focusedField = nil
-                    }
+                    InstrumentKeyboardAccessory(focus: $focusedField, fields: keyboardFields)
                 }
             }
             .sheet(isPresented: $showingStockPicker, onDismiss: {
@@ -137,6 +142,15 @@ struct AddRollView: View {
             }
             .sheet(isPresented: $showingFrozenDatePicker) {
                 frozenDatePickerSheet
+            }
+            .sheet(isPresented: $showingChooseCamera) {
+                ChooseCameraSheet(
+                    onSelect: { camera in
+                        selectedCameraId = camera.id
+                        showingChooseCamera = false
+                    },
+                    onDismiss: { showingChooseCamera = false }
+                )
             }
             .onAppear {
                 guard !hasAppeared else { return }
@@ -299,15 +313,23 @@ struct AddRollView: View {
         if status == .inCamera {
             HairlineRule()
             SectionLabel(title: "Camera", style: .detail)
-            menuRow(
-                "Loaded in",
-                value: selectedCameraName ?? "Select camera",
-                isPlaceholder: selectedCameraId == nil
-            ) {
-                ForEach(availableCameras) { camera in
-                    Button(camera.name) { selectedCameraId = camera.id }
+            Button {
+                showingChooseCamera = true
+            } label: {
+                DetailFieldRow(label: "Loaded in") {
+                    HStack(spacing: AppTheme.Spacing.xs) {
+                        DetailFieldValue(
+                            text: selectedCameraName ?? "Select camera",
+                            isPlaceholder: selectedCameraId == nil
+                        )
+                        LucideIcon(.chevronsUpDown)
+                            .foregroundStyle(AppTheme.textPrimary)
+                    }
                 }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Loaded in")
             HairlineRule()
             fieldRow("Frames shot") {
                 TextField(placeholder: "0", text: $frameCountText)
@@ -405,36 +427,16 @@ struct AddRollView: View {
 
     private var expectedFramesRow: some View {
         DetailFieldRow(label: "Expected frames") {
-            HStack(spacing: AppTheme.Spacing.md) {
-                Button {
-                    exposuresText = String(max(exposures - 1, 1))
-                } label: {
-                    Text("−")
-                        .font(AppType.title)
-                        .foregroundStyle(exposures > 1 ? AppTheme.textPrimary : AppTheme.textTertiary)
-                }
-                .buttonStyle(.plain)
-                .disabled(exposures <= 1)
-                .accessibilityLabel("Fewer frames")
-
+            NumberStepper(
+                canDecrement: exposures > 1,
+                decrementLabel: "Fewer frames",
+                incrementLabel: "More frames",
+                onDecrement: { exposuresText = String(max(exposures - 1, 1)) },
+                onIncrement: { exposuresText = String(min(exposures + 1, 100)) }
+            ) {
                 TextField(placeholder: "36", text: $exposuresText)
-                    .font(AppType.body)
-                    .foregroundStyle(AppTheme.textPrimary)
                     .keyboardType(.numberPad)
-                    .multilineTextAlignment(.center)
-                    .monospacedDigit()
-                    .frame(minWidth: 28)
                     .focused($focusedField, equals: .exposures)
-
-                Button {
-                    exposuresText = String(min(exposures + 1, 100))
-                } label: {
-                    Text("+")
-                        .font(AppType.title)
-                        .foregroundStyle(AppTheme.textPrimary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("More frames")
             }
         }
     }
@@ -474,7 +476,7 @@ struct AddRollView: View {
     ) -> some View {
         DetailFieldRow(label: label) {
             content()
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.trailing)
         }

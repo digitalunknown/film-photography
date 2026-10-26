@@ -136,7 +136,7 @@ struct ScanImportSheet: View {
         NavigationStack {
             content
                 .instrumentScreen()
-                .navigationTitle("Arrange Scans")
+                .navigationTitle("Edit Scans")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { toolbarContent }
         }

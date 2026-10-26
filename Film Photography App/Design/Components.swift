@@ -175,7 +175,7 @@ struct DataRow: View {
     var body: some View {
         InstrumentRow(label: label, showsDivider: showsDivider) {
             Text(value)
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(valueBright ? AppTheme.textPrimary : AppTheme.textSecondary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
@@ -193,14 +193,53 @@ struct DetailFieldRow<Value: View>: View {
     var body: some View {
         HStack(spacing: AppTheme.Spacing.lg) {
             Text(label)
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(AppTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             value()
+                .instrumentFieldFont()
                 .frame(minHeight: AppTheme.iconSize, alignment: .center)
         }
         .frame(minHeight: AppTheme.iconSize, alignment: .center)
+    }
+}
+
+/// Trailing − / value / + control. Icons match the 24pt field carets and stay
+/// hugged to the number so a growing text field cannot push them apart.
+struct NumberStepper<Value: View>: View {
+    var canDecrement: Bool = true
+    var decrementLabel: String
+    var incrementLabel: String
+    var onDecrement: () -> Void
+    var onIncrement: () -> Void
+    @ViewBuilder var value: () -> Value
+
+    var body: some View {
+        HStack(spacing: AppTheme.Spacing.sm) {
+            Button(action: onDecrement) {
+                LucideIcon(.minus)
+                    .foregroundStyle(canDecrement ? AppTheme.textPrimary : AppTheme.textTertiary)
+            }
+            .buttonStyle(.plain)
+            .disabled(!canDecrement)
+            .accessibilityLabel(decrementLabel)
+
+            value()
+                .instrumentFieldFont()
+                .foregroundStyle(AppTheme.textPrimary)
+                .monospacedDigit()
+                .multilineTextAlignment(.center)
+                .frame(width: 44)
+
+            Button(action: onIncrement) {
+                LucideIcon(.plus)
+                    .foregroundStyle(AppTheme.textPrimary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(incrementLabel)
+        }
+        .fixedSize(horizontal: true, vertical: false)
     }
 }
 
@@ -211,7 +250,7 @@ struct DetailFieldValue: View {
 
     var body: some View {
         Text(text)
-            .font(AppType.body)
+            .instrumentFieldFont()
             .foregroundStyle(isPlaceholder ? AppTheme.textSecondary : AppTheme.textPrimary)
             .multilineTextAlignment(.trailing)
     }
@@ -230,7 +269,7 @@ struct InstrumentRow<Trailing: View>: View {
             }
             HStack(alignment: .top, spacing: AppTheme.Spacing.lg) {
                 Text(label)
-                    .font(AppType.body)
+                    .instrumentFieldFont()
                     .foregroundStyle(AppTheme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -258,7 +297,7 @@ struct InstrumentMenuRow<MenuContent: View>: View {
             } label: {
                 HStack(spacing: AppTheme.Spacing.xs) {
                     Text(value)
-                        .font(AppType.body)
+                        .instrumentFieldFont()
                         .foregroundStyle(valueBright ? AppTheme.textPrimary : AppTheme.textSecondary)
                         .multilineTextAlignment(.leading)
                     LucideIcon(.chevronsUpDown)
@@ -279,7 +318,7 @@ struct InstrumentEditableRow<Content: View>: View {
     var body: some View {
         InstrumentRow(label: label, showsDivider: showsDivider) {
             content()
-                .font(AppType.body)
+                .instrumentFieldFont()
                 .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.leading)
         }
@@ -365,7 +404,7 @@ struct CircleIconButton: View {
         Button(action: action) {
             LucideIcon(icon)
                 .foregroundStyle(AppTheme.textPrimary)
-                .frame(width: 35, height: 35)
+                .frame(width: AppTheme.accessoryButtonSize, height: AppTheme.accessoryButtonSize)
                 .background(Circle().strokeBorder(AppTheme.textPrimary, lineWidth: AppTheme.strokeWidth))
                 .contentShape(Circle())
         }
@@ -386,9 +425,10 @@ struct StackedFieldRow<Value: View>: View {
         HStack(spacing: AppTheme.Spacing.lg) {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                 Text(label)
-                    .font(AppType.body)
+                    .instrumentFieldFont()
                     .foregroundStyle(AppTheme.textSecondary)
                 value()
+                    .instrumentFieldFont()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -406,6 +446,7 @@ struct PillButtonLabel: View {
     var icon: Lucide?
     var isProminent: Bool = false
     var isBusy: Bool = false
+    var fillsWidth: Bool = true
 
     var body: some View {
         HStack(spacing: AppTheme.Spacing.sm) {
@@ -421,8 +462,9 @@ struct PillButtonLabel: View {
                 .font(AppType.button)
         }
         .foregroundStyle(isProminent ? AppTheme.bg : AppTheme.textPrimary)
-        .frame(maxWidth: .infinity)
         .padding(.vertical, AppTheme.Spacing.md)
+        .padding(.horizontal, fillsWidth ? 0 : AppTheme.Spacing.lg)
+        .frame(maxWidth: fillsWidth ? .infinity : nil)
         .background {
             if isProminent {
                 Capsule().fill(AppTheme.textPrimary)
@@ -454,29 +496,138 @@ struct TextAction: View {
     }
 }
 
-struct InstrumentEmptyState: View {
+struct InstrumentEmptyState<Hero: View>: View {
     let message: String
     var primaryAction: String
     var primaryHandler: () -> Void
-    var secondaryAction: String? = nil
-    var secondaryHandler: (() -> Void)? = nil
+    var icon: Lucide = .focus
+    var actionIcon: Lucide = .plus
+    var actionFillsWidth: Bool = true
+    var hero: Hero
+
+    private var iconSize: CGFloat { 64 }
+
+    init(
+        message: String,
+        primaryAction: String,
+        primaryHandler: @escaping () -> Void,
+        icon: Lucide = .focus,
+        actionIcon: Lucide = .plus,
+        actionFillsWidth: Bool = true,
+        @ViewBuilder hero: () -> Hero
+    ) {
+        self.message = message
+        self.primaryAction = primaryAction
+        self.primaryHandler = primaryHandler
+        self.icon = icon
+        self.actionIcon = actionIcon
+        self.actionFillsWidth = actionFillsWidth
+        self.hero = hero()
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
+        VStack(spacing: AppTheme.Spacing.xl) {
+            illustration
+
             Text(message)
-                .font(AppType.body)
-                .foregroundStyle(AppTheme.textSecondary)
+                .font(AppType.headline)
+                .foregroundStyle(AppTheme.textPrimary)
+                .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
-                TextAction(label: primaryAction, action: primaryHandler)
-                if let secondaryAction, let secondaryHandler {
-                    TextAction(label: secondaryAction, action: secondaryHandler)
-                }
+            Button(action: primaryHandler) {
+                PillButtonLabel(
+                    title: primaryAction,
+                    icon: actionIcon,
+                    fillsWidth: actionFillsWidth
+                )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, AppTheme.horizontalPadding * 2)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var illustration: some View {
+        if Hero.self == EmptyView.self {
+            LucideIcon(icon, size: iconSize)
+                .foregroundStyle(AppTheme.textPrimary)
+        } else {
+            hero
+        }
+    }
+}
+
+extension InstrumentEmptyState where Hero == EmptyView {
+    init(
+        message: String,
+        primaryAction: String,
+        primaryHandler: @escaping () -> Void,
+        icon: Lucide = .focus,
+        actionIcon: Lucide = .plus,
+        actionFillsWidth: Bool = true
+    ) {
+        self.init(
+            message: message,
+            primaryAction: primaryAction,
+            primaryHandler: primaryHandler,
+            icon: icon,
+            actionIcon: actionIcon,
+            actionFillsWidth: actionFillsWidth
+        ) {
+            EmptyView()
+        }
+    }
+}
+
+/// Three catalog canisters for the My Film empty state — Kodak left, Fuji center, Cinestill right.
+struct FilmEmptyRollCluster: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private static let rollSize: CGFloat = 176
+    private static let tilt: Double = 30
+
+    var body: some View {
+        TimelineView(.animation(paused: reduceMotion)) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            ZStack {
+                roll(
+                    "roll_kodak",
+                    x: -58 + drift(t, period: 11, phase: 0.4, amplitude: 2.5),
+                    y: 22 + drift(t, period: 7.5, phase: 0, amplitude: 5),
+                    rotation: -Self.tilt
+                )
+                roll(
+                    "roll_cinestill_800t",
+                    x: 58 + drift(t, period: 12, phase: 1.8, amplitude: 2.5),
+                    y: 22 + drift(t, period: 8.5, phase: 1.3, amplitude: 5),
+                    rotation: Self.tilt
+                )
+                roll(
+                    "roll_fujifilm",
+                    x: drift(t, period: 10, phase: 2.2, amplitude: 2),
+                    y: -12 + drift(t, period: 9, phase: 2.6, amplitude: 6),
+                    rotation: 0
+                )
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, AppTheme.Spacing.xl * 2)
+        .frame(width: 280, height: 230)
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
+    }
+
+    private func drift(_ t: TimeInterval, period: Double, phase: Double, amplitude: CGFloat) -> CGFloat {
+        reduceMotion ? 0 : sin(t * .pi * 2 / period + phase) * amplitude
+    }
+
+    private func roll(_ imageName: String, x: CGFloat, y: CGFloat, rotation: Double) -> some View {
+        Image(imageName)
+            .resizable()
+            .scaledToFit()
+            .frame(width: Self.rollSize, height: Self.rollSize)
+            .rotationEffect(.degrees(rotation))
+            .offset(x: x, y: y)
     }
 }
 
@@ -591,11 +742,11 @@ struct UnderlineMeter: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
             HStack {
                 Text(label)
-                    .font(AppType.body)
+                    .instrumentFieldFont()
                     .foregroundStyle(AppTheme.textSecondary)
                 Spacer()
                 Text(value)
-                    .font(AppType.body)
+                    .instrumentFieldFont()
                     .foregroundStyle(AppTheme.textPrimary)
             }
             GeometryReader { geo in
@@ -643,7 +794,7 @@ struct FrameExposureCounter: View {
                     )
                     Text("/\(safeTotal)")
                         .font(AppType.title)
-                        .foregroundStyle(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .monospacedDigit()
 
                     Text(statusLabel)
@@ -693,7 +844,7 @@ struct FrameExposureCounter: View {
         } label: {
             LucideIcon(.chevronsLeft)
                 .foregroundStyle(AppTheme.textSecondary)
-                .frame(width: 35, height: 35)
+                .frame(width: AppTheme.accessoryButtonSize, height: AppTheme.accessoryButtonSize)
                 .overlay {
                     Circle()
                         .strokeBorder(AppTheme.textSecondary, lineWidth: AppTheme.strokeWidth)
@@ -707,41 +858,14 @@ struct FrameExposureCounter: View {
     }
 
     private var shutterButton: some View {
-        let progress = CGFloat(displayedShot) / CGFloat(safeTotal)
-        let ringSize: CGFloat = 60
-        let ringLine: CGFloat = 3
-        let coreSize: CGFloat = 50
-
-        return Button {
+        Button {
             guard canIncrement else { return }
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
                 onIncrement?()
             }
         } label: {
-            ZStack {
-                Circle()
-                    .stroke(AppTheme.well, lineWidth: ringLine)
-                    .frame(width: ringSize, height: ringSize)
-
-                Circle()
-                    .trim(from: 0, to: progress)
-                    .stroke(
-                        AppTheme.textPrimary,
-                        style: StrokeStyle(lineWidth: ringLine, lineCap: .round)
-                    )
-                    .rotationEffect(.degrees(-90))
-                    .frame(width: ringSize, height: ringSize)
-                    .animation(.easeOut(duration: 0.2), value: displayedShot)
-
-                Circle()
-                    .fill(AppTheme.textPrimary)
-                    .frame(width: coreSize, height: coreSize)
-
-                LucideIcon(.aperture)
-                    .foregroundStyle(AppTheme.bg)
-            }
-            .frame(width: ringSize, height: ringSize)
+            ShutterProgressRing(shot: displayedShot, total: safeTotal)
         }
         .buttonStyle(.plain)
         .disabled(!canIncrement)
@@ -1084,24 +1208,77 @@ extension View {
     }
 }
 
-/// Keyboard accessory Done control with a little air above the keys.
-struct InstrumentKeyboardDoneButton: View {
-    var action: () -> Void = {}
+/// Keyboard accessory: up/down jump fields, check dismisses.
+struct InstrumentKeyboardAccessory<Field: Hashable>: View {
+    @FocusState.Binding var focus: Field?
+    var fields: [Field]
+
+    private var index: Int? {
+        guard let focus else { return nil }
+        return fields.firstIndex(of: focus)
+    }
+
+    private var canGoPrevious: Bool {
+        guard let index else { return false }
+        return index > 0
+    }
+
+    private var canGoNext: Bool {
+        guard let index else { return false }
+        return index < fields.count - 1
+    }
 
     var body: some View {
-        Button("Done") {
-            action()
-            UIApplication.shared.sendAction(
-                #selector(UIResponder.resignFirstResponder),
-                to: nil,
-                from: nil,
-                for: nil
-            )
+        HStack(spacing: AppTheme.Spacing.lg) {
+            Button {
+                move(-1)
+            } label: {
+                LucideIcon(.chevronUp)
+            }
+            .buttonStyle(.plain)
+            .disabled(!canGoPrevious)
+            .foregroundStyle(canGoPrevious ? AppTheme.textPrimary : AppTheme.textTertiary)
+            .accessibilityLabel("Previous field")
+
+            Button {
+                move(1)
+            } label: {
+                LucideIcon(.chevronDown)
+            }
+            .buttonStyle(.plain)
+            .disabled(!canGoNext)
+            .foregroundStyle(canGoNext ? AppTheme.textPrimary : AppTheme.textTertiary)
+            .accessibilityLabel("Next field")
+
+            Spacer(minLength: 0)
+
+            Button {
+                dismissKeyboard()
+            } label: {
+                LucideIcon(.check)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(AppTheme.textPrimary)
+            .accessibilityLabel("Dismiss keyboard")
         }
-        .font(AppType.body)
-        // Air between the accessory and the keys. A `Color.clear` spacer used to provide
-        // this, but it is greedy horizontally and stretched the button across the bar.
-        .padding(.bottom, AppTheme.Spacing.sm)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func move(_ delta: Int) {
+        guard let index else { return }
+        let next = index + delta
+        guard fields.indices.contains(next) else { return }
+        focus = fields[next]
+    }
+
+    private func dismissKeyboard() {
+        focus = nil
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 }
 
@@ -1298,6 +1475,123 @@ struct MonthYearPicker: UIViewRepresentable {
     }
 }
 
+/// Circular shutter on the exposure counter: track, progress, filled core, aperture.
+struct ShutterProgressRing: View {
+    var shot: Int
+    var total: Int
+    var size: CGFloat = 60
+    var lineWidth: CGFloat = 3
+
+    private var safeTotal: Int { max(total, 1) }
+    private var safeShot: Int { min(max(shot, 0), safeTotal) }
+    private var progress: CGFloat { CGFloat(safeShot) / CGFloat(safeTotal) }
+    private var coreSize: CGFloat { size * (50.0 / 60.0) }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(AppTheme.well, lineWidth: lineWidth)
+
+            Circle()
+                .trim(from: 0, to: progress)
+                .stroke(
+                    AppTheme.textPrimary,
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .animation(.easeOut(duration: 0.2), value: safeShot)
+
+            Circle()
+                .fill(AppTheme.textPrimary)
+                .frame(width: coreSize, height: coreSize)
+
+            LucideIcon(.aperture)
+                .foregroundStyle(AppTheme.bg)
+        }
+        .frame(width: size, height: size)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(safeShot) of \(safeTotal) frames shot")
+    }
+}
+
+/// List-row shutter: aperture + count in a 35pt pill, progress tracing the outline.
+struct ShutterProgressPill: View {
+    var shot: Int
+    var total: Int
+
+    private var safeTotal: Int { max(total, 1) }
+    private var safeShot: Int { min(max(shot, 0), safeTotal) }
+    private var progress: CGFloat { CGFloat(safeShot) / CGFloat(safeTotal) }
+    private var lineWidth: CGFloat { AppTheme.strokeWidth }
+
+    var body: some View {
+        HStack(spacing: AppTheme.Spacing.xs) {
+            LucideIcon(.aperture)
+                .foregroundStyle(AppTheme.textPrimary)
+            Text("\(safeShot)/\(safeTotal)")
+                .instrumentFieldFont()
+                .foregroundStyle(AppTheme.textPrimary)
+                .monospacedDigit()
+                .lineLimit(1)
+        }
+        .padding(.horizontal, AppTheme.Spacing.sm)
+        .frame(height: AppTheme.accessoryButtonSize)
+        .background {
+            ZStack {
+                StadiumRing()
+                    .stroke(AppTheme.well, lineWidth: lineWidth)
+                StadiumRing()
+                    .trim(from: 0, to: progress)
+                    .stroke(
+                        AppTheme.textPrimary,
+                        style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                    )
+                    .animation(.easeOut(duration: 0.2), value: safeShot)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(safeShot) of \(safeTotal) frames shot")
+    }
+}
+
+/// Capsule outline that starts at the top center and runs clockwise, so trim
+/// fills the same way as the circular shutter ring.
+private struct StadiumRing: Shape {
+    func path(in rect: CGRect) -> Path {
+        let inset = lineInset
+        let ring = rect.insetBy(dx: inset, dy: inset)
+        let radius = ring.height / 2
+        guard ring.width >= ring.height, radius > 0 else {
+            return Path(ellipseIn: ring)
+        }
+
+        let left = CGPoint(x: ring.minX + radius, y: ring.midY)
+        let right = CGPoint(x: ring.maxX - radius, y: ring.midY)
+        var path = Path()
+        path.move(to: CGPoint(x: ring.midX, y: ring.minY))
+        path.addLine(to: CGPoint(x: right.x, y: ring.minY))
+        path.addArc(
+            center: right,
+            radius: radius,
+            startAngle: .degrees(-90),
+            endAngle: .degrees(90),
+            clockwise: false
+        )
+        path.addLine(to: CGPoint(x: left.x, y: ring.maxY))
+        path.addArc(
+            center: left,
+            radius: radius,
+            startAngle: .degrees(90),
+            endAngle: .degrees(-90),
+            clockwise: false
+        )
+        path.addLine(to: CGPoint(x: ring.midX, y: ring.minY))
+        return path
+    }
+
+    private var lineInset: CGFloat { AppTheme.strokeWidth / 2 }
+}
+
 /// Shared roll row used on Rolls list and Camera detail.
 struct RollLedgerRow: View {
     @Environment(AppStore.self) private var store
@@ -1306,6 +1600,9 @@ struct RollLedgerRow: View {
     /// When set, the second line is the roll's status instead of the camera name —
     /// used on a camera's history list, where the body is already known.
     var showsStatus: Bool = false
+    /// My Film list: Load to Camera on inventory, shutter ring on a loaded roll.
+    var showsListActions: Bool = false
+    var onLoadToCamera: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .center, spacing: AppTheme.Spacing.lg) {
@@ -1325,7 +1622,7 @@ struct RollLedgerRow: View {
 
                     Spacer(minLength: AppTheme.Spacing.xs)
 
-                    if !roll.status.isInventory {
+                    if showsTrailingCount {
                         Text("\(roll.frameCount)/\(roll.totalExposures)")
                             .font(AppType.title)
                             .foregroundStyle(AppTheme.textPrimary)
@@ -1352,7 +1649,26 @@ struct RollLedgerRow: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+
+            if showsLoadButton, let onLoadToCamera {
+                CircleIconButton(icon: .camera, action: onLoadToCamera)
+                    .accessibilityLabel("Load to Camera")
+            } else if showsShutterRing {
+                ShutterProgressPill(shot: roll.frameCount, total: roll.totalExposures)
+            }
         }
+    }
+
+    private var showsLoadButton: Bool {
+        showsListActions && roll.status.isInventory && onLoadToCamera != nil
+    }
+
+    private var showsShutterRing: Bool {
+        showsListActions && roll.status == .inCamera
+    }
+
+    private var showsTrailingCount: Bool {
+        !roll.status.isInventory && !showsShutterRing
     }
 
     private var stock: FilmStock? {

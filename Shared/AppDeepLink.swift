@@ -1,11 +1,19 @@
 import Foundation
 
-/// URLs the home-screen widget uses to open a roll in the app.
+/// URLs the home-screen widget uses to open a roll or the add-film sheet.
 enum AppDeepLink {
     static let scheme = "incamera"
 
+    static var addFilm: URL {
+        URL(string: "\(scheme)://add-film")!
+    }
+
     static func roll(_ id: UUID) -> URL {
         URL(string: "\(scheme)://roll/\(id.uuidString)")!
+    }
+
+    static func isAddFilm(_ url: URL) -> Bool {
+        url.scheme == scheme && url.host == "add-film"
     }
 
     static func rollId(from url: URL) -> UUID? {

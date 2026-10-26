@@ -11,10 +11,10 @@
 	</dict>
 	<key>UIAppFonts</key>
 	<array>
-		<string>Figtree-Regular.ttf</string>
-		<string>Figtree-Medium.ttf</string>
-		<string>Figtree-SemiBold.ttf</string>
-		<string>Figtree-Bold.ttf</string>
+		<string>InstrumentSans-Regular.ttf</string>
+		<string>InstrumentSans-Medium.ttf</string>
+		<string>InstrumentSans-SemiBold.ttf</string>
+		<string>InstrumentSans-Bold.ttf</string>
 	</array>
 </dict>
 </plist>
